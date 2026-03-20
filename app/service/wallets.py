@@ -1,51 +1,37 @@
 from fastapi import HTTPException
+from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
 from app.repository import wallets as wallets_repository
 from app.schemas import CreateWalletRequest
 
 
-def get_wallet(wallet_name: str | None = None):
-    db = SessionLocal()
+def get_wallet(db: Session, wallet_name: str | None = None):
+    if wallet_name is None:
+        wallets = wallets_repository.get_all_wallets(db)
+        return {"total_balance": sum(w.balance for w in wallets)}
 
-    try:
-        if wallet_name is None:
-            wallets = wallets_repository.get_all_wallets(db)
-            return {"total_balance": sum(w.balance for w in wallets)}
-
-        if not wallets_repository.is_wallet_exist(db, wallet_name):
-            raise HTTPException(
-                status_code=404, detail=f"Wallet <{wallet_name}> not found."
-            )
-
-        wallet = wallets_repository.get_wallet_balance_by_name(db, wallet_name)
-
-        return {"wallet": wallet.name, "balance": wallet.balance}  # type: ignore
-
-    finally:
-        db.close()
-
-
-def create_wallet(wallet: CreateWalletRequest):
-    db = SessionLocal()
-
-    try:
-        if wallets_repository.is_wallet_exist(db, wallet.name):
-            raise HTTPException(
-                status_code=400, detail=f"Wallet <{wallet.name}> already exists."
-            )
-
-        wallet = wallets_repository.create_wallet(
-            db, wallet.name, wallet.initial_balance
+    if not wallets_repository.is_wallet_exist(db, wallet_name):
+        raise HTTPException(
+            status_code=404, detail=f"Wallet <{wallet_name}> not found."
         )
 
-        db.commit()
+    wallet = wallets_repository.get_wallet_balance_by_name(db, wallet_name)
 
-        return {
-            "message": f"Wallet <{wallet.name}> has been created.",
-            "wallet": wallet.name,
-            "balance": wallet.balance,
-        }
+    return {"wallet": wallet.name, "balance": wallet.balance}  # type: ignore
 
-    finally:
-        db.close()
+
+def create_wallet(db: Session, wallet: CreateWalletRequest):
+    if wallets_repository.is_wallet_exist(db, wallet.name):
+        raise HTTPException(
+            status_code=400, detail=f"Wallet <{wallet.name}> already exists."
+        )
+
+    wallet = wallets_repository.create_wallet(db, wallet.name, wallet.initial_balance)
+
+    db.commit()
+
+    return {
+        "message": f"Wallet <{wallet.name}> has been created.",
+        "wallet": wallet.name,
+        "balance": wallet.balance,
+    }
