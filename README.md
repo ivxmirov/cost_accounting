@@ -63,6 +63,13 @@ uvicorn app.main:app --reload
 ```text
 cost_accounting
 ├─ .pre-commit-config.yaml
+├─ alembic
+│  ├─ env.py
+│  ├─ README
+│  ├─ script.py.mako
+│  └─ versions
+│     └─ af914c1abcba_initial.py
+├─ alembic.ini
 ├─ app
 │  ├─ api
 │  │  ├─ v1
@@ -87,6 +94,14 @@ cost_accounting
 │  │  ├─ users.py
 │  │  ├─ wallets.py
 │  │  └─ __init__.py
+│  ├─ static
+│  │  ├─ css
+│  │  │  ├─ bootstrap.min.css
+│  │  │  └─ style.css
+│  │  ├─ index.html
+│  │  └─ js
+│  │     ├─ app.js
+│  │     └─ bootstrap.bundle.min.js
 │  └─ __init__.py
 ├─ main.py
 ├─ poetry.lock

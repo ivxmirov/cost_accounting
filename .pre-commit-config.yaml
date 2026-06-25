@@ -9,6 +9,7 @@ repos:
         entry: poetry run isort
         language: system
         types: [python]
+        exclude: ^(tests/|alembic/)
         args: ["--settings-file=pyproject.toml"]
 
       - id: black
@@ -16,6 +17,7 @@ repos:
         entry: poetry run black
         language: system
         types: [python]
+        exclude: ^(tests/|alembic/)
         args: ["--config=pyproject.toml"]
 
       - id: pylint
@@ -23,6 +25,7 @@ repos:
         entry: poetry run pylint
         language: system
         types: [python]
+        exclude: ^(tests/|alembic/)
         args: ["--rcfile=pyproject.toml"]
 
       - id: mypy
@@ -30,7 +33,7 @@ repos:
         entry: poetry run mypy
         language: system
         types: [python]
-        exclude: ^tests/
+        exclude: ^(tests/|alembic/)
         args: [
             "--config-file=pyproject.toml",
             "--junit-xml", "test-reports/mypy-junit.xml",
