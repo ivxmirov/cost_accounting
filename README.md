@@ -60,63 +60,6 @@ uvicorn app.main:app --reload
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
-## Структура
-
-```text
-cost_accounting
-├─ .pre-commit-config.yaml
-├─ alembic
-│  ├─ env.py
-│  ├─ README
-│  ├─ script.py.mako
-│  └─ versions
-│     └─ af914c1abcba_initial.py
-├─ alembic.ini
-├─ app
-│  ├─ api
-│  │  ├─ v1
-│  │  │  ├─ operations.py
-│  │  │  ├─ users.py
-│  │  │  ├─ wallets.py
-│  │  │  └─ __init__.py
-│  │  └─ __init__.py
-│  ├─ database.py
-│  ├─ dependency.py
-│  ├─ enum.py
-│  ├─ models.py
-│  ├─ repository
-│  │  ├─ operations.py
-│  │  ├─ users.py
-│  │  ├─ wallets.py
-│  │  └─ __init__.py
-│  ├─ schemas.py
-│  ├─ service
-│  │  ├─ exchange_service.py
-│  │  ├─ operations.py
-│  │  ├─ users.py
-│  │  ├─ wallets.py
-│  │  └─ __init__.py
-│  ├─ static
-│  │  ├─ css
-│  │  │  ├─ bootstrap.min.css
-│  │  │  └─ style.css
-│  │  ├─ index.html
-│  │  └─ js
-│  │     ├─ app.js
-│  │     └─ bootstrap.bundle.min.js
-│  └─ __init__.py
-├─ main.py
-├─ poetry.lock
-├─ pyproject.toml
-├─ README.md
-├─ test-reports
-└─ tests
-   ├─ conftest.py
-   ├─ test_api
-   │  └─ test_operations.py
-   └─ __init__.py
-```
-
 ## Примеры запросов к API
 
 **Создать пользователя** - доступно всем пользователям
@@ -213,12 +156,69 @@ Response (201 Created):
   "id": 1,
   "wallet_id": 1,
   "type": "transfer",
-  "amount": "0.4000000000",
-  "currency": "usd",
+  "amount": "0.3000000000",
+  "currency": "rub",
   "category": "transfer",
   "subcategory": null,
   "created_at": "2026-06-25T13:42:47.696518"
 }
+```
+
+## Структура
+
+```text
+cost_accounting
+├─ .pre-commit-config.yaml
+├─ alembic
+│  ├─ env.py
+│  ├─ README
+│  ├─ script.py.mako
+│  └─ versions
+│     └─ af914c1abcba_initial.py
+├─ alembic.ini
+├─ app
+│  ├─ api
+│  │  ├─ v1
+│  │  │  ├─ operations.py
+│  │  │  ├─ users.py
+│  │  │  ├─ wallets.py
+│  │  │  └─ __init__.py
+│  │  └─ __init__.py
+│  ├─ database.py
+│  ├─ dependency.py
+│  ├─ enum.py
+│  ├─ models.py
+│  ├─ repository
+│  │  ├─ operations.py
+│  │  ├─ users.py
+│  │  ├─ wallets.py
+│  │  └─ __init__.py
+│  ├─ schemas.py
+│  ├─ service
+│  │  ├─ exchange_service.py
+│  │  ├─ operations.py
+│  │  ├─ users.py
+│  │  ├─ wallets.py
+│  │  └─ __init__.py
+│  ├─ static
+│  │  ├─ css
+│  │  │  ├─ bootstrap.min.css
+│  │  │  └─ style.css
+│  │  ├─ index.html
+│  │  └─ js
+│  │     ├─ app.js
+│  │     └─ bootstrap.bundle.min.js
+│  └─ __init__.py
+├─ main.py
+├─ poetry.lock
+├─ pyproject.toml
+├─ README.md
+├─ test-reports
+└─ tests
+   ├─ conftest.py
+   ├─ test_api
+   │  └─ test_operations.py
+   └─ __init__.py
 ```
 
 ## Автор
