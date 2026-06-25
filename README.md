@@ -17,32 +17,38 @@
 ## Быстрый старт
 
 1. Клонируйте репозиторий
+
 ```bash
 git clone https://github.com/ivxmirov/cost_accounting.git
 ```
 
 2. Установите зависимости (включая dev и test-зависимости)
+
 ```bash
 poetry install --with test,dev
 ```
 
 3. Активируйте виртуальное окружение
+
 ```bash
 poetry shell
 ```
 
 4. Настройте переменные окружения
+
 ```bash
 cp .env.example .env
 ```
 Отредактируйте .env и .env.test под свои настройки
 
 5. Примените миграции базы данных
+
 ```bash
 alembic upgrade head
 ```
 
 6. Запустите сервер для разработки
+
 ```bash
 uvicorn app.main:app --reload
 ```
@@ -94,4 +100,110 @@ cost_accounting
 ```
 
 ## Разработка
-## API-документация. Примеры запросов
+
+## Некоторые примеры запросов к API
+
+**Создать пользователя** - доступно всем пользователям
+
+```bash
+curl -X 'POST' \
+  'http://127.0.0.1:8000/api/v1/users' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "login": "user_example"
+}'
+```
+
+Response (201 Created):
+```
+{
+  "login": "user_example",
+  "id": 0
+}
+```
+
+**Создать кошелек** - требуется авторизация
+
+```bash
+curl -X 'POST' \
+  'http://127.0.0.1:8000/api/v1/wallets' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer your_login' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "name": "wallet_example",
+  "initial_balance": 500,
+  "currency": "rub"
+}'
+```
+
+Response (201 Created):
+```
+{
+  "id": 0,
+  "name": "wallet_example",
+  "balance": "500.0000000000",
+  "currency": "rub"
+}
+```
+
+#### Добавить рецепт в список покупок
+Доступно только авторизованным пользователям
+
+__POST__ http://localhost/api/recipes/{id}/shopping_cart/
+
+Response:
+```
+{
+  "id": 0,
+  "name": "string",
+  "image": "http://python_django_practice.example.org/media/recipes/images/image.png",
+  "cooking_time": 1
+}
+```
+
+#### Добавить рецепт в избранное
+Доступно только авторизованному пользователю
+
+__POST__ http://localhost/api/recipes/{id}/favorite/
+
+Response:
+```
+{
+  "id": 0,
+  "name": "string",
+  "image": "http://python_django_practice.example.org/media/recipes/images/image.png",
+  "cooking_time": 1
+}
+```
+
+#### Подписаться на пользователя
+Доступно только авторизованным пользователям
+
+__POST__ http://localhost/api/users/{id}/subscribe/
+
+Response:
+```
+{
+  "email": "user@example.com",
+  "id": 0,
+  "username": "string",
+  "first_name": "Вася",
+  "last_name": "Иванов",
+  "is_subscribed": true,
+  "recipes": [
+    {
+      "id": 0,
+      "name": "string",
+      "image": "http://python_django_practice.example.org/media/recipes/images/image.png",
+      "cooking_time": 1
+    }
+  ],
+  "recipes_count": 0,
+  "avatar": "http://python_django_practice.example.org/media/users/image.png"
+}
+```
+
+## Автор
+Илья Хмыров - [GitHub](https://github.com/ivxmirov)
