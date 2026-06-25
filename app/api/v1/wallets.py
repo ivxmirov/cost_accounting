@@ -17,7 +17,7 @@ async def get_balance(
     return await wallets_service.get_total_balance(db, current_user)
 
 
-@router.post("/wallets", response_model=WalletResponse)
+@router.post("/wallets", response_model=WalletResponse, status_code=201)
 def create_wallet(
     wallet: CreateWalletRequest,
     db: Session = Depends(get_db),

@@ -25,7 +25,7 @@ def test_add_expense_success(db_session, client):
     )
 
     # Assert
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response.json()["type"] == "expense"
     assert Decimal(str(response.json()["amount"])) == Decimal(50)
     assert response.json()["currency"] == "rub"
@@ -168,7 +168,7 @@ def test_add_income_success(db_session, client):
     )
 
     # Assert
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response.json()["type"] == "income"
     assert Decimal(str(response.json()["amount"])) == Decimal(50)
     assert response.json()["currency"] == "rub"

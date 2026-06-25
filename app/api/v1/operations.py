@@ -12,7 +12,7 @@ from app.service.operations import transfer_between_wallets
 router = APIRouter()
 
 
-@router.post("/operations/income")
+@router.post("/operations/income", status_code=201)
 def add_income(
     operation: OperationRequest,
     db: Session = Depends(get_db),
@@ -21,7 +21,7 @@ def add_income(
     return operations_service.add_income(db, current_user, operation)
 
 
-@router.post("/operations/expense")
+@router.post("/operations/expense", status_code=201)
 def add_expense(
     operation: OperationRequest,
     db: Session = Depends(get_db),
@@ -43,7 +43,7 @@ def get_operations_list(
     )
 
 
-@router.post("/operations/transfer", response_model=OperationResponse)
+@router.post("/operations/transfer", response_model=OperationResponse, status_code=201)
 async def create_transfer(
     payload: TransferCreateSchema,
     user: User = Depends(get_current_user),
