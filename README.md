@@ -59,7 +59,8 @@ uvicorn app.main:app --reload
 - ReDoc: http://localhost:8000/redoc
 
 ## Структура
-```
+
+```text
 cost_accounting
 ├─ .pre-commit-config.yaml
 ├─ app
@@ -119,7 +120,7 @@ Response (201 Created):
 ```
 {
   "login": "user_example",
-  "id": 0
+  "id": 1
 }
 ```
 
@@ -141,69 +142,69 @@ curl -X 'POST' \
 Response (201 Created):
 ```
 {
-  "id": 0,
+  "id": 1,
   "name": "wallet_example",
   "balance": "500.0000000000",
   "currency": "rub"
 }
 ```
 
-#### Добавить рецепт в список покупок
-Доступно только авторизованным пользователям
+**Пополнить баланс кошелька** - требуется авторизация
 
-__POST__ http://localhost/api/recipes/{id}/shopping_cart/
+```bash
+curl -X 'POST' \
+  'http://127.0.0.1:8000/api/v1/operations/income' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer your_login' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "wallet_name": "wallet_example",
+  "amount": 25000,
+  "description": "gift"
+}'
+```
 
-Response:
+Response (201 Created):
 ```
 {
-  "id": 0,
-  "name": "string",
-  "image": "http://python_django_practice.example.org/media/recipes/images/image.png",
-  "cooking_time": 1
+  "id": 1,
+  "wallet_id": 1,
+  "type": "income",
+  "amount": "25000.0000000000",
+  "currency": "rub",
+  "category": "gift",
+  "subcategory": null,
+  "created_at": "2026-06-25T13:34:27.526417"
 }
 ```
 
-#### Добавить рецепт в избранное
-Доступно только авторизованному пользователю
+**Перевести деньги между кошельками** - требуется авторизация
+```bash
+curl -X 'POST' \
+  'http://127.0.0.1:8000/api/v1/operations/transfer' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer your_login' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "from_wallet_id": 1,
+  "to_wallet_id": 2,
+  "amount": 30
+}'
+```
 
-__POST__ http://localhost/api/recipes/{id}/favorite/
-
-Response:
+Response (201 Created):
 ```
 {
-  "id": 0,
-  "name": "string",
-  "image": "http://python_django_practice.example.org/media/recipes/images/image.png",
-  "cooking_time": 1
-}
-```
-
-#### Подписаться на пользователя
-Доступно только авторизованным пользователям
-
-__POST__ http://localhost/api/users/{id}/subscribe/
-
-Response:
-```
-{
-  "email": "user@example.com",
-  "id": 0,
-  "username": "string",
-  "first_name": "Вася",
-  "last_name": "Иванов",
-  "is_subscribed": true,
-  "recipes": [
-    {
-      "id": 0,
-      "name": "string",
-      "image": "http://python_django_practice.example.org/media/recipes/images/image.png",
-      "cooking_time": 1
-    }
-  ],
-  "recipes_count": 0,
-  "avatar": "http://python_django_practice.example.org/media/users/image.png"
+  "id": 1,
+  "wallet_id": 1,
+  "type": "transfer",
+  "amount": "0.4000000000",
+  "currency": "usd",
+  "category": "transfer",
+  "subcategory": null,
+  "created_at": "2026-06-25T13:42:47.696518"
 }
 ```
 
 ## Автор
-Илья Хмыров - [GitHub](https://github.com/ivxmirov)
+ivxmirov - [GitHub](https://github.com/ivxmirov)
