@@ -15,38 +15,42 @@
 [![Mypy](https://img.shields.io/badge/Mypy-1.19+-2F4858.svg)](https://mypy-lang.org)
 
 ## Быстрый старт
-### Установка и запуск
 
 1. Клонируйте репозиторий
-```
+```bash
 git clone https://github.com/ivxmirov/cost_accounting.git
 ```
 
 2. Установите зависимости (включая dev и test-зависимости)
-```
+```bash
 poetry install --with test,dev
 ```
 
 3. Активируйте виртуальное окружение
-```
+```bash
 poetry shell
 ```
 
 4. Настройте переменные окружения
+```bash
 cp .env.example .env
-Отредактируйте .env под свои настройки
+```
+Отредактируйте .env и .env.test под свои настройки
 
 5. Примените миграции базы данных
+```bash
 alembic upgrade head
+```
 
 6. Запустите сервер для разработки
+```bash
 uvicorn app.main:app --reload
+```
 
-Готово! API доступно по адресу:
+**Готово! API доступно по адресу:**
+- Web UI: http://localhost:8000/static/index.html
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
-
-## Конфигурация
 
 ## Структура
 ```
