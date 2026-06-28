@@ -169,12 +169,18 @@ Response (201 Created):
 ```text
 cost_accounting
 ├─ .pre-commit-config.yaml
+├─ .python-version
+├─ .ruff_cache
+│  ├─ 0.8.4
+│  │  ├─ 15770996931700005560
+│  │  └─ 8492191901104820292
+│  └─ CACHEDIR.TAG
 ├─ alembic
 │  ├─ env.py
 │  ├─ README
 │  ├─ script.py.mako
 │  └─ versions
-│     └─ af914c1abcba_initial.py
+│     └─ d74888e54f65_initial_migration.py
 ├─ alembic.ini
 ├─ app
 │  ├─ api
@@ -210,15 +216,15 @@ cost_accounting
 │  │     └─ bootstrap.bundle.min.js
 │  └─ __init__.py
 ├─ main.py
-├─ poetry.lock
 ├─ pyproject.toml
 ├─ README.md
 ├─ test-reports
-└─ tests
-   ├─ conftest.py
-   ├─ test_api
-   │  └─ test_operations.py
-   └─ __init__.py
+├─ tests
+│  ├─ conftest.py
+│  ├─ test_api
+│  │  └─ test_operations.py
+│  └─ __init__.py
+└─ uv.lock
 ```
 
 ## Автор
