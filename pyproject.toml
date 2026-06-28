@@ -15,65 +15,64 @@ dependencies = [
     "aiohttp (>=3.13.5,<4.0.0)"
 ]
 
-[tool.poetry]
-packages = [{include = "cost_accounting", from = "src"}]
-
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
-
 [dependency-groups]
-test = [
-    "pytest (>=9.0.2,<10.0.0)"
-]
 dev = [
-    "mypy (>=1.19.1,<2.0.0)",
-    "types-requests (>=2.33.0.20260402,<3.0.0.0)"
+    "pre-commit>=4.6.0",
+    "ruff>=0.15.12",
+    "mypy>=1.20.2",
+]
+test = [
+    "pytest>=8.4.2",
+    "pytest-asyncio==0.24.0",
+    "pytest-cov>=7.1.0",
 ]
 
-[tool.pylint."messages control"]
-# Only show warnings with the listed confidence levels. Leave empty to show all.
-# Valid levels: HIGH, CONTROL_FLOW, INFERENCE, INFERENCE_FAILURE, UNDEFINED.
-confidence = [
-    "HIGH",
-    "CONTROL_FLOW",
-    "INFERENCE",
-    "INFERENCE_FAILURE",
-    "UNDEFINED",
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = [
+    "alembic",
+    "test-reports",
 ]
 
-disable = [
-  "C0103",  # invalid-name
-  "C0114",  # missing-module-docstring
-  "C0115",  # missing-class-docstring
-  "C0116",  # missing-function-docstring
-  "R0903",  # too-few-public-methods
-  "R0913",  # too-many-arguments,
-  "R0917",  # too-many-positional-arguments,
-  "import-error",
-  "no-name-in-module",
-  "wrong-import-order",
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "W",   # pycodestyle warnings
 ]
 
-[tool.pylint.master]
-ignore-patterns = []
-extension-pkg-allow-list = ["pytest", "sqlalchemy"]
+[tool.ruff.format]
+# Форматирование фрагментов кода в докстрингах
+docstring-code-format = true
+# Стиль кавычек
+quote-style = "double"
+# Перенос элементов в зависимости от запятой в конце строки
+skip-magic-trailing-comma = false
 
-[tool.pylint."tests"]
-disable = [
-    "redefined-outer-name",
-    "missing-function-docstring",
-    "protected-access",
+[tool.ruff.lint.isort]
+# Перенос импортов в зависимости от запятой в конце строки
+split-on-trailing-comma = true
+
+[tool.mypy]
+python_version = "3.12"
+strict = false
+ignore_missing_imports = true
+warn_return_any = false
+warn_unused_configs = true
+follow_imports = "normal"
+exclude = [
+    "venv/",
+    ".venv/",
+    "tests/",
+    "migrations/",
+    ".*/__pycache__/",
+    "alembic/",
+    "test-reports/",
 ]
-
-[tool.isort]
-profile = "black"
-line_length = 88
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = false
-use_parentheses = true
-ensure_newline_before_comments = true
+cache_dir = ".mypy_cache"
 
 [tool.pyright]
 exclude = [
@@ -81,15 +80,6 @@ exclude = [
     "**/__pycache__",
     "**/.*",
     "alembic/**",
-    ".venv"
-]
-
-[tool.ruff]
-exclude = [
-    "alembic",
-]
-
-[tool.mypy]
-exclude = [
-    "alembic/",
+    "test-reports/**",
+    ".venv",
 ]

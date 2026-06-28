@@ -1,50 +1,16 @@
-default_language_version:
-    python: python3.11
-
 repos:
--   repo: local
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
     hooks:
-      - id: isort
-        name: isort
-        entry: poetry run isort
-        language: system
-        types: [python]
-        exclude: ^(tests/|alembic/)
-        args: ["--settings-file=pyproject.toml"]
-
-      - id: black
-        name: black
-        entry: poetry run black
-        language: system
-        types: [python]
-        exclude: ^(tests/|alembic/)
-        args: ["--config=pyproject.toml"]
-
-      - id: pylint
-        name: pylint
-        entry: poetry run pylint
-        language: system
-        types: [python]
-        exclude: ^(tests/|alembic/)
-        args: ["--rcfile=pyproject.toml"]
-
+      - id: ruff
+        args: [--fix]
+        files: ^app/.*\.py$
+      - id: ruff-format
+        files: ^app/.*\.py$
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
       - id: mypy
-        name: mypy
-        entry: poetry run mypy
-        language: system
-        types: [python]
-        exclude: ^(tests/|alembic/)
-        args: [
-            "--config-file=pyproject.toml",
-            "--junit-xml", "test-reports/mypy-junit.xml",
-            "--show-error-codes"
-        ]
-        require_serial: true
-
--   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
-    hooks:
-    -   id: trailing-whitespace
-    -   id: end-of-file-fixer
-    -   id: check-yaml
-    -   id: debug-statements
+        additional_dependencies: []
+        pass_filenames: false
+        args: [app/]

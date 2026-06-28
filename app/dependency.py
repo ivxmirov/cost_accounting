@@ -1,4 +1,5 @@
 from typing import Generator
+from urllib.parse import unquote
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -23,7 +24,7 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ) -> User:
-    login = credentials.credentials
+    login = unquote(credentials.credentials)
     user = users_repository.get_user(db, login)
 
     if not user:

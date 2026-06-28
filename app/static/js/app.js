@@ -1,7 +1,13 @@
 const API_BASE = '../api/v1';
-let currentUser = null;
+let currentUser = localStorage.getItem('token') || null;
 let wallets = [];
 let operations = [];
+
+function getAuthHeader() {
+    const rawToken = currentUser || localStorage.getItem('token');
+    if (!rawToken) return {};
+    return { 'Authorization': `Bearer ${encodeURIComponent(rawToken)}` };
+}
 
 function showToast(title, message, isError = false) {
     const toastEl = document.getElementById('toastNotification');
@@ -57,6 +63,7 @@ async function register() {
         });
 
         if (response.ok) {
+            localStorage.setItem('token', username);
             showSuccess('Регистрация успешна!');
             currentUser = username;
             showMainSection();
@@ -70,29 +77,36 @@ async function register() {
 }
 
 async function login() {
-    const username = document.getElementById('username').value.trim();
+    const resp = await fetch(`${API_BASE}/users/me`, {
+        headers: { 'Authorization': `Bearer ${encodeURIComponent(username)}` }
+    });
     if (!username) {
         showError('Введите логин');
         return;
     }
-    currentUser = username;
-    // Проверяем наличие пользователя через /users/me
+
     try {
         const resp = await fetch(`${API_BASE}/users/me`, {
-            headers: { 'Authorization': `Bearer ${encodeURIComponent(currentUser)}` }
+            headers: { 'Authorization': `Bearer ${username}` }
         });
-        if (!resp.ok) {
+
+        if (resp.ok) {
+            // Успешный вход
+            currentUser = username;
+            localStorage.setItem('token', username);
+            showMainSection();
+        } else {
+            currentUser = null;
             const data = await resp.json().catch(() => ({}));
-            showError(data.detail || 'Пользователь не найден');
-            return;
+            showError(data.detail || 'Пользователь не найден. Зарегистрируйтесь.');
         }
-        showMainSection();
     } catch (e) {
         showError('Не удалось подключиться к серверу');
     }
 }
 
 function logout() {
+    localStorage.removeItem('token');
     currentUser = null;
     wallets = [];
     operations = [];
@@ -118,7 +132,10 @@ async function loadAllData() {
 async function loadWallets() {
     try {
         const response = await fetch(`${API_BASE}/wallets`, {
-            headers: { 'Authorization': `Bearer ${encodeURIComponent(currentUser)}` }
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            }
         });
 
         if (response.ok) {
@@ -175,7 +192,10 @@ async function loadWallets() {
 async function loadOperations() {
     try {
         const response = await fetch(`${API_BASE}/operations`, {
-            headers: { 'Authorization': `Bearer ${encodeURIComponent(currentUser)}` }
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            }
         });
 
         if (response.ok) {
@@ -293,6 +313,7 @@ function renderOperationsTable() {
 }
 
 async function updateTotalBalance() {
+    const token = currentUser || localStorage.getItem('token');
     if (wallets.length === 0) {
         document.getElementById('totalBalance').innerHTML = `
             0.00 ₽
@@ -304,7 +325,7 @@ async function updateTotalBalance() {
     try {
         // Получаем общий баланс в рублях с сервера (с конвертацией валют)
         const response = await fetch(`${API_BASE}/balance`, {
-            headers: { 'Authorization': `Bearer ${encodeURIComponent(currentUser)}` }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
 
         if (response.ok) {
@@ -370,12 +391,14 @@ async function addWallet() {
         return;
     }
 
+    const token = currentUser || localStorage.getItem('token');
+
     try {
         const response = await fetch(`${API_BASE}/wallets`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${encodeURIComponent(currentUser)}`
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({ name, currency, initial_balance: balance })
         });
@@ -421,7 +444,7 @@ async function addIncome() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${encodeURIComponent(currentUser)}`
+                ...getAuthHeader()
             },
             body: JSON.stringify({
                 wallet_name: wallet.name,
@@ -478,7 +501,7 @@ async function addExpense() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${encodeURIComponent(currentUser)}`
+                ...getAuthHeader()
             },
             body: JSON.stringify({
                 wallet_name: wallet.name,
@@ -529,7 +552,7 @@ async function transfer() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${encodeURIComponent(currentUser)}`
+                ...getAuthHeader()
             },
             body: JSON.stringify({ from_wallet_id, to_wallet_id, amount })
         });
@@ -579,7 +602,10 @@ async function loadReport() {
         });
 
         const response = await fetch(`${API_BASE}/operations?${params}`, {
-            headers: { 'Authorization': `Bearer ${encodeURIComponent(currentUser)}` }
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeader()
+            }
         });
 
         if (response.ok) {
