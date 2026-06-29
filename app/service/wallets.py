@@ -26,15 +26,11 @@ async def get_total_balance(db: Session, current_user: User) -> TotalBalance:
     return TotalBalance(total_balance=total_balance)
 
 
-def create_wallet(
-    db: Session, current_user: User, wallet: CreateWalletRequest
-) -> WalletResponse:
+def create_wallet(db: Session, current_user: User, wallet: CreateWalletRequest) -> WalletResponse:
     if wallets_repository.is_wallet_exist(db, current_user.id, wallet.name):
-        raise HTTPException(
-            status_code=400, detail=f"Wallet <{wallet.name}> already exists."
-        )
+        raise HTTPException(status_code=400, detail=f"Wallet <{wallet.name}> already exists.")
 
-    wallet = wallets_repository.create_wallet(
+    wallet_data = wallets_repository.create_wallet(
         db,
         current_user.id,
         wallet.name,
@@ -44,7 +40,7 @@ def create_wallet(
 
     db.commit()
 
-    return WalletResponse.model_validate(wallet)
+    return WalletResponse.model_validate(wallet_data)
 
 
 def get_all_wallets(db: Session, current_user: User) -> list[WalletResponse]:
