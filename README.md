@@ -183,11 +183,6 @@ Response (201 Created):
 cost_accounting
 ├─ .pre-commit-config.yaml
 ├─ .python-version
-├─ .ruff_cache
-│  ├─ 0.8.4
-│  │  ├─ 15770996931700005560
-│  │  └─ 8492191901104820292
-│  └─ CACHEDIR.TAG
 ├─ alembic
 │  ├─ env.py
 │  ├─ README
@@ -231,7 +226,6 @@ cost_accounting
 ├─ main.py
 ├─ pyproject.toml
 ├─ README.md
-├─ test-reports
 ├─ tests
 │  ├─ conftest.py
 │  ├─ test_api
