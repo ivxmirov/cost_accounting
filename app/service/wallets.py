@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from fastapi import HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.enum import CurrencyEnum
 from app.models import User
@@ -10,8 +10,8 @@ from app.schemas import CreateWalletRequest, TotalBalance, WalletResponse
 from app.service import exchange_service
 
 
-async def get_total_balance(db: Session, current_user: User) -> TotalBalance:
-    wallets = wallets_repository.get_all_wallets(db, current_user.id)
+async def get_total_balance(db: AsyncSession, current_user: User) -> TotalBalance:
+    wallets = await wallets_repository.get_all_wallets(db, current_user.id)
     total_balance = Decimal(0)
 
     for wallet in wallets:
@@ -26,11 +26,13 @@ async def get_total_balance(db: Session, current_user: User) -> TotalBalance:
     return TotalBalance(total_balance=total_balance)
 
 
-def create_wallet(db: Session, current_user: User, wallet: CreateWalletRequest) -> WalletResponse:
-    if wallets_repository.is_wallet_exist(db, current_user.id, wallet.name):
+async def create_wallet(
+    db: AsyncSession, current_user: User, wallet: CreateWalletRequest
+) -> WalletResponse:
+    if await wallets_repository.is_wallet_exist(db, current_user.id, wallet.name):
         raise HTTPException(status_code=400, detail=f"Wallet <{wallet.name}> already exists.")
 
-    wallet_data = wallets_repository.create_wallet(
+    wallet_data = await wallets_repository.create_wallet(
         db,
         current_user.id,
         wallet.name,
@@ -38,11 +40,11 @@ def create_wallet(db: Session, current_user: User, wallet: CreateWalletRequest) 
         wallet.currency,
     )
 
-    db.commit()
+    await db.commit()
 
     return WalletResponse.model_validate(wallet_data)
 
 
-def get_all_wallets(db: Session, current_user: User) -> list[WalletResponse]:
-    wallets = wallets_repository.get_all_wallets(db, current_user.id)
+async def get_all_wallets(db: AsyncSession, current_user: User) -> list[WalletResponse]:
+    wallets = await wallets_repository.get_all_wallets(db, current_user.id)
     return [WalletResponse.model_validate(wallet) for wallet in wallets]
