@@ -8,12 +8,14 @@
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.135+-009688.svg)](https://fastapi.tiangolo.com)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0+-D71F00.svg)](https://www.sqlalchemy.org)
+[![asyncpg](https://img.shields.io/badge/asyncpg-0.31+-2F6790.svg)](https://github.com/MagicStack/asyncpg)
 
 **Инфраструктура:**  
 [![uv](https://img.shields.io/badge/uv-0.7+-DE5FE2.svg)](https://docs.astral.sh/uv)
 [![Uvicorn](https://img.shields.io/badge/Uvicorn-0.42+-4B8BBE.svg)](https://www.uvicorn.org)
 [![HTTPX](https://img.shields.io/badge/HTTPX-0.28+-5A29E4.svg)](https://www.python-httpx.org)
 [![Aiohttp](https://img.shields.io/badge/Aiohttp-3.13+-2C5BB4.svg)](https://docs.aiohttp.org)
+[![Alembic](https://img.shields.io/badge/Alembic-1.18+-6E4B8B.svg)](https://alembic.sqlalchemy.org)
 
 **Качество кода:**  
 [![Ruff](https://img.shields.io/badge/Ruff-0.15+-D7FF64.svg)](https://docs.astral.sh/ruff)
@@ -188,7 +190,8 @@ cost_accounting
 │  ├─ README
 │  ├─ script.py.mako
 │  └─ versions
-│     └─ d74888e54f65_initial_migration.py
+│     ├─ 4e767668dbe0_add_tables.py
+│     └─ 7598617a985e_clean_start.py
 ├─ alembic.ini
 ├─ app
 │  ├─ api
