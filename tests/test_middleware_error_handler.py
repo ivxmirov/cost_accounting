@@ -4,10 +4,16 @@ from app.service import users as user_service
 
 
 def test_http_exception_format(client, test_user):
-    response = client.post("/api/v1/users", json={"login": test_user.login, "password": "password123"})
+    response = client.post(
+        "/api/v1/users", json={"login": test_user.login, "password": "password123"}
+    )
     assert response.status_code == 400
     data = response.json()
-    assert data == {"code": "400", "message": "Пользователь с таким логином уже существует", "details": None}
+    assert data == {
+        "code": "400",
+        "message": "Пользователь с таким логином уже существует",
+        "details": None,
+    }
 
 
 def test_http_exception_with_dict_detail(client, monkeypatch):
@@ -25,7 +31,6 @@ def test_http_exception_with_dict_detail(client, monkeypatch):
     assert data["code"] == "400"
     assert data["message"] == "Custom message"
     assert data["details"] == {"reason": "duplicate"}
-
 
 
 def test_validation_error_format(client):
@@ -66,4 +71,3 @@ def test_error_response_structure(client):
     assert isinstance(data["code"], str)
     assert isinstance(data["message"], str) or data["message"] is None
     assert isinstance(data["details"], (dict, list)) or data["details"] is None
-

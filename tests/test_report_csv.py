@@ -265,7 +265,9 @@ def test_report_csv_currency_conversion(
     assert "RUB" in lines[1]
 
 
-def test_report_csv_empty_category(client, test_user, test_wallet, db, auth_headers, mock_currency_api):
+def test_report_csv_empty_category(
+    client, test_user, test_wallet, db, auth_headers, mock_currency_api
+):
     """CSV отчёт должен правильно обрабатывать пустые категории."""
     operation = Operation(
         wallet_id=test_wallet.id,
@@ -293,4 +295,3 @@ def test_report_csv_empty_category(client, test_user, test_wallet, db, auth_head
     lines = response.text.strip().split("\n")
     assert len(lines) == 2
     assert lines[1].endswith(",USD") or ",," in lines[1]
-

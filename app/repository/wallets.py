@@ -7,66 +7,71 @@ from app.enum import CurrencyEnum
 from app.models import Wallet
 
 
-async def add_income(
-    db: AsyncSession, user_id: int, wallet_name: str, amount: Decimal
-) -> Wallet | None:
-    result = await db.execute(
-        select(Wallet).filter(Wallet.name == wallet_name, Wallet.user_id == user_id)
-    )
-    wallet = result.scalars().first()
-    if wallet:
-        wallet.balance += amount
-    return wallet
-
-
-async def add_expense(
-    db: AsyncSession, user_id: int, wallet_name: str, amount: Decimal
-) -> Wallet | None:
-    result = await db.execute(
-        select(Wallet).filter(Wallet.name == wallet_name, Wallet.user_id == user_id)
-    )
-    wallet = result.scalars().first()
-    if wallet:
-        wallet.balance -= amount
-    return wallet
-
-
 async def is_wallet_exist(db: AsyncSession, user_id: int, wallet_name: str) -> bool:
     result = await db.execute(
-        select(Wallet).filter(Wallet.name == wallet_name, Wallet.user_id == user_id)
+        select(Wallet).where(Wallet.name == wallet_name, Wallet.user_id == user_id)
     )
-    return result.scalars().first() is not None
+    return result.scalar_one_or_none() is not None
 
 
-async def get_wallet_balance_by_name(
-    db: AsyncSession, user_id: int, wallet_name: str
-) -> Wallet | None:
+async def add_income(db: AsyncSession, user_id: int, wallet_name: str, amount: Decimal) -> Wallet:
     result = await db.execute(
-        select(Wallet).filter(Wallet.name == wallet_name, Wallet.user_id == user_id)
+        select(Wallet).where(Wallet.name == wallet_name, Wallet.user_id == user_id)
     )
-    return result.scalars().first()
+    wallet = result.scalar_one()
+    wallet.balance += amount
+    return wallet
 
 
-async def get_wallet_by_id(db: AsyncSession, user_id: int, wallet_id: int) -> Wallet | None:
+async def get_wallet_balance_by_name(db: AsyncSession, user_id: int, wallet_name: str) -> Wallet:
     result = await db.execute(
-        select(Wallet).filter(Wallet.id == wallet_id, Wallet.user_id == user_id)
+        select(Wallet).where(Wallet.name == wallet_name, Wallet.user_id == user_id)
     )
-    return result.scalars().first()
+    return result.scalar_one()
 
 
-async def get_all_wallets(db: AsyncSession, user_id: int) -> list[Wallet]:
-    result = await db.execute(select(Wallet).filter(Wallet.user_id == user_id))
+async def add_expense(db: AsyncSession, user_id: int, wallet_name: str, amount: Decimal) -> Wallet:
+    result = await db.execute(
+        select(Wallet).where(Wallet.name == wallet_name, Wallet.user_id == user_id)
+    )
+    wallet = result.scalar_one()
+    wallet.balance -= amount
+    return wallet
+
+
+async def get_all_wallets(
+    db: AsyncSession,
+    user_id: int,
+) -> list[Wallet]:
+    result = await db.execute(select(Wallet).where(Wallet.user_id == user_id))
     return list(result.scalars().all())
 
 
 async def create_wallet(
-    db: AsyncSession,
-    user_id: int,
-    wallet_name: str,
-    initial_balance: Decimal,
-    currency: CurrencyEnum,
+    db: AsyncSession, user_id: int, wallet_name: str, amount: Decimal, currency: CurrencyEnum
 ) -> Wallet:
-    wallet = Wallet(name=wallet_name, balance=initial_balance, user_id=user_id, currency=currency)
+    wallet = Wallet(name=wallet_name, balance=amount, user_id=user_id, currency=currency)
     db.add(wallet)
     await db.flush()
     return wallet
+
+
+async def get_wallet_by_id(db: AsyncSession, user_id: int, wallet_id: int) -> Wallet | None:
+    result = await db.execute(
+        select(Wallet).where(Wallet.id == wallet_id, Wallet.user_id == user_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_wallet_by_id_without_user_check(db: AsyncSession, wallet_id: int) -> Wallet | None:
+    """
+    Находит кошелек в базе данных по идентификатору БЕЗ проверки владельца
+    Используется для различия между ошибками 404 (кошелек не найден) и 403 (чужой кошелек)
+    Args:
+        db: Сессия базы данных
+        wallet_id: Идентификатор кошелька для поиска
+    Returns:
+        Объект кошелька или None, если кошелек не найден
+    """
+    result = await db.execute(select(Wallet).where(Wallet.id == wallet_id))
+    return result.scalar_one_or_none()

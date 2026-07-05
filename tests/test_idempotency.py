@@ -214,6 +214,5 @@ def test_idempotency_preserves_wallet_balance(client, test_user, test_wallet, db
         assert response.status_code in (200, 201)
 
     db.refresh(test_wallet)
-    expected_balance = initial_balance + Decimal("200.0")  
+    expected_balance = initial_balance + Decimal("200.0")
     assert test_wallet.balance == expected_balance
-

@@ -43,76 +43,78 @@ async def test_e2e_basic_user_flow_registration_to_expense(client, db, mock_curr
     - pytest async support: https://docs.pytest.org/en/stable/how-to/asyncio.html
     - FastAPI TestClient: https://fastapi.tiangolo.com/tutorial/testing/
     """
-    
-    response = client.post("/api/v1/users", json={"login": "e2e_user_1", "password": "password123"})
-    assert response.status_code == 201  
-    user_data = response.json()
-    user_data["id"]  
-    user_data["login"]  
 
-    
+    response = client.post("/api/v1/users", json={"login": "e2e_user_1", "password": "password123"})
+    assert response.status_code == 201
+    user_data = response.json()
+    user_data["id"]
+    user_data["login"]
+
     login_response = client.post(
         "/api/v1/auth/login",
         json={"login": "e2e_user_1", "password": "password123"},
     )
-    assert login_response.status_code == 200  
-    access_token = login_response.json()["access_token"]  
+    assert login_response.status_code == 200
+    access_token = login_response.json()["access_token"]
 
-    
     headers = {"Authorization": f"Bearer {access_token}"}
 
-    
-    wallet_name = "Main Wallet"  
+    wallet_name = "Main Wallet"
     wallet_response = client.post(
         "/api/v1/wallets",
         json={"name": wallet_name, "initial_balance": 0.0, "currency": "usd"},
         headers=headers,
     )
-    assert wallet_response.status_code == 201  
+    assert wallet_response.status_code == 201
     wallet_data = wallet_response.json()
-    wallet_id = wallet_data["id"]  
-    assert float(wallet_data["balance"]) == 0.0  
+    wallet_id = wallet_data["id"]
+    assert float(wallet_data["balance"]) == 0.0
 
-    
     income_response = client.put(
         "/api/v1/operations/income",
-        json={"transaction_id": str(uuid.uuid4()), "wallet_name": wallet_name, "amount": 100.0, "description": "Salary"},
+        json={
+            "transaction_id": str(uuid.uuid4()),
+            "wallet_name": wallet_name,
+            "amount": 100.0,
+            "description": "Salary",
+        },
         headers=headers,
     )
-    assert income_response.status_code == 201  
+    assert income_response.status_code == 201
     income_data = income_response.json()
-    assert income_data["type"] == "income"  
-    assert float(income_data["amount"]) == 100.0  
+    assert income_data["type"] == "income"
+    assert float(income_data["amount"]) == 100.0
 
-    
     wallets_response = client.get("/api/v1/wallets", headers=headers)
-    assert wallets_response.status_code == 200  
+    assert wallets_response.status_code == 200
     wallets_data = wallets_response.json()
-    wallet_after_income = next(w for w in wallets_data if w["id"] == wallet_id)  
-    assert float(wallet_after_income["balance"]) == 100.0  
+    wallet_after_income = next(w for w in wallets_data if w["id"] == wallet_id)
+    assert float(wallet_after_income["balance"]) == 100.0
 
-    
     expense_response = client.put(
         "/api/v1/operations/expense",
-        json={"transaction_id": str(uuid.uuid4()), "wallet_name": wallet_name, "amount": 50.0, "description": "Lunch"},
+        json={
+            "transaction_id": str(uuid.uuid4()),
+            "wallet_name": wallet_name,
+            "amount": 50.0,
+            "description": "Lunch",
+        },
         headers=headers,
     )
-    assert expense_response.status_code == 201  
+    assert expense_response.status_code == 201
     expense_data = expense_response.json()
-    assert expense_data["type"] == "expense"  
-    assert float(expense_data["amount"]) == 50.0  
+    assert expense_data["type"] == "expense"
+    assert float(expense_data["amount"]) == 50.0
 
-    
     wallets_final_response = client.get("/api/v1/wallets", headers=headers)
-    assert wallets_final_response.status_code == 200  
+    assert wallets_final_response.status_code == 200
     wallets_final_data = wallets_final_response.json()
-    wallet_final = next(w for w in wallets_final_data if w["id"] == wallet_id)  
-    assert float(wallet_final["balance"]) == 50.0  
+    wallet_final = next(w for w in wallets_final_data if w["id"] == wallet_id)
+    assert float(wallet_final["balance"]) == 50.0
 
-    
-    wallet_in_db = db.get(Wallet, wallet_id)  
-    assert wallet_in_db is not None  
-    assert float(wallet_in_db.balance) == 50.0  
+    wallet_in_db = db.get(Wallet, wallet_id)
+    assert wallet_in_db is not None
+    assert float(wallet_in_db.balance) == 50.0
 
 
 @pytest.mark.asyncio
@@ -155,83 +157,84 @@ async def test_e2e_multi_wallet_flow_with_transfer(client, db, mock_currency_api
     - pytest fixtures: https://docs.pytest.org/en/stable/fixture.html
     - async test patterns: https://docs.pytest.org/en/stable/how-to/asyncio.html#async-fixtures
     """
-    
-    response = client.post("/api/v1/users", json={"login": "e2e_user_2", "password": "password123"})
-    assert response.status_code == 201  
-    user_data = response.json()
-    user_data["login"]  
 
-    
+    response = client.post("/api/v1/users", json={"login": "e2e_user_2", "password": "password123"})
+    assert response.status_code == 201
+    user_data = response.json()
+    user_data["login"]
+
     login_response = client.post(
         "/api/v1/auth/login",
         json={"login": "e2e_user_2", "password": "password123"},
     )
-    assert login_response.status_code == 200  
-    access_token = login_response.json()["access_token"]  
+    assert login_response.status_code == 200
+    access_token = login_response.json()["access_token"]
 
-    
     headers = {"Authorization": f"Bearer {access_token}"}
 
-    
-    wallet1_name = "USD Wallet"  
+    wallet1_name = "USD Wallet"
     wallet1_response = client.post(
         "/api/v1/wallets",
         json={"name": wallet1_name, "initial_balance": 500.0, "currency": "usd"},
         headers=headers,
     )
-    assert wallet1_response.status_code == 201  
+    assert wallet1_response.status_code == 201
     wallet1_data = wallet1_response.json()
-    wallet1_id = wallet1_data["id"]  
+    wallet1_id = wallet1_data["id"]
 
-    
-    wallet2_name = "EUR Wallet"  
+    wallet2_name = "EUR Wallet"
     wallet2_response = client.post(
         "/api/v1/wallets",
         json={"name": wallet2_name, "initial_balance": 0.0, "currency": "eur"},
         headers=headers,
     )
-    assert wallet2_response.status_code == 201  
+    assert wallet2_response.status_code == 201
     wallet2_data = wallet2_response.json()
-    wallet2_id = wallet2_data["id"]  
+    wallet2_id = wallet2_data["id"]
 
-    
     wallets_response = client.get("/api/v1/wallets", headers=headers)
-    assert wallets_response.status_code == 200  
+    assert wallets_response.status_code == 200
     wallets_data = wallets_response.json()
-    assert len(wallets_data) == 2  
+    assert len(wallets_data) == 2
 
-    
     income_response = client.put(
         "/api/v1/operations/income",
-        json={"transaction_id": str(uuid.uuid4()), "wallet_name": wallet1_name, "amount": 200.0, "description": "Bonus"},
+        json={
+            "transaction_id": str(uuid.uuid4()),
+            "wallet_name": wallet1_name,
+            "amount": 200.0,
+            "description": "Bonus",
+        },
         headers=headers,
     )
-    assert income_response.status_code == 201  
+    assert income_response.status_code == 201
 
-    
     transfer_response = client.put(
         "/api/v1/operations/transfer",
-        json={"transaction_id": str(uuid.uuid4()), "from_wallet_id": wallet1_id, "to_wallet_id": wallet2_id, "amount": 100.0},
+        json={
+            "transaction_id": str(uuid.uuid4()),
+            "from_wallet_id": wallet1_id,
+            "to_wallet_id": wallet2_id,
+            "amount": 100.0,
+        },
         headers=headers,
     )
-    assert transfer_response.status_code == 201  
+    assert transfer_response.status_code == 201
     transfer_data = transfer_response.json()
-    assert transfer_data["type"] == "transfer"  
+    assert transfer_data["type"] == "transfer"
 
-    
     balance_response = client.get("/api/v1/balance", headers=headers)
-    assert balance_response.status_code == 200  
+    assert balance_response.status_code == 200
     balance_data = balance_response.json()
-    assert "total_balance" in balance_data  
+    assert "total_balance" in balance_data
 
-    
     wallets_final_response = client.get("/api/v1/wallets", headers=headers)
-    assert wallets_final_response.status_code == 200  
+    assert wallets_final_response.status_code == 200
     wallets_final_data = wallets_final_response.json()
-    wallet1_final = next(w for w in wallets_final_data if w["id"] == wallet1_id)  
-    wallet2_final = next(w for w in wallets_final_data if w["id"] == wallet2_id)  
-    assert float(wallet1_final["balance"]) == 600.0  
-    assert float(wallet2_final["balance"]) > 0.0  
+    wallet1_final = next(w for w in wallets_final_data if w["id"] == wallet1_id)
+    wallet2_final = next(w for w in wallets_final_data if w["id"] == wallet2_id)
+    assert float(wallet1_final["balance"]) == 600.0
+    assert float(wallet2_final["balance"]) > 0.0
 
 
 @pytest.mark.asyncio
@@ -276,91 +279,102 @@ async def test_e2e_operations_history_and_report(client, db, mock_currency_api):
     - pytest assertions: https://docs.pytest.org/en/stable/how-to/assert.html
     - test organization: https://docs.pytest.org/en/stable/explanation/goodpractices.html
     """
-    
-    response = client.post("/api/v1/users", json={"login": "e2e_user_3", "password": "password123"})
-    assert response.status_code == 201  
-    user_data = response.json()
-    user_data["login"]  
 
-    
+    response = client.post("/api/v1/users", json={"login": "e2e_user_3", "password": "password123"})
+    assert response.status_code == 201
+    user_data = response.json()
+    user_data["login"]
+
     login_response = client.post(
         "/api/v1/auth/login",
         json={"login": "e2e_user_3", "password": "password123"},
     )
-    assert login_response.status_code == 200  
-    access_token = login_response.json()["access_token"]  
+    assert login_response.status_code == 200
+    access_token = login_response.json()["access_token"]
 
-    
     headers = {"Authorization": f"Bearer {access_token}"}
 
-    
-    wallet_name = "RUB Wallet"  
+    wallet_name = "RUB Wallet"
     wallet_response = client.post(
         "/api/v1/wallets",
         json={"name": wallet_name, "initial_balance": 0.0, "currency": "rub"},
         headers=headers,
     )
-    assert wallet_response.status_code == 201  
+    assert wallet_response.status_code == 201
     wallet_data = wallet_response.json()
-    wallet_id = wallet_data["id"]  
+    wallet_id = wallet_data["id"]
 
-    
     income1_response = client.put(
         "/api/v1/operations/income",
-        json={"transaction_id": str(uuid.uuid4()), "wallet_name": wallet_name, "amount": 1000.0, "description": "Salary"},
+        json={
+            "transaction_id": str(uuid.uuid4()),
+            "wallet_name": wallet_name,
+            "amount": 1000.0,
+            "description": "Salary",
+        },
         headers=headers,
     )
-    assert income1_response.status_code == 201  
+    assert income1_response.status_code == 201
 
-    
     income2_response = client.put(
         "/api/v1/operations/income",
-        json={"transaction_id": str(uuid.uuid4()), "wallet_name": wallet_name, "amount": 500.0, "description": "Bonus"},
+        json={
+            "transaction_id": str(uuid.uuid4()),
+            "wallet_name": wallet_name,
+            "amount": 500.0,
+            "description": "Bonus",
+        },
         headers=headers,
     )
-    assert income2_response.status_code == 201  
+    assert income2_response.status_code == 201
 
-    
     expense1_response = client.put(
         "/api/v1/operations/expense",
-        json={"transaction_id": str(uuid.uuid4()), "wallet_name": wallet_name, "amount": 300.0, "description": "Groceries"},
+        json={
+            "transaction_id": str(uuid.uuid4()),
+            "wallet_name": wallet_name,
+            "amount": 300.0,
+            "description": "Groceries",
+        },
         headers=headers,
     )
-    assert expense1_response.status_code == 201  
+    assert expense1_response.status_code == 201
 
-    
     expense2_response = client.put(
         "/api/v1/operations/expense",
-        json={"transaction_id": str(uuid.uuid4()), "wallet_name": wallet_name, "amount": 200.0, "description": "Taxi"},
+        json={
+            "transaction_id": str(uuid.uuid4()),
+            "wallet_name": wallet_name,
+            "amount": 200.0,
+            "description": "Taxi",
+        },
         headers=headers,
     )
-    assert expense2_response.status_code == 201  
+    assert expense2_response.status_code == 201
 
-    
     operations_response = client.get("/api/v1/operations", headers=headers)
-    assert operations_response.status_code == 200  
+    assert operations_response.status_code == 200
     operations_data = operations_response.json()
-    assert len(operations_data) == 4  
+    assert len(operations_data) == 4
 
-    
-    operations_by_wallet_response = client.get(f"/api/v1/operations?wallet_id={wallet_id}", headers=headers)
-    assert operations_by_wallet_response.status_code == 200  
+    operations_by_wallet_response = client.get(
+        f"/api/v1/operations?wallet_id={wallet_id}", headers=headers
+    )
+    assert operations_by_wallet_response.status_code == 200
     operations_by_wallet_data = operations_by_wallet_response.json()
-    assert len(operations_by_wallet_data) == 4  
-    for operation in operations_by_wallet_data:  
-        assert operation["wallet_id"] == wallet_id  
+    assert len(operations_by_wallet_data) == 4
+    for operation in operations_by_wallet_data:
+        assert operation["wallet_id"] == wallet_id
 
-    
     wallets_response = client.get("/api/v1/wallets", headers=headers)
-    assert wallets_response.status_code == 200  
+    assert wallets_response.status_code == 200
     wallets_data = wallets_response.json()
-    wallet_final = next(w for w in wallets_data if w["id"] == wallet_id)  
-    assert float(wallet_final["balance"]) == 1000.0  
+    wallet_final = next(w for w in wallets_data if w["id"] == wallet_id)
+    assert float(wallet_final["balance"]) == 1000.0
 
-    
-    wallet_in_db = db.get(Wallet, wallet_id)  
-    assert wallet_in_db is not None  
-    assert float(wallet_in_db.balance) == 1000.0  
+    wallet_in_db = db.get(Wallet, wallet_id)
+    assert wallet_in_db is not None
+    assert float(wallet_in_db.balance) == 1000.0
 
 
 @pytest.mark.asyncio
@@ -397,70 +411,72 @@ async def test_e2e_insufficient_funds_after_income(client, db, mock_currency_api
     - pytest.raises для проверки исключений: https://docs.pytest.org/en/stable/reference/reference.html#pytest.raises
     - error handling tests: https://docs.pytest.org/en/stable/how-to/assert.html#assertions-about-expected-exceptions
     """
-    
-    response = client.post("/api/v1/users", json={"login": "e2e_user_4", "password": "password123"})
-    assert response.status_code == 201  
-    user_data = response.json()
-    user_data["login"]  
 
-    
+    response = client.post("/api/v1/users", json={"login": "e2e_user_4", "password": "password123"})
+    assert response.status_code == 201
+    user_data = response.json()
+    user_data["login"]
+
     login_response = client.post(
         "/api/v1/auth/login",
         json={"login": "e2e_user_4", "password": "password123"},
     )
-    assert login_response.status_code == 200  
-    access_token = login_response.json()["access_token"]  
+    assert login_response.status_code == 200
+    access_token = login_response.json()["access_token"]
 
-    
     headers = {"Authorization": f"Bearer {access_token}"}
 
-    
-    wallet_name = "USD Wallet"  
+    wallet_name = "USD Wallet"
     wallet_response = client.post(
         "/api/v1/wallets",
         json={"name": wallet_name, "initial_balance": 0.0, "currency": "usd"},
         headers=headers,
     )
-    assert wallet_response.status_code == 201  
+    assert wallet_response.status_code == 201
     wallet_data = wallet_response.json()
-    wallet_id = wallet_data["id"]  
+    wallet_id = wallet_data["id"]
 
-    
     income_response = client.put(
         "/api/v1/operations/income",
-        json={"transaction_id": str(uuid.uuid4()), "wallet_name": wallet_name, "amount": 100.0, "description": "Salary"},
+        json={
+            "transaction_id": str(uuid.uuid4()),
+            "wallet_name": wallet_name,
+            "amount": 100.0,
+            "description": "Salary",
+        },
         headers=headers,
     )
-    assert income_response.status_code == 201  
+    assert income_response.status_code == 201
 
-    
     wallets_response = client.get("/api/v1/wallets", headers=headers)
-    assert wallets_response.status_code == 200  
+    assert wallets_response.status_code == 200
     wallets_data = wallets_response.json()
-    wallet_after_income = next(w for w in wallets_data if w["id"] == wallet_id)  
-    assert float(wallet_after_income["balance"]) == 100.0  
+    wallet_after_income = next(w for w in wallets_data if w["id"] == wallet_id)
+    assert float(wallet_after_income["balance"]) == 100.0
 
-    
     expense_response = client.put(
         "/api/v1/operations/expense",
-        json={"transaction_id": str(uuid.uuid4()), "wallet_name": wallet_name, "amount": 240.0, "description": "Expensive item"},
+        json={
+            "transaction_id": str(uuid.uuid4()),
+            "wallet_name": wallet_name,
+            "amount": 240.0,
+            "description": "Expensive item",
+        },
         headers=headers,
     )
-    assert expense_response.status_code == 400  
+    assert expense_response.status_code == 400
     error_data = expense_response.json()
-    assert "Insufficient funds" in error_data["message"]  
+    assert "Insufficient funds" in error_data["message"]
 
-    
     wallets_final_response = client.get("/api/v1/wallets", headers=headers)
-    assert wallets_final_response.status_code == 200  
+    assert wallets_final_response.status_code == 200
     wallets_final_data = wallets_final_response.json()
-    wallet_final = next(w for w in wallets_final_data if w["id"] == wallet_id)  
-    assert float(wallet_final["balance"]) == 100.0  
+    wallet_final = next(w for w in wallets_final_data if w["id"] == wallet_id)
+    assert float(wallet_final["balance"]) == 100.0
 
-    
-    wallet_in_db = db.get(Wallet, wallet_id)  
-    assert wallet_in_db is not None  
-    assert float(wallet_in_db.balance) == 100.0  
+    wallet_in_db = db.get(Wallet, wallet_id)
+    assert wallet_in_db is not None
+    assert float(wallet_in_db.balance) == 100.0
 
 
 @pytest.mark.asyncio
@@ -497,68 +513,65 @@ async def test_e2e_expense_without_income(client, db, mock_currency_api):
     - test isolation: https://docs.pytest.org/en/stable/explanation/fixtures.html#fixture-scopes
     - database testing: https://docs.pytest.org/en/stable/how-to/fixtures.html#fixtures-can-request-other-fixtures
     """
-    
-    response = client.post("/api/v1/users", json={"login": "e2e_user_5", "password": "password123"})
-    assert response.status_code == 201  
-    user_data = response.json()
-    user_data["login"]  
 
-    
+    response = client.post("/api/v1/users", json={"login": "e2e_user_5", "password": "password123"})
+    assert response.status_code == 201
+    user_data = response.json()
+    user_data["login"]
+
     login_response = client.post(
         "/api/v1/auth/login",
         json={"login": "e2e_user_5", "password": "password123"},
     )
-    assert login_response.status_code == 200  
-    access_token = login_response.json()["access_token"]  
+    assert login_response.status_code == 200
+    access_token = login_response.json()["access_token"]
 
-    
     headers = {"Authorization": f"Bearer {access_token}"}
 
-    
-    wallet_name = "USD Wallet"  
+    wallet_name = "USD Wallet"
     wallet_response = client.post(
         "/api/v1/wallets",
         json={"name": wallet_name, "initial_balance": 0.0, "currency": "usd"},
         headers=headers,
     )
-    assert wallet_response.status_code == 201  
+    assert wallet_response.status_code == 201
     wallet_data = wallet_response.json()
-    wallet_id = wallet_data["id"]  
+    wallet_id = wallet_data["id"]
 
-    
     wallets_response = client.get("/api/v1/wallets", headers=headers)
-    assert wallets_response.status_code == 200  
+    assert wallets_response.status_code == 200
     wallets_data = wallets_response.json()
-    wallet_initial = next(w for w in wallets_data if w["id"] == wallet_id)  
-    assert float(wallet_initial["balance"]) == 0.0  
+    wallet_initial = next(w for w in wallets_data if w["id"] == wallet_id)
+    assert float(wallet_initial["balance"]) == 0.0
 
-    
     expense_response = client.put(
         "/api/v1/operations/expense",
-        json={"transaction_id": str(uuid.uuid4()), "wallet_name": wallet_name, "amount": 50.0, "description": "Lunch"},
+        json={
+            "transaction_id": str(uuid.uuid4()),
+            "wallet_name": wallet_name,
+            "amount": 50.0,
+            "description": "Lunch",
+        },
         headers=headers,
     )
-    assert expense_response.status_code == 400  
+    assert expense_response.status_code == 400
     error_data = expense_response.json()
-    assert "Insufficient funds" in error_data["message"]  
+    assert "Insufficient funds" in error_data["message"]
 
-    
     wallets_final_response = client.get("/api/v1/wallets", headers=headers)
-    assert wallets_final_response.status_code == 200  
+    assert wallets_final_response.status_code == 200
     wallets_final_data = wallets_final_response.json()
-    wallet_final = next(w for w in wallets_final_data if w["id"] == wallet_id)  
-    assert float(wallet_final["balance"]) == 0.0  
+    wallet_final = next(w for w in wallets_final_data if w["id"] == wallet_id)
+    assert float(wallet_final["balance"]) == 0.0
 
-    
-    wallet_in_db = db.get(Wallet, wallet_id)  
-    assert wallet_in_db is not None  
-    assert float(wallet_in_db.balance) == 0.0  
+    wallet_in_db = db.get(Wallet, wallet_id)
+    assert wallet_in_db is not None
+    assert float(wallet_in_db.balance) == 0.0
 
-    
     operations_response = client.get("/api/v1/operations", headers=headers)
-    assert operations_response.status_code == 200  
+    assert operations_response.status_code == 200
     operations_data = operations_response.json()
-    assert len(operations_data) == 0  
+    assert len(operations_data) == 0
 
 
 @pytest.mark.asyncio
@@ -595,68 +608,71 @@ async def test_e2e_transfer_insufficient_funds(client, db, mock_currency_api):
     - pytest parametrization: https://docs.pytest.org/en/stable/how-to/parametrize.html
     - test data management: https://docs.pytest.org/en/stable/how-to/fixtures.html
     """
-    
-    response = client.post("/api/v1/users", json={"login": "e2e_user_6", "password": "password123"})
-    assert response.status_code == 201  
-    user_data = response.json()
-    user_data["login"]  
 
-    
+    response = client.post("/api/v1/users", json={"login": "e2e_user_6", "password": "password123"})
+    assert response.status_code == 201
+    user_data = response.json()
+    user_data["login"]
+
     login_response = client.post(
         "/api/v1/auth/login",
         json={"login": "e2e_user_6", "password": "password123"},
     )
-    assert login_response.status_code == 200  
-    access_token = login_response.json()["access_token"]  
+    assert login_response.status_code == 200
+    access_token = login_response.json()["access_token"]
 
-    
     headers = {"Authorization": f"Bearer {access_token}"}
 
-    
-    wallet1_name = "USD Wallet"  
+    wallet1_name = "USD Wallet"
     wallet1_response = client.post(
         "/api/v1/wallets",
         json={"name": wallet1_name, "initial_balance": 100.0, "currency": "usd"},
         headers=headers,
     )
-    assert wallet1_response.status_code == 201  
+    assert wallet1_response.status_code == 201
     wallet1_data = wallet1_response.json()
-    wallet1_id = wallet1_data["id"]  
+    wallet1_id = wallet1_data["id"]
 
-    
-    wallet2_name = "EUR Wallet"  
+    wallet2_name = "EUR Wallet"
     wallet2_response = client.post(
         "/api/v1/wallets",
         json={"name": wallet2_name, "initial_balance": 0.0, "currency": "eur"},
         headers=headers,
     )
-    assert wallet2_response.status_code == 201  
+    assert wallet2_response.status_code == 201
     wallet2_data = wallet2_response.json()
-    wallet2_id = wallet2_data["id"]  
+    wallet2_id = wallet2_data["id"]
 
-    
     income_response = client.put(
         "/api/v1/operations/income",
-        json={"transaction_id": str(uuid.uuid4()), "wallet_name": wallet1_name, "amount": 50.0, "description": "Bonus"},
+        json={
+            "transaction_id": str(uuid.uuid4()),
+            "wallet_name": wallet1_name,
+            "amount": 50.0,
+            "description": "Bonus",
+        },
         headers=headers,
     )
-    assert income_response.status_code == 201  
+    assert income_response.status_code == 201
 
-    
     transfer_response = client.put(
         "/api/v1/operations/transfer",
-        json={"transaction_id": str(uuid.uuid4()), "from_wallet_id": wallet1_id, "to_wallet_id": wallet2_id, "amount": 200.0},
+        json={
+            "transaction_id": str(uuid.uuid4()),
+            "from_wallet_id": wallet1_id,
+            "to_wallet_id": wallet2_id,
+            "amount": 200.0,
+        },
         headers=headers,
     )
-    assert transfer_response.status_code == 400  
+    assert transfer_response.status_code == 400
     error_data = transfer_response.json()
-    assert "Not enough money" in error_data["message"]  
+    assert "Not enough money" in error_data["message"]
 
-    
     wallets_response = client.get("/api/v1/wallets", headers=headers)
-    assert wallets_response.status_code == 200  
+    assert wallets_response.status_code == 200
     wallets_data = wallets_response.json()
-    wallet1_final = next(w for w in wallets_data if w["id"] == wallet1_id)  
-    wallet2_final = next(w for w in wallets_data if w["id"] == wallet2_id)  
-    assert float(wallet1_final["balance"]) == 150.0  
-    assert float(wallet2_final["balance"]) == 0.0  
+    wallet1_final = next(w for w in wallets_data if w["id"] == wallet1_id)
+    wallet2_final = next(w for w in wallets_data if w["id"] == wallet2_id)
+    assert float(wallet1_final["balance"]) == 150.0
+    assert float(wallet2_final["balance"]) == 0.0

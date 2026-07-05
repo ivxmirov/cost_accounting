@@ -8,7 +8,10 @@ from app.models import Wallet
 async def test_transfer_v1_success(client, test_user, db, mock_currency_api, auth_headers):
     """v1: Перевод между кошельками должен успешно списать/зачислить средства."""
     wallet1 = Wallet(
-        user_id=test_user.id, name="USD Wallet", currency=CurrencyEnum.USD, balance=Decimal("1000.0")
+        user_id=test_user.id,
+        name="USD Wallet",
+        currency=CurrencyEnum.USD,
+        balance=Decimal("1000.0"),
     )
     wallet2 = Wallet(
         user_id=test_user.id, name="EUR Wallet", currency=CurrencyEnum.EUR, balance=Decimal("0.0")
@@ -31,10 +34,10 @@ async def test_transfer_v1_success(client, test_user, db, mock_currency_api, aut
     )
     assert response.status_code == 201
     data = response.json()
-    
+
     assert data["type"] == "transfer"
     assert data["wallet_id"] == wallet1.id
-    
+
     db.refresh(wallet1)
     db.refresh(wallet2)
     assert float(wallet1.balance) == 900.0
@@ -124,9 +127,9 @@ def test_transfer_v1_same_currency(client, test_user, db, auth_headers):
     )
     assert response.status_code == 201
     data = response.json()
-    
+
     assert data["type"] == "transfer"
-    
+
     db.refresh(wallet1)
     db.refresh(wallet2)
     assert float(wallet1.balance) == 350.0
@@ -173,5 +176,5 @@ async def test_transfer_v1_idempotency(client, test_user, db, mock_currency_api,
     )
     assert response2.status_code == 200
     data = response2.json()
-    
+
     assert data["type"] == "transfer"

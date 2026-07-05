@@ -5,12 +5,12 @@ from app.models import User
 
 
 async def get_user(db: AsyncSession, login: str) -> User | None:
-    result = await db.execute(select(User).filter(User.login == login))
-    return result.scalars().first()
+    result = await db.execute(select(User).where(User.login == login))
+    return result.scalar_one_or_none()
 
 
-async def create_user(db: AsyncSession, login: str) -> User:
-    user = User(login=login)
+async def create_user(db: AsyncSession, login: str, password_hash: str) -> User:
+    user = User(login=login, password_hash=password_hash)
     db.add(user)
     await db.flush()
     return user

@@ -8,7 +8,10 @@ from app.models import Wallet
 async def test_transfer_v2_with_custom_amount_success(client, test_user, db, auth_headers):
     """v2: Перевод с кастомной суммой получения успешно выполняется."""
     wallet1 = Wallet(
-        user_id=test_user.id, name="RUB Wallet", currency=CurrencyEnum.RUB, balance=Decimal("10000.0")
+        user_id=test_user.id,
+        name="RUB Wallet",
+        currency=CurrencyEnum.RUB,
+        balance=Decimal("10000.0"),
     )
     wallet2 = Wallet(
         user_id=test_user.id, name="USD Wallet", currency=CurrencyEnum.USD, balance=Decimal("0.0")
@@ -45,7 +48,10 @@ async def test_transfer_v2_without_custom_amount_fallback_to_v1(
 ):
     """v2: Перевод без кастомной суммы работает как v1 (автоконверсия)."""
     wallet1 = Wallet(
-        user_id=test_user.id, name="USD Wallet", currency=CurrencyEnum.USD, balance=Decimal("1000.0")
+        user_id=test_user.id,
+        name="USD Wallet",
+        currency=CurrencyEnum.USD,
+        balance=Decimal("1000.0"),
     )
     wallet2 = Wallet(
         user_id=test_user.id, name="EUR Wallet", currency=CurrencyEnum.EUR, balance=Decimal("0.0")
@@ -169,7 +175,10 @@ def test_transfer_v2_custom_amount_same_wallet(client, test_user, test_wallet, a
 def test_transfer_v2_implied_rate_calculation(client, test_user, db, auth_headers):
     """v2: Проверка расчета implied exchange rate."""
     wallet1 = Wallet(
-        user_id=test_user.id, name="RUB Wallet", currency=CurrencyEnum.RUB, balance=Decimal("10000.0")
+        user_id=test_user.id,
+        name="RUB Wallet",
+        currency=CurrencyEnum.RUB,
+        balance=Decimal("10000.0"),
     )
     wallet2 = Wallet(
         user_id=test_user.id, name="EUR Wallet", currency=CurrencyEnum.EUR, balance=Decimal("0.0")

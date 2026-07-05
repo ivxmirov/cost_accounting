@@ -36,4 +36,3 @@ def test_request_id_persists_through_request(client, test_user):
         headers={"Authorization": f"Bearer {test_user.login}", "X-Request-ID": custom_request_id},
     )
     assert response.headers["X-Request-ID"] == custom_request_id
-

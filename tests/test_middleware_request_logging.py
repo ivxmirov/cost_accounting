@@ -18,7 +18,9 @@ def test_request_logged(client, caplog):
 
 def test_post_request_logged(client, caplog):
     with caplog.at_level(logging.INFO):
-        response = client.post("/api/v1/users", json={"login": "testuser123", "password": "password123"})
+        response = client.post(
+            "/api/v1/users", json={"login": "testuser123", "password": "password123"}
+        )
         assert response.status_code in [201, 400, 422]
 
     log_records = [record for record in caplog.records if "POST" in record.message]
@@ -56,4 +58,3 @@ def test_logging_timing(client, caplog):
     assert "time=" in log_message
     time_part = log_message.split("time=")[1]
     assert "ms" in time_part
-
