@@ -59,9 +59,9 @@ def test_access_protected_endpoint_with_valid_token(client, test_user):
 
 
 def test_access_protected_endpoint_without_token(client):
-    """Доступ к защищенному эндпоинту без токена должен вернуть 403."""
+    """Доступ к защищенному эндпоинту без токена должен вернуть 401."""
     response = client.get("/api/v1/users/me")
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 def test_access_protected_endpoint_with_invalid_token(client):

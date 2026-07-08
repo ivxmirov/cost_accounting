@@ -38,6 +38,7 @@ async def add_income(
     existing_operation = await operations_repository.get_by_transaction_id(
         db, operation.transaction_id
     )
+
     if existing_operation:
         return (OperationResponse.model_validate(existing_operation), 200)
 
@@ -47,6 +48,7 @@ async def add_income(
     wallet = await wallets_repository.add_income(
         db, current_user.id, operation.wallet_name, operation.amount
     )
+
     new_operation = await operations_repository.create_operation(
         db=db,
         wallet_id=wallet.id,
@@ -82,10 +84,11 @@ async def add_expense(
     if existing_operation:
         return (OperationResponse.model_validate(existing_operation), 200)
 
-    if not await wallets_repository.is_wallet_exist(db, current_user.id, operation.wallet_name):
+    wallet = await wallets_repository.get_wallet_by_name(db, current_user.id, operation.wallet_name)
+
+    if not wallet:
         raise HTTPException(status_code=404, detail=f"Wallet '{operation.wallet_name}' not found")
 
-    wallet = await wallets_repository.get_wallet_by_name(db, current_user.id, operation.wallet_name)
     if wallet.balance < operation.amount:
         raise HTTPException(
             status_code=400, detail=f"Insufficient funds. Available: {wallet.balance}"

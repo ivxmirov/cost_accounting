@@ -1,4 +1,3 @@
-import uuid
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -60,7 +59,7 @@ def test_get_balance_not_exists(client, auth_headers):
 def test_get_balance_unauthorized(client):
     response = client.get("/api/v1/balance")
 
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 def test_create_wallet_success(client, auth_headers):
@@ -88,4 +87,4 @@ def test_create_wallet_exists(client, auth_headers, wallet):
 def test_create_wallet_unauthorized(client):
     response = client.post("/api/v1/wallets", json={"name": "my_wallet", "initial_balance": 100.0})
 
-    assert response.status_code == 403
+    assert response.status_code == 401

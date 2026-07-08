@@ -12,6 +12,8 @@ class GenericExceptionMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
             return response
+        except HTTPException:
+            raise
         except Exception:
             return JSONResponse(
                 status_code=500,

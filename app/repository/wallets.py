@@ -23,11 +23,11 @@ async def add_income(db: AsyncSession, user_id: int, wallet_name: str, amount: D
     return wallet
 
 
-async def get_wallet_by_name(db: AsyncSession, user_id: int, wallet_name: str) -> Wallet:
+async def get_wallet_by_name(db: AsyncSession, user_id: int, wallet_name: str) -> Wallet | None:
     result = await db.execute(
         select(Wallet).where(Wallet.name == wallet_name, Wallet.user_id == user_id)
     )
-    return result.scalar_one()
+    return result.scalar_one_or_none()
 
 
 async def add_expense(db: AsyncSession, user_id: int, wallet_name: str, amount: Decimal) -> Wallet:

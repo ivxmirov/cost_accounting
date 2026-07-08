@@ -19,11 +19,12 @@ from app.middleware.request_logging import RequestLoggingMiddleware
 
 app = FastAPI()
 
-app.add_exception_handler(HTTPException, http_exception_handler)
-app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_middleware(GenericExceptionMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(RequestIDMiddleware)
+
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 app.include_router(auth_router, prefix="/api/v1", tags=["auth"])
 app.include_router(wallet_router, prefix="/api/v1", tags=["wallet"])

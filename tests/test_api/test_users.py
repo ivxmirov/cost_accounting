@@ -33,4 +33,4 @@ def test_get_me_unauthorized(client):
 
     response = client.get("/api/v1/users/me")
 
-    assert response.status_code == 403
+    assert response.status_code == 401
