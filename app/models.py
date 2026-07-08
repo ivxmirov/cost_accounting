@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -21,7 +21,7 @@ class Operation(Base):
     currency: Mapped[CurrencyEnum]
     category: Mapped[str | None] = mapped_column(default=None)
     subcategory: Mapped[str | None] = mapped_column(default=None)
-    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
     wallet: Mapped["Wallet"] = relationship(back_populates="operations")
 
 
