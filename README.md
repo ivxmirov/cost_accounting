@@ -190,20 +190,30 @@ cost_accounting
 │  ├─ README
 │  ├─ script.py.mako
 │  └─ versions
-│     ├─ 4e767668dbe0_add_tables.py
-│     └─ 7598617a985e_clean_start.py
+│     ├─ 4e767668dbe0_initial_migration.py
+│     └─ 7b909f9a3286_add_operations_and_wallets_models.py
 ├─ alembic.ini
 ├─ app
 │  ├─ api
 │  │  ├─ v1
+│  │  │  ├─ auth.py
 │  │  │  ├─ operations.py
 │  │  │  ├─ users.py
 │  │  │  ├─ wallets.py
 │  │  │  └─ __init__.py
+│  │  ├─ v2
+│  │  │  ├─ operations.py
+│  │  │  └─ __init__.py
 │  │  └─ __init__.py
+│  ├─ config.py
 │  ├─ database.py
 │  ├─ dependency.py
 │  ├─ enum.py
+│  ├─ middleware
+│  │  ├─ error_handler.py
+│  │  ├─ request_id.py
+│  │  ├─ request_logging.py
+│  │  └─ __init__.py
 │  ├─ models.py
 │  ├─ repository
 │  │  ├─ operations.py
@@ -212,6 +222,7 @@ cost_accounting
 │  │  └─ __init__.py
 │  ├─ schemas.py
 │  ├─ service
+│  │  ├─ auth.py
 │  │  ├─ exchange_service.py
 │  │  ├─ operations.py
 │  │  ├─ users.py
@@ -225,6 +236,10 @@ cost_accounting
 │  │  └─ js
 │  │     ├─ app.js
 │  │     └─ bootstrap.bundle.min.js
+│  ├─ utils
+│  │  ├─ jwt.py
+│  │  ├─ password.py
+│  │  └─ __init__.py
 │  └─ __init__.py
 ├─ main.py
 ├─ pyproject.toml
@@ -232,7 +247,28 @@ cost_accounting
 ├─ tests
 │  ├─ conftest.py
 │  ├─ test_api
-│  │  └─ test_operations.py
+│  │  ├─ test_operations.py
+│  │  ├─ test_users.py
+│  │  ├─ test_wallets.py
+│  │  └─ __init__.py
+│  ├─ test_auth_jwt.py
+│  ├─ test_auth_registration.py
+│  ├─ test_e2e.py
+│  ├─ test_e2e_validator.py
+│  ├─ test_idempotency.py
+│  ├─ test_middleware_error_handler.py
+│  ├─ test_middleware_request_id.py
+│  ├─ test_middleware_request_logging.py
+│  ├─ test_report_csv.py
+│  ├─ test_repository
+│  │  ├─ test_user_repository.py
+│  │  └─ test_wallet_repository.py
+│  ├─ test_service
+│  │  ├─ test_operation_service.py
+│  │  ├─ test_users_service.py
+│  │  └─ test_wallet_service.py
+│  ├─ test_transfer_v1.py
+│  ├─ test_transfer_v2.py
 │  └─ __init__.py
 └─ uv.lock
 ```

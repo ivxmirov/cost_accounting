@@ -1,23 +1,130 @@
+// API базовый URL
 const API_BASE = '../api/v1';
-let currentUser = localStorage.getItem('token') || null;
+// Текущий пользователь (логин)
+let currentUser = null;
+// JWT токены
+let accessToken = null;
+let refreshToken = null;
+// Данные приложения
 let wallets = [];
 let operations = [];
 
-function getAuthHeader() {
-    const rawToken = currentUser || localStorage.getItem('token');
-    if (!rawToken) return {};
-    return { 'Authorization': `Bearer ${encodeURIComponent(rawToken)}` };
+// Функция для генерации UUID для идемпотентности операций
+function generateUUID() {
+    return crypto.randomUUID();
 }
+
+// Функция для получения заголовков авторизации
+function getAuthHeaders() {
+    if (!accessToken) {
+        return {};
+    }
+    return {
+        'Authorization': `Bearer ${accessToken}`
+    };
+}
+
+// Функция для обновления access токена с помощью refresh токена
+async function refreshAccessToken() {
+    if (!refreshToken) {
+        console.log('[REFRESH] Нет refresh токена');
+        return false;
+    }
+
+    try {
+        console.log('[REFRESH] Отправляем запрос на обновление...');
+        const response = await fetch(`${API_BASE}/auth/refresh`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_token: refreshToken })
+        });
+
+        console.log(`[REFRESH] Статус: ${response.status}`);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('[REFRESH] Токен обновлён:', data);
+            accessToken = data.access_token;
+            refreshToken = data.refresh_token;
+            
+            localStorage.setItem('accessToken', accessToken);
+            localStorage.setItem('refreshToken', refreshToken);
+            
+            return true;
+        } else {
+            console.log('[REFRESH] Не удалось обновить токен');
+            return false;
+        }
+    } catch (e) {
+        console.error('[REFRESH] Ошибка:', e);
+        return false;
+    }
+}
+
+// Функция для выполнения запроса с автоматическим обновлением токена
+async function fetchWithAuth(url, options = {}) {
+    console.log(`[AUTH] Запрос: ${options.method || 'GET'} ${url}`);
+    console.log(`[AUTH] Токен есть: ${!!accessToken}, Refresh: ${!!refreshToken}`);
+    
+    // Добавляем заголовки авторизации
+    options.headers = {
+        ...options.headers,
+        ...getAuthHeaders()
+    };
+
+    let response = await fetch(url, options);
+    console.log(`[AUTH] Статус ответа: ${response.status}`);
+
+    // Если 401 и есть refresh токен - пробуем обновить
+    if (response.status === 401 && refreshToken) {
+        console.log('[AUTH] Получен 401, пробуем обновить токен...');
+        const refreshed = await refreshAccessToken();
+        console.log(`[AUTH] Обновление токена: ${refreshed ? 'успешно' : 'НЕ УДАЛОСЬ'}`);
+        
+        if (refreshed) {
+            // Обновляем заголовки с новым токеном
+            options.headers = {
+                ...options.headers,
+                ...getAuthHeaders()
+            };
+            // Повторяем запрос
+            console.log('[AUTH] Повторяем запрос с новым токеном...');
+            response = await fetch(url, options);
+            console.log(`[AUTH] Статус после обновления: ${response.status}`);
+        }
+    }
+
+    return response;
+}
+
+// Функция для автологина при загрузке страницы
+function tryAutoLogin() {
+    const savedAccessToken = localStorage.getItem('accessToken');
+    const savedRefreshToken = localStorage.getItem('refreshToken');
+    const savedUser = localStorage.getItem('currentUser');
+
+    if (savedAccessToken && savedRefreshToken && savedUser) {
+        accessToken = savedAccessToken;
+        refreshToken = savedRefreshToken;
+        currentUser = savedUser;
+        showMainSection();
+    }
+}
+
+// Автологин при загрузке страницы
+window.addEventListener('DOMContentLoaded', () => {
+    tryAutoLogin();
+});
 
 function showToast(title, message, isError = false) {
     const toastEl = document.getElementById('toastNotification');
     const toastTitle = document.getElementById('toastTitle');
     const toastBody = document.getElementById('toastBody');
     const toastHeader = toastEl.querySelector('.toast-header');
-
+    
     toastTitle.textContent = title;
     toastBody.textContent = message;
-
+    
     // Цвета в зависимости от типа
     if (isError) {
         toastHeader.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
@@ -26,7 +133,7 @@ function showToast(title, message, isError = false) {
         toastHeader.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
         toastHeader.style.color = 'white';
     }
-
+    
     const toast = new bootstrap.Toast(toastEl, {
         autohide: true,
         delay: 3000
@@ -48,10 +155,17 @@ function closeModal(modalId) {
     if (modal) modal.hide();
 }
 
+// Функция регистрации нового пользователя
 async function register() {
     const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    
     if (!username) {
         showError('Введите логин');
+        return;
+    }
+    if (!password || password.length < 6) {
+        showError('Пароль должен быть не менее 6 символов');
         return;
     }
 
@@ -59,60 +173,94 @@ async function register() {
         const response = await fetch(`${API_BASE}/users`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ login: username })
+            body: JSON.stringify({ login: username, password: password })
         });
 
         if (response.ok) {
-            localStorage.setItem('token', username);
-            showSuccess('Регистрация успешна!');
-            currentUser = username;
-            showMainSection();
+            showSuccess('Регистрация успешна! Выполняется вход...');
+            // После успешной регистрации автоматически входим
+            await loginAfterRegister(username, password);
         } else {
             const error = await response.json();
-            showError(error.detail || 'Ошибка регистрации');
+            showError(error.message || error.detail || 'Ошибка регистрации');
         }
     } catch (e) {
         showError('Не удалось подключиться к серверу');
     }
 }
 
+// Функция входа в систему
 async function login() {
-    const resp = await fetch(`${API_BASE}/users/me`, {
-        headers: { 'Authorization': `Bearer ${encodeURIComponent(username)}` }
-    });
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    
     if (!username) {
         showError('Введите логин');
         return;
     }
+    if (!password) {
+        showError('Введите пароль');
+        return;
+    }
 
+    // Вызываем общую функцию входа
+    await loginAfterRegister(username, password);
+}
+
+// Функция для входа с явной передачей логина и пароля
+async function loginAfterRegister(username, password) {
     try {
-        const resp = await fetch(`${API_BASE}/users/me`, {
-            headers: { 'Authorization': `Bearer ${username}` }
+        const response = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ login: username, password: password })
         });
 
-        if (resp.ok) {
-            // Успешный вход
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Сохраняем токены и пользователя
+            accessToken = data.access_token;
+            refreshToken = data.refresh_token;
             currentUser = username;
-            localStorage.setItem('token', username);
+            
+            // Сохраняем в localStorage
+            localStorage.setItem('accessToken', accessToken);
+            localStorage.setItem('refreshToken', refreshToken);
+            localStorage.setItem('currentUser', currentUser);
+            
+            showSuccess('Вход выполнен успешно!');
             showMainSection();
         } else {
-            currentUser = null;
-            const data = await resp.json().catch(() => ({}));
-            showError(data.detail || 'Пользователь не найден. Зарегистрируйтесь.');
+            const error = await response.json();
+            showError(error.message || error.detail || 'Неверный логин или пароль');
         }
     } catch (e) {
         showError('Не удалось подключиться к серверу');
     }
 }
 
+// Функция выхода из системы
 function logout() {
-    localStorage.removeItem('token');
+    // Очищаем данные в памяти
     currentUser = null;
+    accessToken = null;
+    refreshToken = null;
     wallets = [];
     operations = [];
+    
+    // Очищаем localStorage
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('currentUser');
+    
+    // Переключаем интерфейс
     document.getElementById('authSection').style.display = 'block';
     document.getElementById('mainSection').style.display = 'none';
     document.getElementById('username').value = '';
+    document.getElementById('password').value = '';
+    
+    showSuccess('Вы вышли из системы');
 }
 
 function showMainSection() {
@@ -129,14 +277,10 @@ async function loadAllData() {
     updateWalletSelects();
 }
 
+// Функция загрузки списка кошельков
 async function loadWallets() {
     try {
-        const response = await fetch(`${API_BASE}/wallets`, {
-            headers: {
-                'Content-Type': 'application/json',
-                ...getAuthHeader()
-            }
-        });
+        const response = await fetchWithAuth(`${API_BASE}/wallets`);
 
         if (response.ok) {
             const rawWallets = await response.json();
@@ -151,7 +295,7 @@ async function loadWallets() {
                 } else if (w.balance != null) {
                     balance = Number(w.balance) || 0;
                 }
-
+                
                 return {
                     ...w,
                     currency: String(w.currency || '').toLowerCase(),
@@ -189,14 +333,10 @@ async function loadWallets() {
     }
 }
 
+// Функция загрузки списка операций
 async function loadOperations() {
     try {
-        const response = await fetch(`${API_BASE}/operations`, {
-            headers: {
-                'Content-Type': 'application/json',
-                ...getAuthHeader()
-            }
-        });
+        const response = await fetchWithAuth(`${API_BASE}/operations`);
 
         if (response.ok) {
             const rawOperations = await response.json();
@@ -211,7 +351,7 @@ async function loadOperations() {
                 } else if (op.amount != null) {
                     amount = Number(op.amount) || 0;
                 }
-
+                
                 return {
                     ...op,
                     currency: String(op.currency || '').toLowerCase(),
@@ -231,7 +371,7 @@ async function loadOperations() {
 
 function renderWalletsTable() {
     const tbody = document.getElementById('walletsTable');
-
+    
     if (wallets.length === 0) {
         tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">У вас пока нет кошельков</td></tr>';
         return;
@@ -260,14 +400,14 @@ function renderWalletsTable() {
 
 function renderOperationsTable() {
     const tbody = document.getElementById('transactionsTable');
-
+    
     if (operations.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет транзакций</td></tr>';
         return;
     }
 
     const last10 = operations.slice(-10).reverse();
-
+    
     tbody.innerHTML = last10.map(t => {
         const wallet = wallets.find(w => w.id === t.wallet_id);
         const walletName = wallet ? wallet.name : 'Неизвестно';
@@ -295,11 +435,11 @@ function renderOperationsTable() {
             hour: '2-digit',
             minute: '2-digit'
         });
-
+        
         // Гарантируем что сумма - число
         const amount = typeof t.amount === 'number' ? t.amount : (parseFloat(t.amount) || 0);
         const currency = String(t.currency || '').toLowerCase();
-
+        
         return `
             <tr>
                 <td>${date}</td>
@@ -313,7 +453,6 @@ function renderOperationsTable() {
 }
 
 async function updateTotalBalance() {
-    const token = currentUser || localStorage.getItem('token');
     if (wallets.length === 0) {
         document.getElementById('totalBalance').innerHTML = `
             0.00 ₽
@@ -324,9 +463,7 @@ async function updateTotalBalance() {
 
     try {
         // Получаем общий баланс в рублях с сервера (с конвертацией валют)
-        const response = await fetch(`${API_BASE}/balance`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await fetchWithAuth(`${API_BASE}/balance`);
 
         if (response.ok) {
             const data = await response.json();
@@ -366,7 +503,7 @@ function updateWalletSelects() {
     selects.forEach(id => {
         const select = document.getElementById(id);
         if (!select) return;
-
+        
         if (wallets.length === 0) {
             select.innerHTML = '<option value="">Сначала создайте кошелек</option>';
         } else {
@@ -382,26 +519,34 @@ function updateWalletSelects() {
 }
 
 async function addWallet() {
+    if (!accessToken) {
+        showError('Сначала войдите в систему');
+        return;
+    }
+
     const name = document.getElementById('walletName').value.trim();
     const currency = document.getElementById('walletCurrency').value;
-    const balance = parseFloat(document.getElementById('walletBalance').value);
+    const balance = parseFloat(document.getElementById('walletBalance').value) || 0;
 
     if (!name) {
         showError('Введите название кошелька');
         return;
     }
 
-    const token = currentUser || localStorage.getItem('token');
-
     try {
-        const response = await fetch(`${API_BASE}/wallets`, {
+        const response = await fetchWithAuth(`${API_BASE}/wallets`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ name, currency, initial_balance: balance })
+            body: JSON.stringify({ 
+                name: name, 
+                currency: currency, 
+                initial_balance: balance 
+            })
         });
+
+        console.log('[WALLET] Статус создания:', response.status);
 
         if (response.ok) {
             showSuccess('Кошелек создан!');
@@ -409,11 +554,40 @@ async function addWallet() {
             document.getElementById('walletName').value = '';
             document.getElementById('walletBalance').value = '0';
             await loadAllData();
+        } else if (response.status === 401) {
+            // Пробуем ещё раз обновить токен
+            const refreshed = await refreshAccessToken();
+            if (refreshed) {
+                // Повторяем запрос
+                const retryResponse = await fetchWithAuth(`${API_BASE}/wallets`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        name: name, 
+                        currency: currency, 
+                        initial_balance: balance 
+                    })
+                });
+                
+                if (retryResponse.ok) {
+                    showSuccess('Кошелек создан!');
+                    closeModal('addWalletModal');
+                    await loadAllData();
+                } else {
+                    const error = await retryResponse.json();
+                    showError(error.detail || 'Ошибка создания кошелька');
+                }
+            } else {
+                showError('Ошибка авторизации. Войдите снова.');
+                // Только здесь вызываем logout
+                logout();
+            }
         } else {
             const error = await response.json();
             showError(error.detail || 'Ошибка создания кошелька');
         }
     } catch (e) {
+        console.error('[WALLET] Ошибка:', e);
         showError('Ошибка подключения');
     }
 }
@@ -440,17 +614,16 @@ async function addIncome() {
     }
 
     try {
-        const response = await fetch(`${API_BASE}/operations/income`, {
-            method: 'POST',
+        const response = await fetchWithAuth(`${API_BASE}/operations/income`, {
+            method: 'PUT',
             headers: {
-                'Content-Type': 'application/json',
-                ...getAuthHeader()
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                wallet_name: wallet.name,
-                amount,
-                description,
-                category: description || 'доход'
+            body: JSON.stringify({ 
+                transaction_id: generateUUID(),
+                wallet_name: wallet.name, 
+                amount, 
+                description
             })
         });
 
@@ -462,7 +635,7 @@ async function addIncome() {
             await loadAllData();
         } else {
             const error = await response.json();
-            showError(error.detail || 'Ошибка добавления дохода');
+            showError(error.message || error.detail || 'Ошибка добавления дохода');
         }
     } catch (e) {
         showError('Ошибка подключения');
@@ -497,17 +670,16 @@ async function addExpense() {
     }
 
     try {
-        const response = await fetch(`${API_BASE}/operations/expense`, {
-            method: 'POST',
+        const response = await fetchWithAuth(`${API_BASE}/operations/expense`, {
+            method: 'PUT',
             headers: {
-                'Content-Type': 'application/json',
-                ...getAuthHeader()
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                wallet_name: wallet.name,
-                amount,
-                category,
-                description
+            body: JSON.stringify({ 
+                transaction_id: generateUUID(),
+                wallet_name: wallet.name, 
+                amount, 
+                description 
             })
         });
 
@@ -520,7 +692,7 @@ async function addExpense() {
             await loadAllData();
         } else {
             const error = await response.json();
-            showError(error.detail || 'Ошибка добавления расхода');
+            showError(error.message || error.detail || 'Ошибка добавления расхода');
         }
     } catch (e) {
         showError('Ошибка подключения');
@@ -548,13 +720,17 @@ async function transfer() {
     }
 
     try {
-        const response = await fetch(`${API_BASE}/operations/transfer`, {
-            method: 'POST',
+        const response = await fetchWithAuth(`${API_BASE}/operations/transfer`, {
+            method: 'PUT',
             headers: {
-                'Content-Type': 'application/json',
-                ...getAuthHeader()
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ from_wallet_id, to_wallet_id, amount })
+            body: JSON.stringify({ 
+                transaction_id: generateUUID(),
+                from_wallet_id, 
+                to_wallet_id, 
+                amount 
+            })
         });
 
         if (response.ok) {
@@ -564,7 +740,7 @@ async function transfer() {
             await loadAllData();
         } else {
             const error = await response.json();
-            showError(error.detail || 'Ошибка перевода');
+            showError(error.message || error.detail || 'Ошибка перевода');
         }
     } catch (e) {
         showError('Ошибка подключения');
@@ -576,7 +752,7 @@ function initReportDates() {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-
+    
     document.getElementById('reportDateFrom').valueAsDate = firstDay;
     document.getElementById('reportDateTo').valueAsDate = tomorrow;
 }
@@ -601,12 +777,7 @@ async function loadReport() {
             date_to: `${dateTo}T23:59:59`
         });
 
-        const response = await fetch(`${API_BASE}/operations?${params}`, {
-            headers: {
-                'Content-Type': 'application/json',
-                ...getAuthHeader()
-            }
-        });
+        const response = await fetchWithAuth(`${API_BASE}/operations?${params}`);
 
         if (response.ok) {
             const rawReportOperations = await response.json();
@@ -621,7 +792,7 @@ async function loadReport() {
                 } else if (op.amount != null) {
                     amount = Number(op.amount) || 0;
                 }
-
+                
                 return {
                     ...op,
                     currency: String(op.currency || '').toLowerCase(),
@@ -629,7 +800,7 @@ async function loadReport() {
                 };
             });
             const tbody = document.getElementById('reportTable');
-
+            
             if (reportOperations.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет операций за выбранный период</td></tr>';
             } else {
@@ -661,7 +832,7 @@ async function loadReport() {
                         hour: '2-digit',
                         minute: '2-digit'
                     });
-
+                    
                     const currencySymbols = {
                         'rub': '₽',
                         'usd': '$',
@@ -671,7 +842,7 @@ async function loadReport() {
                     const amount = typeof t.amount === 'number' ? t.amount : (parseFloat(t.amount) || 0);
                     const currency = String(t.currency || '').toLowerCase();
                     const symbol = currencySymbols[currency] || currency.toUpperCase();
-
+                    
                     return `
                         <tr>
                             <td>${date}</td>
@@ -688,7 +859,7 @@ async function loadReport() {
             showSuccess('Отчет сформирован!');
         } else {
             const error = await response.json();
-            showError(error.detail || 'Ошибка загрузки отчета');
+            showError(error.message || error.detail || 'Ошибка загрузки отчета');
         }
     } catch (e) {
         console.error('Ошибка загрузки отчета:', e);

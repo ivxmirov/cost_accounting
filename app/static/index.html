@@ -16,8 +16,12 @@
             <div class="card-body">
                 <h3 class="card-title">Вход в систему</h3>
                 <div class="mb-3">
-                    <label for="username" class="form-label">Ваш логин</label>
-                    <input type="text" class="form-control" id="username" placeholder="Введите логин">
+                    <label for="username" class="form-label">Логин</label>
+                    <input type="text" class="form-control" id="username" placeholder="Введите логин" minlength="3">
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Пароль</label>
+                    <input type="password" class="form-control" id="password" placeholder="Введите пароль" minlength="6">
                 </div>
                 <button onclick="register()" class="btn btn-primary me-2">✨ Зарегистрироваться</button>
                 <button onclick="login()" class="btn btn-success">🔑 Войти</button>
@@ -258,7 +262,7 @@
                         </div>
                     </div>
                     <button class="btn btn-primary w-100 mb-4" onclick="loadReport()">📈 Сформировать отчет</button>
-
+                    
                     <div id="reportContent" style="display: none;">
                         <h5 class="mb-3">Операции за выбранный период:</h5>
                         <div class="table-responsive">
@@ -298,41 +302,41 @@
     <script src="./js/app.js"></script>
     <script>
         document.getElementById('reportModal').addEventListener('show.bs.modal', initReportDates);
-
+        
         document.getElementById('addIncomeModal').addEventListener('show.bs.modal', function() {
             updateWalletSelects();
         });
-
+        
         document.getElementById('addExpenseModal').addEventListener('show.bs.modal', function() {
             updateWalletSelects();
         });
-
+        
         document.getElementById('transferModal').addEventListener('show.bs.modal', function() {
             updateWalletSelects();
         });
-
+        
         // Сброс форм при закрытии модалок
         document.getElementById('addWalletModal').addEventListener('hidden.bs.modal', function() {
             document.getElementById('walletName').value = '';
             document.getElementById('walletCurrency').value = 'rub';
             document.getElementById('walletBalance').value = '0';
         });
-
+        
         document.getElementById('addIncomeModal').addEventListener('hidden.bs.modal', function() {
             document.getElementById('incomeAmount').value = '';
             document.getElementById('incomeDescription').value = '';
         });
-
+        
         document.getElementById('addExpenseModal').addEventListener('hidden.bs.modal', function() {
             document.getElementById('expenseAmount').value = '';
             document.getElementById('expenseCategory').value = '';
             document.getElementById('expenseDescription').value = '';
         });
-
+        
         document.getElementById('transferModal').addEventListener('hidden.bs.modal', function() {
             document.getElementById('transferAmount').value = '';
         });
-
+        
         document.getElementById('reportModal').addEventListener('hidden.bs.modal', function() {
             document.getElementById('reportContent').style.display = 'none';
         });

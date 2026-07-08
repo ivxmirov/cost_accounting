@@ -1,11 +1,13 @@
 from decimal import Decimal
 from uuid import uuid4
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.enum import CurrencyEnum
 from app.models import Wallet
 
 
-async def test_transfer_v1_success(client, test_user, db, mock_currency_api, auth_headers):
+async def test_transfer_v1_success(client, test_user, db: AsyncSession, mock_currency_api, auth_headers):
     """v1: Перевод между кошельками должен успешно списать/зачислить средства."""
     wallet1 = Wallet(
         user_id=test_user.id,
@@ -18,9 +20,9 @@ async def test_transfer_v1_success(client, test_user, db, mock_currency_api, aut
     )
     db.add(wallet1)
     db.add(wallet2)
-    db.commit()
-    db.refresh(wallet1)
-    db.refresh(wallet2)
+    await db.commit()
+    await db.refresh(wallet1)
+    await db.refresh(wallet2)
 
     response = client.put(
         "/api/v1/operations/transfer",
@@ -38,8 +40,8 @@ async def test_transfer_v1_success(client, test_user, db, mock_currency_api, aut
     assert data["type"] == "transfer"
     assert data["wallet_id"] == wallet1.id
 
-    db.refresh(wallet1)
-    db.refresh(wallet2)
+    await db.refresh(wallet1)
+    await db.refresh(wallet2)
     assert float(wallet1.balance) == 900.0
     assert float(wallet2.balance) > 0
 
@@ -59,7 +61,7 @@ def test_transfer_v1_wallet_not_found(client, test_user, auth_headers):
     assert response.status_code in (404, 422)
 
 
-def test_transfer_v1_insufficient_funds(client, test_user, db, auth_headers):
+async def test_transfer_v1_insufficient_funds(client, test_user, db: AsyncSession, auth_headers):
     """v1: Перевод при недостатке средств — 400."""
     wallet1 = Wallet(
         user_id=test_user.id, name="Wallet 1", currency=CurrencyEnum.USD, balance=Decimal("50.0")
@@ -69,9 +71,9 @@ def test_transfer_v1_insufficient_funds(client, test_user, db, auth_headers):
     )
     db.add(wallet1)
     db.add(wallet2)
-    db.commit()
-    db.refresh(wallet1)
-    db.refresh(wallet2)
+    await db.commit()
+    await db.refresh(wallet1)
+    await db.refresh(wallet2)
 
     response = client.put(
         "/api/v1/operations/transfer",
@@ -101,7 +103,7 @@ def test_transfer_v1_same_wallet(client, test_user, test_wallet, auth_headers):
     assert response.status_code == 422
 
 
-def test_transfer_v1_same_currency(client, test_user, db, auth_headers):
+async def test_transfer_v1_same_currency(client, test_user, db: AsyncSession, auth_headers):
     """v1: Перевод между кошельками с одной валютой."""
     wallet1 = Wallet(
         user_id=test_user.id, name="Wallet 1", currency=CurrencyEnum.USD, balance=Decimal("500.0")
@@ -111,9 +113,9 @@ def test_transfer_v1_same_currency(client, test_user, db, auth_headers):
     )
     db.add(wallet1)
     db.add(wallet2)
-    db.commit()
-    db.refresh(wallet1)
-    db.refresh(wallet2)
+    await db.commit()
+    await db.refresh(wallet1)
+    await db.refresh(wallet2)
 
     response = client.put(
         "/api/v1/operations/transfer",
@@ -130,13 +132,13 @@ def test_transfer_v1_same_currency(client, test_user, db, auth_headers):
 
     assert data["type"] == "transfer"
 
-    db.refresh(wallet1)
-    db.refresh(wallet2)
+    await db.refresh(wallet1)
+    await db.refresh(wallet2)
     assert float(wallet1.balance) == 350.0
     assert float(wallet2.balance) == 350.0
 
 
-async def test_transfer_v1_idempotency(client, test_user, db, mock_currency_api, auth_headers):
+async def test_transfer_v1_idempotency(client, test_user, db: AsyncSession, mock_currency_api, auth_headers):
     """v1: Повторный запрос с тем же transaction_id возвращает 200."""
     wallet1 = Wallet(
         user_id=test_user.id, name="Wallet 1", currency=CurrencyEnum.USD, balance=Decimal("1000.0")
@@ -146,9 +148,9 @@ async def test_transfer_v1_idempotency(client, test_user, db, mock_currency_api,
     )
     db.add(wallet1)
     db.add(wallet2)
-    db.commit()
-    db.refresh(wallet1)
-    db.refresh(wallet2)
+    await db.commit()
+    await db.refresh(wallet1)
+    await db.refresh(wallet2)
 
     transaction_id = str(uuid4())
 

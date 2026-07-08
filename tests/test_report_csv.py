@@ -6,7 +6,7 @@ from app.enum import CurrencyEnum
 from app.models import Operation
 
 
-def test_report_csv_format(client, test_user, test_wallet, db, auth_headers, mock_currency_api):
+async def test_report_csv_format(client, test_user, test_wallet, db, auth_headers, mock_currency_api):
     """CSV отчёт должен иметь правильный формат с заголовками."""
     operation = Operation(
         wallet_id=test_wallet.id,
@@ -18,7 +18,7 @@ def test_report_csv_format(client, test_user, test_wallet, db, auth_headers, moc
         created_at=datetime(2024, 6, 15, 12, 0, 0),
     )
     db.add(operation)
-    db.commit()
+    await db.commit()
 
     response = client.get(
         "/api/v1/reports",
@@ -38,7 +38,7 @@ def test_report_csv_format(client, test_user, test_wallet, db, auth_headers, moc
     assert lines[0] == "date,type,wallet_id,amount,category,currency"
 
 
-def test_report_csv_content(client, test_user, test_wallet, db, auth_headers, mock_currency_api):
+async def test_report_csv_content(client, test_user, test_wallet, db, auth_headers, mock_currency_api):
     """CSV отчёт должен содержать правильные данные операций."""
     operation1 = Operation(
         wallet_id=test_wallet.id,
@@ -60,7 +60,7 @@ def test_report_csv_content(client, test_user, test_wallet, db, auth_headers, mo
     )
     db.add(operation1)
     db.add(operation2)
-    db.commit()
+    await db.commit()
 
     response = client.get(
         "/api/v1/reports",
@@ -87,7 +87,7 @@ def test_report_csv_content(client, test_user, test_wallet, db, auth_headers, mo
     assert "USD" in lines[2]
 
 
-def test_report_csv_download_headers(
+async def test_report_csv_download_headers(
     client, test_user, test_wallet, db, auth_headers, mock_currency_api
 ):
     """CSV отчёт должен иметь заголовки для скачивания файла."""
@@ -100,7 +100,7 @@ def test_report_csv_download_headers(
         created_at=datetime(2024, 6, 15, 12, 0, 0),
     )
     db.add(operation)
-    db.commit()
+    await db.commit()
 
     date_from = "2024-06-01"
     date_to = "2024-06-30"
@@ -122,7 +122,7 @@ def test_report_csv_download_headers(
     assert ".csv" in response.headers["content-disposition"]
 
 
-def test_report_csv_with_multiple_operations(
+async def test_report_csv_with_multiple_operations(
     client, test_user, test_wallet, db, auth_headers, mock_currency_api
 ):
     """CSV отчёт с несколькими операциями должен содержать все данные."""
@@ -167,7 +167,7 @@ def test_report_csv_with_multiple_operations(
 
     for op in operations:
         db.add(op)
-    db.commit()
+    await db.commit()
 
     response = client.get(
         "/api/v1/reports",
@@ -184,7 +184,7 @@ def test_report_csv_with_multiple_operations(
     assert len(lines) == 5
 
 
-def test_report_csv_empty(client, test_user, test_wallet, db, auth_headers, mock_currency_api):
+async def test_report_csv_empty(client, test_user, test_wallet, db, auth_headers, mock_currency_api):
     """Пустой CSV отчёт должен содержать только заголовки."""
     response = client.get(
         "/api/v1/reports",
@@ -202,7 +202,7 @@ def test_report_csv_empty(client, test_user, test_wallet, db, auth_headers, mock
     assert lines[0] == "date,type,wallet_id,amount,category,currency"
 
 
-def test_report_csv_special_characters(
+async def test_report_csv_special_characters(
     client, test_user, test_wallet, db, auth_headers, mock_currency_api
 ):
     """CSV должен правильно обрабатывать спецсимволы в категории."""
@@ -216,7 +216,7 @@ def test_report_csv_special_characters(
         created_at=datetime(2024, 6, 15, 12, 0, 0),
     )
     db.add(operation)
-    db.commit()
+    await db.commit()
 
     response = client.get(
         "/api/v1/reports",
@@ -233,7 +233,7 @@ def test_report_csv_special_characters(
     assert "Food, Groceries" in lines[1]
 
 
-def test_report_csv_currency_conversion(
+async def test_report_csv_currency_conversion(
     client, test_user, test_wallet, db, auth_headers, mock_currency_api
 ):
     """CSV отчёт должен конвертировать валюты правильно."""
@@ -247,7 +247,7 @@ def test_report_csv_currency_conversion(
         created_at=datetime(2024, 6, 15, 12, 0, 0),
     )
     db.add(operation)
-    db.commit()
+    await db.commit()
 
     response = client.get(
         "/api/v1/reports",
@@ -265,7 +265,7 @@ def test_report_csv_currency_conversion(
     assert "RUB" in lines[1]
 
 
-def test_report_csv_empty_category(
+async def test_report_csv_empty_category(
     client, test_user, test_wallet, db, auth_headers, mock_currency_api
 ):
     """CSV отчёт должен правильно обрабатывать пустые категории."""
@@ -279,7 +279,7 @@ def test_report_csv_empty_category(
         created_at=datetime(2024, 6, 15, 12, 0, 0),
     )
     db.add(operation)
-    db.commit()
+    await db.commit()
 
     response = client.get(
         "/api/v1/reports",

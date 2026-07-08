@@ -17,7 +17,7 @@ def test_http_exception_format(client, test_user):
 
 
 def test_http_exception_with_dict_detail(client, monkeypatch):
-    def failing_create_user(*args, **kwargs):
+    async def failing_create_user(*args, **kwargs):
         raise HTTPException(
             status_code=400,
             detail={"message": "Custom message", "reason": "duplicate"},
@@ -46,7 +46,7 @@ def test_validation_error_format(client):
 
 
 def test_generic_exception_format(client, monkeypatch):
-    def failing_create_user(*args, **kwargs):
+    async def failing_create_user(*args, **kwargs):
         raise ValueError("Test internal error")
 
     monkeypatch.setattr(user_service, "create_user", failing_create_user)

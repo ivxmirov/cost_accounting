@@ -1,12 +1,12 @@
 import uuid
 from decimal import Decimal
 
-import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Wallet
 
 
-def test_income_idempotency(client, test_user, test_wallet, db, auth_headers):
+async def test_income_idempotency(client, test_user, test_wallet, db: AsyncSession, auth_headers):
     """
     Повторный запрос income с тем же transaction_id возвращает 200 OK с той же операцией.
     Баланс кошелька не должен измениться при повторном запросе.
@@ -28,7 +28,8 @@ def test_income_idempotency(client, test_user, test_wallet, db, auth_headers):
     assert data1["type"] == "income"
     assert data1["amount"] == "500.00"
 
-    initial_balance = db.get(Wallet, test_wallet.id).balance
+    wallet = await db.get(Wallet, test_wallet.id)
+    initial_balance = wallet.balance
 
     response2 = client.put(
         "/api/v1/operations/income",
@@ -47,11 +48,11 @@ def test_income_idempotency(client, test_user, test_wallet, db, auth_headers):
     assert data2["type"] == data1["type"]
     assert data2["amount"] == data1["amount"]
 
-    final_balance = db.get(Wallet, test_wallet.id).balance
-    assert final_balance == initial_balance
+    wallet = await db.get(Wallet, test_wallet.id)
+    assert wallet.balance == initial_balance
 
 
-def test_expense_idempotency(client, test_user, test_wallet, db, auth_headers):
+async def test_expense_idempotency(client, test_user, test_wallet, db: AsyncSession, auth_headers):
     """
     Повторный запрос expense с тем же transaction_id возвращает 200 OK с той же операцией.
     Баланс кошелька не должен измениться при повторном запросе.
@@ -73,7 +74,8 @@ def test_expense_idempotency(client, test_user, test_wallet, db, auth_headers):
     assert data1["type"] == "expense"
     assert data1["amount"] == "100.00"
 
-    initial_balance = db.get(Wallet, test_wallet.id).balance
+    wallet = await db.get(Wallet, test_wallet.id)
+    initial_balance = wallet.balance
 
     response2 = client.put(
         "/api/v1/operations/expense",
@@ -93,12 +95,11 @@ def test_expense_idempotency(client, test_user, test_wallet, db, auth_headers):
     assert data2["amount"] == data1["amount"]
     assert data2["category"] == data1["category"]
 
-    final_balance = db.get(Wallet, test_wallet.id).balance
-    assert final_balance == initial_balance
+    wallet = await db.get(Wallet, test_wallet.id)
+    assert wallet.balance == initial_balance
 
 
-@pytest.mark.asyncio
-async def test_transfer_idempotency(client, test_user, db, mock_currency_api, auth_headers):
+async def test_transfer_idempotency(client, test_user, db: AsyncSession, mock_currency_api, auth_headers):
     """
     Повторный запрос transfer с тем же transaction_id возвращает 200 OK.
     Балансы кошельков не должны измениться при повторном запросе.
@@ -113,9 +114,9 @@ async def test_transfer_idempotency(client, test_user, db, mock_currency_api, au
     )
     db.add(wallet1)
     db.add(wallet2)
-    db.commit()
-    db.refresh(wallet1)
-    db.refresh(wallet2)
+    await db.commit()
+    await db.refresh(wallet1)
+    await db.refresh(wallet2)
 
     transaction_id = str(uuid.uuid4())
 
@@ -133,8 +134,10 @@ async def test_transfer_idempotency(client, test_user, db, mock_currency_api, au
     data1 = response1.json()
     assert data1["type"] == "transfer"
 
-    balance1_after_first = db.get(Wallet, wallet1.id).balance
-    balance2_after_first = db.get(Wallet, wallet2.id).balance
+    wallet1_obj = await db.get(Wallet, wallet1.id)
+    wallet2_obj = await db.get(Wallet, wallet2.id)
+    balance1_after_first = wallet1_obj.balance
+    balance2_after_first = wallet2_obj.balance
 
     response2 = client.put(
         "/api/v1/operations/transfer",
@@ -150,15 +153,14 @@ async def test_transfer_idempotency(client, test_user, db, mock_currency_api, au
     data2 = response2.json()
     assert data2["id"] == data1["id"]
 
-    balance1_after_second = db.get(Wallet, wallet1.id).balance
-    balance2_after_second = db.get(Wallet, wallet2.id).balance
-
-    assert balance1_after_second == balance1_after_first
-    assert balance2_after_second == balance2_after_first
+    wallet1_obj = await db.get(Wallet, wallet1.id)
+    wallet2_obj = await db.get(Wallet, wallet2.id)
+    assert wallet1_obj.balance == balance1_after_first
+    assert wallet2_obj.balance == balance2_after_first
 
 
 def test_different_transaction_ids_create_separate_operations(
-    client, test_user, test_wallet, db, auth_headers
+    client, test_user, test_wallet, auth_headers
 ):
     """
     Разные transaction_id должны создавать отдельные операции.
@@ -191,13 +193,14 @@ def test_different_transaction_ids_create_separate_operations(
     assert response1.json()["id"] != response2.json()["id"]
 
 
-def test_idempotency_preserves_wallet_balance(client, test_user, test_wallet, db, auth_headers):
+async def test_idempotency_preserves_wallet_balance(
+    client, test_user, test_wallet, db: AsyncSession, auth_headers
+):
     """
     Идемпотентность должна сохранять баланс кошелька при повторных запросах.
     Баланс должен увеличиться только один раз, несмотря на 3 одинаковых запроса.
     """
     transaction_id = str(uuid.uuid4())
-
     initial_balance = test_wallet.balance
 
     for _ in range(3):
@@ -213,6 +216,6 @@ def test_idempotency_preserves_wallet_balance(client, test_user, test_wallet, db
         )
         assert response.status_code in (200, 201)
 
-    db.refresh(test_wallet)
+    await db.refresh(test_wallet)
     expected_balance = initial_balance + Decimal("200.0")
     assert test_wallet.balance == expected_balance

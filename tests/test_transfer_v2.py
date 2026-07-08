@@ -1,11 +1,13 @@
 from decimal import Decimal
 from uuid import uuid4
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.enum import CurrencyEnum
 from app.models import Wallet
 
 
-async def test_transfer_v2_with_custom_amount_success(client, test_user, db, auth_headers):
+async def test_transfer_v2_with_custom_amount_success(client, test_user, db: AsyncSession, auth_headers):
     """v2: Перевод с кастомной суммой получения успешно выполняется."""
     wallet1 = Wallet(
         user_id=test_user.id,
@@ -18,9 +20,9 @@ async def test_transfer_v2_with_custom_amount_success(client, test_user, db, aut
     )
     db.add(wallet1)
     db.add(wallet2)
-    db.commit()
-    db.refresh(wallet1)
-    db.refresh(wallet2)
+    await db.commit()
+    await db.refresh(wallet1)
+    await db.refresh(wallet2)
 
     response = client.put(
         "/api/v2/operations/transfer",
@@ -44,7 +46,7 @@ async def test_transfer_v2_with_custom_amount_success(client, test_user, db, aut
 
 
 async def test_transfer_v2_without_custom_amount_fallback_to_v1(
-    client, test_user, db, mock_currency_api, auth_headers
+    client, test_user, db: AsyncSession, mock_currency_api, auth_headers
 ):
     """v2: Перевод без кастомной суммы работает как v1 (автоконверсия)."""
     wallet1 = Wallet(
@@ -58,9 +60,9 @@ async def test_transfer_v2_without_custom_amount_fallback_to_v1(
     )
     db.add(wallet1)
     db.add(wallet2)
-    db.commit()
-    db.refresh(wallet1)
-    db.refresh(wallet2)
+    await db.commit()
+    await db.refresh(wallet1)
+    await db.refresh(wallet2)
 
     response = client.put(
         "/api/v2/operations/transfer",
@@ -79,7 +81,7 @@ async def test_transfer_v2_without_custom_amount_fallback_to_v1(
     assert float(data["to_wallet"]["balance"]) > 0
 
 
-def test_transfer_v2_custom_amount_same_currency(client, test_user, db, auth_headers):
+async def test_transfer_v2_custom_amount_same_currency(client, test_user, db: AsyncSession, auth_headers):
     """v2: Перевод с кастомной суммой между кошельками с одинаковой валютой."""
     wallet1 = Wallet(
         user_id=test_user.id, name="Wallet 1", currency=CurrencyEnum.USD, balance=Decimal("500.0")
@@ -89,9 +91,9 @@ def test_transfer_v2_custom_amount_same_currency(client, test_user, db, auth_hea
     )
     db.add(wallet1)
     db.add(wallet2)
-    db.commit()
-    db.refresh(wallet1)
-    db.refresh(wallet2)
+    await db.commit()
+    await db.refresh(wallet1)
+    await db.refresh(wallet2)
 
     response = client.put(
         "/api/v2/operations/transfer",
@@ -112,7 +114,9 @@ def test_transfer_v2_custom_amount_same_currency(client, test_user, db, auth_hea
     assert data["exchange_rate"] == 0.95
 
 
-def test_transfer_v2_custom_amount_insufficient_funds(client, test_user, db, auth_headers):
+async def test_transfer_v2_custom_amount_insufficient_funds(
+    client, test_user, db: AsyncSession, auth_headers
+):
     """v2: Перевод с кастомной суммой при недостатке средств — 400."""
     wallet1 = Wallet(
         user_id=test_user.id, name="Wallet 1", currency=CurrencyEnum.USD, balance=Decimal("50.0")
@@ -122,9 +126,9 @@ def test_transfer_v2_custom_amount_insufficient_funds(client, test_user, db, aut
     )
     db.add(wallet1)
     db.add(wallet2)
-    db.commit()
-    db.refresh(wallet1)
-    db.refresh(wallet2)
+    await db.commit()
+    await db.refresh(wallet1)
+    await db.refresh(wallet2)
 
     response = client.put(
         "/api/v2/operations/transfer",
@@ -172,7 +176,7 @@ def test_transfer_v2_custom_amount_same_wallet(client, test_user, test_wallet, a
     assert response.status_code == 422
 
 
-def test_transfer_v2_implied_rate_calculation(client, test_user, db, auth_headers):
+async def test_transfer_v2_implied_rate_calculation(client, test_user, db: AsyncSession, auth_headers):
     """v2: Проверка расчета implied exchange rate."""
     wallet1 = Wallet(
         user_id=test_user.id,
@@ -185,9 +189,9 @@ def test_transfer_v2_implied_rate_calculation(client, test_user, db, auth_header
     )
     db.add(wallet1)
     db.add(wallet2)
-    db.commit()
-    db.refresh(wallet1)
-    db.refresh(wallet2)
+    await db.commit()
+    await db.refresh(wallet1)
+    await db.refresh(wallet2)
 
     response = client.put(
         "/api/v2/operations/transfer",
@@ -209,7 +213,7 @@ def test_transfer_v2_implied_rate_calculation(client, test_user, db, auth_header
     assert abs(data["exchange_rate"] - expected_rate) < 0.000001
 
 
-async def test_transfer_v2_idempotency(client, test_user, db, auth_headers):
+async def test_transfer_v2_idempotency(client, test_user, db: AsyncSession, auth_headers):
     """v2: Повторный запрос с тем же transaction_id возвращает 200."""
     wallet1 = Wallet(
         user_id=test_user.id, name="Wallet 1", currency=CurrencyEnum.USD, balance=Decimal("1000.0")
@@ -219,9 +223,9 @@ async def test_transfer_v2_idempotency(client, test_user, db, auth_headers):
     )
     db.add(wallet1)
     db.add(wallet2)
-    db.commit()
-    db.refresh(wallet1)
-    db.refresh(wallet2)
+    await db.commit()
+    await db.refresh(wallet1)
+    await db.refresh(wallet2)
 
     transaction_id = str(uuid4())
 
@@ -254,7 +258,9 @@ async def test_transfer_v2_idempotency(client, test_user, db, auth_headers):
     assert data["success"] is True
 
 
-def test_transfer_v2_empty_custom_amount_works_as_v1(client, test_user, db, auth_headers):
+async def test_transfer_v2_empty_custom_amount_works_as_v1(
+    client, test_user, db: AsyncSession, auth_headers
+):
     """v2: Перевод с пустой кастомной суммой между одинаковыми валютами."""
     wallet1 = Wallet(
         user_id=test_user.id, name="Wallet 1", currency=CurrencyEnum.USD, balance=Decimal("500.0")
@@ -264,9 +270,9 @@ def test_transfer_v2_empty_custom_amount_works_as_v1(client, test_user, db, auth
     )
     db.add(wallet1)
     db.add(wallet2)
-    db.commit()
-    db.refresh(wallet1)
-    db.refresh(wallet2)
+    await db.commit()
+    await db.refresh(wallet1)
+    await db.refresh(wallet2)
 
     response = client.put(
         "/api/v2/operations/transfer",

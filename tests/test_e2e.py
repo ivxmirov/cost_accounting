@@ -6,7 +6,6 @@ import pytest
 from app.models import Wallet
 
 
-@pytest.mark.asyncio
 async def test_e2e_basic_user_flow_registration_to_expense(client, db, mock_currency_api):
     """E2E тест: Базовый пользовательский флоу от регистрации до траты.
 
@@ -112,12 +111,11 @@ async def test_e2e_basic_user_flow_registration_to_expense(client, db, mock_curr
     wallet_final = next(w for w in wallets_final_data if w["id"] == wallet_id)
     assert float(wallet_final["balance"]) == 50.0
 
-    wallet_in_db = db.get(Wallet, wallet_id)
+    wallet_in_db = await db.get(Wallet, wallet_id)
     assert wallet_in_db is not None
     assert float(wallet_in_db.balance) == 50.0
 
 
-@pytest.mark.asyncio
 async def test_e2e_multi_wallet_flow_with_transfer(client, db, mock_currency_api):
     """E2E тест: Флоу с несколькими кошельками и переводом между ними.
 
@@ -237,7 +235,6 @@ async def test_e2e_multi_wallet_flow_with_transfer(client, db, mock_currency_api
     assert float(wallet2_final["balance"]) > 0.0
 
 
-@pytest.mark.asyncio
 async def test_e2e_operations_history_and_report(client, db, mock_currency_api):
     """E2E тест: Флоу с историей операций.
 
@@ -372,12 +369,11 @@ async def test_e2e_operations_history_and_report(client, db, mock_currency_api):
     wallet_final = next(w for w in wallets_data if w["id"] == wallet_id)
     assert float(wallet_final["balance"]) == 1000.0
 
-    wallet_in_db = db.get(Wallet, wallet_id)
+    wallet_in_db = await db.get(Wallet, wallet_id)
     assert wallet_in_db is not None
     assert float(wallet_in_db.balance) == 1000.0
 
 
-@pytest.mark.asyncio
 async def test_e2e_insufficient_funds_after_income(client, db, mock_currency_api):
     """E2E тест: Ошибка недостатка средств после пополнения.
 
@@ -474,12 +470,11 @@ async def test_e2e_insufficient_funds_after_income(client, db, mock_currency_api
     wallet_final = next(w for w in wallets_final_data if w["id"] == wallet_id)
     assert float(wallet_final["balance"]) == 100.0
 
-    wallet_in_db = db.get(Wallet, wallet_id)
+    wallet_in_db = await db.get(Wallet, wallet_id)
     assert wallet_in_db is not None
     assert float(wallet_in_db.balance) == 100.0
 
 
-@pytest.mark.asyncio
 async def test_e2e_expense_without_income(client, db, mock_currency_api):
     """E2E тест: Ошибка траты без предварительного пополнения.
 
@@ -564,7 +559,7 @@ async def test_e2e_expense_without_income(client, db, mock_currency_api):
     wallet_final = next(w for w in wallets_final_data if w["id"] == wallet_id)
     assert float(wallet_final["balance"]) == 0.0
 
-    wallet_in_db = db.get(Wallet, wallet_id)
+    wallet_in_db = await db.get(Wallet, wallet_id)
     assert wallet_in_db is not None
     assert float(wallet_in_db.balance) == 0.0
 
@@ -574,7 +569,6 @@ async def test_e2e_expense_without_income(client, db, mock_currency_api):
     assert len(operations_data) == 0
 
 
-@pytest.mark.asyncio
 async def test_e2e_transfer_insufficient_funds(client, db, mock_currency_api):
     """E2E тест: Ошибка перевода при недостатке средств.
 
