@@ -81,7 +81,9 @@ async def get_wallet(db: AsyncSession, current_user: User, wallet_name: str) -> 
     Raises:
         HTTPException: Если кошелек не найден
     """
-    wallet = await wallets_repository.get_wallet_balance_by_name(db, current_user.id, wallet_name)
-    if not wallet:
+    if not await wallets_repository.is_wallet_exist(db, current_user.id, wallet_name):
         raise HTTPException(status_code=404, detail=f"Wallet '{wallet_name}' not found")
+
+    wallet = await wallets_repository.get_wallet_by_name(db, current_user.id, wallet_name)
+
     return WalletResponse.model_validate(wallet)

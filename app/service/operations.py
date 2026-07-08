@@ -85,9 +85,7 @@ async def add_expense(
     if not await wallets_repository.is_wallet_exist(db, current_user.id, operation.wallet_name):
         raise HTTPException(status_code=404, detail=f"Wallet '{operation.wallet_name}' not found")
 
-    wallet = await wallets_repository.get_wallet_balance_by_name(
-        db, current_user.id, operation.wallet_name
-    )
+    wallet = await wallets_repository.get_wallet_by_name(db, current_user.id, operation.wallet_name)
     if wallet.balance < operation.amount:
         raise HTTPException(
             status_code=400, detail=f"Insufficient funds. Available: {wallet.balance}"
