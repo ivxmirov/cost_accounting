@@ -593,20 +593,31 @@ async function addWallet() {
 }
 
 async function addIncome() {
+    if (!accessToken) {
+        showError('Сначала войдите в систему');
+        return;
+    }
+
     if (wallets.length === 0) {
         showError('Сначала создайте кошелек');
         return;
     }
 
     const wallet_id = parseInt(document.getElementById('incomeWallet').value);
-    const amount = parseFloat(document.getElementById('incomeAmount').value);
+    const amount = document.getElementById('incomeAmount').value;
     const description = document.getElementById('incomeDescription').value.trim();
 
-    if (!amount || amount <= 0) {
+    if (!amount || parseFloat(amount) <= 0) {
         showError('Введите корректную сумму');
         return;
     }
 
+    if (!wallet_id) {
+        showError('Выберите кошелек');
+        return;
+    }
+
+    // Находим имя кошелька по ID
     const wallet = wallets.find(w => w.id === wallet_id);
     if (!wallet) {
         showError('Кошелек не найден');
@@ -621,48 +632,60 @@ async function addIncome() {
             },
             body: JSON.stringify({ 
                 transaction_id: generateUUID(),
-                wallet_name: wallet.name, 
-                amount, 
-                description
+                wallet_name: wallet.name,  // Отправляем ИМЯ кошелька
+                amount: parseFloat(amount),
+                description: description || 'Доход'
             })
         });
 
+        console.log('[INCOME] Статус:', response.status);
+        
         if (response.ok) {
+            const data = await response.json();
+            console.log('[INCOME] Успех:', data);
             showSuccess('Доход добавлен!');
             closeModal('addIncomeModal');
             document.getElementById('incomeAmount').value = '';
             document.getElementById('incomeDescription').value = '';
             await loadAllData();
         } else {
-            const error = await response.json();
-            showError(error.message || error.detail || 'Ошибка добавления дохода');
+            const errorData = await response.json();
+            console.error('[INCOME] Ошибка:', errorData);
+            showError(errorData.detail || 'Ошибка добавления дохода');
         }
     } catch (e) {
-        showError('Ошибка подключения');
+        console.error('[INCOME] Исключение:', e);
+        showError('Ошибка подключения: ' + e.message);
     }
 }
 
 async function addExpense() {
+    if (!accessToken) {
+        showError('Сначала войдите в систему');
+        return;
+    }
+
     if (wallets.length === 0) {
         showError('Сначала создайте кошелек');
         return;
     }
 
     const wallet_id = parseInt(document.getElementById('expenseWallet').value);
-    const amount = parseFloat(document.getElementById('expenseAmount').value);
+    const amount = document.getElementById('expenseAmount').value;
     const category = document.getElementById('expenseCategory').value.trim();
     const description = document.getElementById('expenseDescription').value.trim();
 
-    if (!amount || amount <= 0) {
+    if (!amount || parseFloat(amount) <= 0) {
         showError('Введите корректную сумму');
         return;
     }
 
-    if (!category) {
-        showError('Введите категорию');
+    if (!wallet_id) {
+        showError('Выберите кошелек');
         return;
     }
 
+    // Находим имя кошелька по ID
     const wallet = wallets.find(w => w.id === wallet_id);
     if (!wallet) {
         showError('Кошелек не найден');
@@ -677,13 +700,17 @@ async function addExpense() {
             },
             body: JSON.stringify({ 
                 transaction_id: generateUUID(),
-                wallet_name: wallet.name, 
-                amount, 
-                description 
+                wallet_name: wallet.name,  // Отправляем ИМЯ кошелька
+                amount: parseFloat(amount),
+                description: description || category || 'Расход'
             })
         });
 
+        console.log('[EXPENSE] Статус:', response.status);
+        
         if (response.ok) {
+            const data = await response.json();
+            console.log('[EXPENSE] Успех:', data);
             showSuccess('Расход добавлен!');
             closeModal('addExpenseModal');
             document.getElementById('expenseAmount').value = '';
@@ -691,15 +718,22 @@ async function addExpense() {
             document.getElementById('expenseDescription').value = '';
             await loadAllData();
         } else {
-            const error = await response.json();
-            showError(error.message || error.detail || 'Ошибка добавления расхода');
+            const errorData = await response.json();
+            console.error('[EXPENSE] Ошибка:', errorData);
+            showError(errorData.detail || 'Ошибка добавления расхода');
         }
     } catch (e) {
-        showError('Ошибка подключения');
+        console.error('[EXPENSE] Исключение:', e);
+        showError('Ошибка подключения: ' + e.message);
     }
 }
 
 async function transfer() {
+    if (!accessToken) {
+        showError('Сначала войдите в систему');
+        return;
+    }
+
     if (wallets.length < 2) {
         showError('Для перевода нужно минимум 2 кошелька');
         return;
@@ -707,14 +741,19 @@ async function transfer() {
 
     const from_wallet_id = parseInt(document.getElementById('transferFrom').value);
     const to_wallet_id = parseInt(document.getElementById('transferTo').value);
-    const amount = parseFloat(document.getElementById('transferAmount').value);
+    const amount = document.getElementById('transferAmount').value;
+
+    if (!from_wallet_id || !to_wallet_id) {
+        showError('Выберите оба кошелька');
+        return;
+    }
 
     if (from_wallet_id === to_wallet_id) {
         showError('Нельзя перевести в тот же кошелек');
         return;
     }
 
-    if (!amount || amount <= 0) {
+    if (!amount || parseFloat(amount) <= 0) {
         showError('Введите корректную сумму');
         return;
     }
@@ -727,23 +766,29 @@ async function transfer() {
             },
             body: JSON.stringify({ 
                 transaction_id: generateUUID(),
-                from_wallet_id, 
-                to_wallet_id, 
-                amount 
+                from_wallet_id: from_wallet_id,
+                to_wallet_id: to_wallet_id,
+                amount: parseFloat(amount)
             })
         });
 
+        console.log('[TRANSFER] Статус:', response.status);
+        
         if (response.ok) {
+            const data = await response.json();
+            console.log('[TRANSFER] Успех:', data);
             showSuccess('Перевод выполнен!');
             closeModal('transferModal');
             document.getElementById('transferAmount').value = '';
             await loadAllData();
         } else {
-            const error = await response.json();
-            showError(error.message || error.detail || 'Ошибка перевода');
+            const errorData = await response.json();
+            console.error('[TRANSFER] Ошибка:', errorData);
+            showError(errorData.detail || 'Ошибка перевода');
         }
     } catch (e) {
-        showError('Ошибка подключения');
+        console.error('[TRANSFER] Исключение:', e);
+        showError('Ошибка подключения: ' + e.message);
     }
 }
 
