@@ -25,19 +25,19 @@
 
 ## Быстрый старт
 
-1. Клонируйте репозиторий
+1. Клонировать репозиторий
 
 ```bash
 git clone https://github.com/ivxmirov/cost_accounting.git
 ```
 
-2. Установите зависимости (включая dev и test-зависимости)
+2. Установить зависимости (включая dev и test-зависимости)
 
 ```bash
 uv sync --group dev --group test
 ```
 
-3. Настройте переменные окружения
+3. Настроить переменные окружения
   
    Скопируйте .env и .env.test и отредактируйте их под свои настройки
 
@@ -46,25 +46,25 @@ cp .env.example .env
 cp .env.test.example .env.test
 ```
 
-4. Примените миграции базы данных
+4. Применить миграции базы данных
 
 ```bash
 uv run alembic upgrade head
 ```
 
-5. Запустите сервер для разработки
+5. Запустить сервер для разработки
 
 ```bash
 uv run uvicorn app.main:app --reload
 ```
 
-6. Запустите тесты
+6. Запустить тесты
 
 ```bash
 uv run pytest
 ```
 
-7. Установите pre-commit хуки (опционально)
+7. Установить pre-commit хуки (опционально)
 
 ```bash
 uv run pre-commit install
