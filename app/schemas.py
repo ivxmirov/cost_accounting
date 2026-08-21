@@ -5,7 +5,45 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
 
-from app.enum import CurrencyEnum, OperationType
+from app.enum import CurrencyEnum, OperationType, WalletType
+
+
+class GroupCreateSchema(BaseModel):
+    name: str = Field(..., min_length=1, max_length=127)
+    members_logins: list[str] = Field(..., min_length=1)
+
+    @field_validator('name')
+    @classmethod
+    def group_name_not_empty(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Название группы не может быть пустым")
+        return v
+
+    @field_validator('members_logins')
+    @classmethod
+    def validate_members_logins(cls, v: list[str]) -> list[str]:
+        # Нормализуем и убираем дубликаты
+        normalized = list(set(login.strip().lower() for login in v))
+        if not normalized:
+            raise ValueError("Добавьте в группу хотя бы одного участника")
+        return normalized
+
+
+class GroupResponseSchema(BaseModel):
+    model_config = {"from_attributes": True}
+
+    name: str
+    creator: int
+    members: list[str]
+
+    @field_validator('members', mode='before')
+    @classmethod
+    def extract_member_logins(cls, v):
+        """Извлекает логины из объектов User"""
+        if v and hasattr(v[0], 'login'):
+            return [member.login for member in v]
+        return v
 
 
 class OperationRequest(BaseModel):
@@ -29,24 +67,26 @@ class OperationRequest(BaseModel):
         return v
 
 
-class CreateWalletRequest(BaseModel):
+class WalletCreateSchema(BaseModel):
     name: str = Field(..., max_length=127)
     initial_balance: Decimal = Decimal(0)
     currency: CurrencyEnum = CurrencyEnum.RUB
+    type: WalletType
+    credit_limit: Decimal | None = None
 
     @field_validator("name")
     @classmethod
     def name_not_empty(cls, v: str) -> str:
         v = v.strip()
         if not v:
-            raise ValueError("Wallet name cannot be empty")
+            raise ValueError("Введите название кошелька")
         return v
 
     @field_validator("initial_balance")
     @classmethod
     def balance_not_negative(cls, v: Decimal) -> Decimal:
         if v < 0:
-            raise ValueError("Initial balance cannot be negative")
+            raise ValueError("Начальный баланс кошелька не должен быть отрицательным")
         return v
 
 
@@ -55,18 +95,20 @@ class UserRequest(BaseModel):
     password: str = Field(..., min_length=6)
 
 
-class UserResponse(BaseModel):
+class UserResponseSchema(BaseModel):
     model_config = {"from_attributes": True}
     id: int
     login: str
 
 
-class WalletResponse(BaseModel):
+class WalletResponseSchema(BaseModel):
     model_config = {"from_attributes": True}
     id: int
     name: str
     balance: Decimal
     currency: CurrencyEnum
+    type: WalletType
+    credit_limit: Decimal | None
 
 
 class OperationResponse(BaseModel):
@@ -124,11 +166,11 @@ class TransferCreateSchemaV2(TransferCreateSchema):
         return v
 
 
-class TransferResponse(BaseModel):
+class TransferResponseSchema(BaseModel):
     model_config = {"from_attributes": True}
     success: bool
-    from_wallet: WalletResponse
-    to_wallet: WalletResponse
+    from_wallet: WalletResponseSchema
+    to_wallet: WalletResponseSchema
     transferred_amount: Decimal
     received_amount: Decimal
     exchange_rate: Decimal

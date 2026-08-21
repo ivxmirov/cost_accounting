@@ -15,8 +15,8 @@ from app.schemas import (
     IncomeCreateSchema,
     OperationResponse,
     TransferCreateSchemaV2,
-    TransferResponse,
-    WalletResponse,
+    TransferResponseSchema,
+    WalletResponseSchema,
 )
 from app.service.exchange_service import get_exchange_rate
 
@@ -214,7 +214,7 @@ async def transfer_between_wallets_v2(
     db: AsyncSession,
     transfer: TransferCreateSchemaV2,
     user_id: int,
-) -> tuple[TransferResponse, int]:
+) -> tuple[TransferResponseSchema, int]:
     """
     Переводит деньги между кошельками пользователя
     Обеспечивает идемпотентность и, при необходимости, конвертацию валют
@@ -255,10 +255,10 @@ async def transfer_between_wallets_v2(
 
     if existing_operation:
         return (
-            TransferResponse(
+            TransferResponseSchema(
                 success=True,
-                from_wallet=WalletResponse.model_validate(from_wallet),
-                to_wallet=WalletResponse.model_validate(to_wallet),
+                from_wallet=WalletResponseSchema.model_validate(from_wallet),
+                to_wallet=WalletResponseSchema.model_validate(to_wallet),
                 transferred_amount=existing_operation.amount,
                 received_amount=target_amount,
                 exchange_rate=exchange_rate,
@@ -286,10 +286,10 @@ async def transfer_between_wallets_v2(
     await db.refresh(to_wallet)
 
     return (
-        TransferResponse(
+        TransferResponseSchema(
             success=True,
-            from_wallet=WalletResponse.model_validate(from_wallet),
-            to_wallet=WalletResponse.model_validate(to_wallet),
+            from_wallet=WalletResponseSchema.model_validate(from_wallet),
+            to_wallet=WalletResponseSchema.model_validate(to_wallet),
             transferred_amount=transfer.amount,
             received_amount=target_amount,
             exchange_rate=exchange_rate,

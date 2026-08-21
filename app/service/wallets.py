@@ -3,10 +3,10 @@ from decimal import Decimal
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.enum import CurrencyEnum
+from app.enum import CurrencyEnum, WalletType
 from app.models import User
 from app.repository import wallets as wallets_repository
-from app.schemas import CreateWalletRequest, TotalBalance, WalletResponse
+from app.schemas import TotalBalance, WalletCreateSchema, WalletResponseSchema
 from app.service import exchange_service
 
 
@@ -21,20 +21,29 @@ async def get_total_balance(db: AsyncSession, current_user: User) -> TotalBalanc
     """
     wallets = await wallets_repository.get_all_wallets(db, current_user.id)
     total_balance = Decimal(0)
+
     for wallet in wallets:
-        if wallet.currency == CurrencyEnum.RUB:
-            total_balance += wallet.balance
-        else:
-            exchange_rate = await exchange_service.get_exchange_rate(
-                wallet.currency, CurrencyEnum.RUB
-            )
-            total_balance += exchange_rate * wallet.balance
+
+        if wallet.type == WalletType.DEBIT:
+            credit_limit = 0
+
+        if wallet.type == WalletType.CREDIT and wallet.credit_limit is not None:
+            credit_limit = wallet.credit_limit
+
+            if wallet.currency == CurrencyEnum.RUB:
+                total_balance += (wallet.balance - credit_limit)
+            else:
+                exchange_rate = await exchange_service.get_exchange_rate(
+                    wallet.currency, CurrencyEnum.RUB
+                )
+                total_balance += exchange_rate * (wallet.balance - credit_limit)
+
     return TotalBalance(total_balance=total_balance)
 
 
 async def create_wallet(
-    db: AsyncSession, current_user: User, wallet: CreateWalletRequest
-) -> WalletResponse:
+    db: AsyncSession, current_user: User, wallet: WalletCreateSchema
+) -> WalletResponseSchema:
     """
     Создает новый кошелек для пользователя с проверкой на дубликаты
     Args:
@@ -49,14 +58,36 @@ async def create_wallet(
     if await wallets_repository.is_wallet_exist(db, current_user.id, wallet.name):
         raise HTTPException(status_code=400, detail=f"Wallet '{wallet.name}' already exists")
 
+    credit_limit = wallet.credit_limit
+
+    if wallet.type == WalletType.CREDIT:
+        if wallet.credit_limit is None:
+            raise HTTPException(400, "Кредитный кошелёк требует кредитный лимит")
+        if wallet.credit_limit <= 0:
+            raise HTTPException(400, "Кредитный лимит должен быть положительным")
+        if wallet.initial_balance > wallet.credit_limit:
+            raise HTTPException(
+                400, "Баланс кредитного кошелька не может быть больше кредитного лимита"
+            )
+
+    elif wallet.type == WalletType.DEBIT:
+        credit_limit = None
+
     new_wallet = await wallets_repository.create_wallet(
-        db, current_user.id, wallet.name, wallet.initial_balance, wallet.currency
+        db,
+        user_id=current_user.id,
+        wallet_name=wallet.name,
+        amount=wallet.initial_balance,
+        currency=wallet.currency,
+        wallet_type=wallet.type,
+        credit_limit=credit_limit
     )
+
     await db.commit()
-    return WalletResponse.model_validate(new_wallet)
+    return WalletResponseSchema.model_validate(new_wallet)
 
 
-async def get_all_wallets(db: AsyncSession, current_user: User) -> list[WalletResponse]:
+async def get_all_wallets(db: AsyncSession, current_user: User) -> list[WalletResponseSchema]:
     """
     Получает список всех кошельков пользователя
     Args:
@@ -66,10 +97,12 @@ async def get_all_wallets(db: AsyncSession, current_user: User) -> list[WalletRe
         Список всех кошельков пользователя
     """
     wallets = await wallets_repository.get_all_wallets(db, current_user.id)
-    return [WalletResponse.model_validate(wallet) for wallet in wallets]
+    return [WalletResponseSchema.model_validate(wallet) for wallet in wallets]
 
 
-async def get_wallet(db: AsyncSession, current_user: User, wallet_name: str) -> WalletResponse:
+async def get_wallet(
+    db: AsyncSession, current_user: User, wallet_name: str
+) -> WalletResponseSchema:
     """
     Получает кошелек пользователя по названию
     Args:
@@ -86,4 +119,4 @@ async def get_wallet(db: AsyncSession, current_user: User, wallet_name: str) -> 
 
     wallet = await wallets_repository.get_wallet_by_name(db, current_user.id, wallet_name)
 
-    return WalletResponse.model_validate(wallet)
+    return WalletResponseSchema.model_validate(wallet)

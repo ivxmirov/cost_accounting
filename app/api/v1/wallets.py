@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependency import get_current_user, get_db
 from app.models import User
-from app.schemas import CreateWalletRequest, WalletResponse
+from app.schemas import WalletCreateSchema, WalletResponseSchema
 from app.service import wallets as wallets_service
 
 router = APIRouter()
@@ -20,16 +20,16 @@ async def get_balance(
     return await wallets_service.get_total_balance(db, current_user)
 
 
-@router.post("/wallets", response_model=WalletResponse, status_code=201)
+@router.post("/wallets", response_model=WalletResponseSchema, status_code=201)
 async def create_wallet(
-    wallet: CreateWalletRequest,
+    wallet: WalletCreateSchema,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     return await wallets_service.create_wallet(db, current_user, wallet)
 
 
-@router.get("/wallets", response_model=list[WalletResponse])
+@router.get("/wallets", response_model=list[WalletResponseSchema])
 async def get_all_wallets(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),

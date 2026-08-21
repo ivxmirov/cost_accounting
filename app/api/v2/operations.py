@@ -9,14 +9,14 @@ from app.dependency import get_current_user, get_db
 from app.models import User
 from app.schemas import (
     TransferCreateSchemaV2,
-    TransferResponse,
+    TransferResponseSchema,
 )
 from app.service import operations as operations_service
 
 router = APIRouter()
 
 
-@router.put("/operations/transfer", response_model=TransferResponse)
+@router.put("/operations/transfer", response_model=TransferResponseSchema)
 async def create_transfer_v2(
     transfer_data: TransferCreateSchemaV2,
     response: Response,

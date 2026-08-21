@@ -3,7 +3,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.enum import CurrencyEnum
+from app.enum import CurrencyEnum, WalletType
 from app.models import Wallet
 
 
@@ -48,9 +48,11 @@ async def get_all_wallets(
 
 
 async def create_wallet(
-    db: AsyncSession, user_id: int, wallet_name: str, amount: Decimal, currency: CurrencyEnum
+    db: AsyncSession, user_id: int, wallet_name: str, amount: Decimal, currency: CurrencyEnum,
+    wallet_type: WalletType, credit_limit: Decimal | None
 ) -> Wallet:
-    wallet = Wallet(name=wallet_name, balance=amount, user_id=user_id, currency=currency)
+    wallet = Wallet(name=wallet_name, balance=amount, user_id=user_id, currency=currency,
+    type=wallet_type, credit_limit=credit_limit)
     db.add(wallet)
     await db.flush()
     return wallet

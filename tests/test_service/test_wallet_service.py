@@ -6,12 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.enum import CurrencyEnum
 from app.models import User, Wallet
-from app.schemas import CreateWalletRequest, TotalBalance
+from app.schemas import TotalBalance, WalletCreateSchema
 from app.service import wallets as wallets_service
 
 
 async def test_create_wallet(db_session: AsyncSession, current_user):
-    payload = CreateWalletRequest(name="test", initial_balance=Decimal(10))
+    payload = WalletCreateSchema(name="test", initial_balance=Decimal(10))
 
     wallet = await wallets_service.create_wallet(
         db_session, current_user=current_user, wallet=payload
@@ -23,7 +23,7 @@ async def test_create_wallet(db_session: AsyncSession, current_user):
 
 
 async def test_create_wallet_exists(db_session: AsyncSession, current_user, wallet):
-    payload = CreateWalletRequest(name=wallet.name, initial_balance=Decimal(10))
+    payload = WalletCreateSchema(name=wallet.name, initial_balance=Decimal(10))
 
     with pytest.raises(HTTPException) as exc:
         await wallets_service.create_wallet(

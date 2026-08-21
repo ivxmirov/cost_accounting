@@ -2,11 +2,11 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repository import users as users_repository
-from app.schemas import UserResponse
+from app.schemas import UserResponseSchema
 from app.utils.password import hash_password
 
 
-async def create_user(db: AsyncSession, login: str, password: str) -> UserResponse:
+async def create_user(db: AsyncSession, login: str, password: str) -> UserResponseSchema:
     """
     Создает нового пользователя с проверкой на дубликаты и хешированием пароля
     Args:
@@ -23,4 +23,4 @@ async def create_user(db: AsyncSession, login: str, password: str) -> UserRespon
     password_hash = hash_password(password)
     user = await users_repository.create_user(db, login, password_hash)
     await db.commit()
-    return UserResponse.model_validate(user)
+    return UserResponseSchema.model_validate(user)
