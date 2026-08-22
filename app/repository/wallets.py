@@ -48,11 +48,22 @@ async def get_all_wallets(
 
 
 async def create_wallet(
-    db: AsyncSession, user_id: int, wallet_name: str, amount: Decimal, currency: CurrencyEnum,
-    wallet_type: WalletType, credit_limit: Decimal | None
+    db: AsyncSession,
+    user_id: int,
+    wallet_name: str,
+    amount: Decimal,
+    currency: CurrencyEnum,
+    wallet_type: WalletType,
+    credit_limit: Decimal | None,
 ) -> Wallet:
-    wallet = Wallet(name=wallet_name, balance=amount, user_id=user_id, currency=currency,
-    type=wallet_type, credit_limit=credit_limit)
+    wallet = Wallet(
+        name=wallet_name,
+        balance=amount,
+        user_id=user_id,
+        currency=currency,
+        type=wallet_type,
+        credit_limit=credit_limit,
+    )
     db.add(wallet)
     await db.flush()
     return wallet

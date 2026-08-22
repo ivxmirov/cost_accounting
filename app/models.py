@@ -35,10 +35,10 @@ class Operation(Base):
 
 
 group_members = Table(
-    'group_members',
+    "group_members",
     Base.metadata,
-    Column('user_id', ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
-    Column('group_id', ForeignKey('groups.id', ondelete='CASCADE'), primary_key=True),
+    Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+    Column("group_id", ForeignKey("groups.id", ondelete="CASCADE"), primary_key=True),
 )
 
 
@@ -50,10 +50,7 @@ class User(Base):
     wallets: Mapped[list["Wallet"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", passive_deletes=True
     )
-    groups: Mapped[list["Group"]] = relationship(
-        secondary=group_members,
-        back_populates="members"
-    )
+    groups: Mapped[list["Group"]] = relationship(secondary=group_members, back_populates="members")
 
 
 class Group(Base):
@@ -63,10 +60,7 @@ class Group(Base):
     creator: Mapped[int] = mapped_column(
         ForeignKey(column="users.id", ondelete="CASCADE"), nullable=False
     )
-    members: Mapped[list["User"]] = relationship(
-        secondary=group_members,
-        back_populates="groups"
-    )
+    members: Mapped[list["User"]] = relationship(secondary=group_members, back_populates="groups")
 
 
 class Wallet(Base):

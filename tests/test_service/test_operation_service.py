@@ -63,9 +63,7 @@ async def test_add_income_other_user(db_session: AsyncSession, wallet):
     )
 
     with pytest.raises(HTTPException) as exc:
-        await operations_service.add_income(
-            db_session, current_user=other_user, operation=payload
-        )
+        await operations_service.add_income(db_session, current_user=other_user, operation=payload)
 
     assert exc.value.status_code == 404
 
@@ -123,9 +121,7 @@ async def test_add_expense_other_user(db_session: AsyncSession, wallet):
     )
 
     with pytest.raises(HTTPException) as exc:
-        await operations_service.add_expense(
-            db_session, current_user=other_user, operation=payload
-        )
+        await operations_service.add_expense(db_session, current_user=other_user, operation=payload)
 
     assert exc.value.status_code == 404
 

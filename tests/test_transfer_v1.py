@@ -7,7 +7,9 @@ from app.enum import CurrencyEnum
 from app.models import Wallet
 
 
-async def test_transfer_v1_success(client, test_user, db: AsyncSession, mock_currency_api, auth_headers):
+async def test_transfer_v1_success(
+    client, test_user, db: AsyncSession, mock_currency_api, auth_headers
+):
     """v1: Перевод между кошельками должен успешно списать/зачислить средства."""
     wallet1 = Wallet(
         user_id=test_user.id,
@@ -138,7 +140,9 @@ async def test_transfer_v1_same_currency(client, test_user, db: AsyncSession, au
     assert float(wallet2.balance) == 350.0
 
 
-async def test_transfer_v1_idempotency(client, test_user, db: AsyncSession, mock_currency_api, auth_headers):
+async def test_transfer_v1_idempotency(
+    client, test_user, db: AsyncSession, mock_currency_api, auth_headers
+):
     """v1: Повторный запрос с тем же transaction_id возвращает 200."""
     wallet1 = Wallet(
         user_id=test_user.id, name="Wallet 1", currency=CurrencyEnum.USD, balance=Decimal("1000.0")

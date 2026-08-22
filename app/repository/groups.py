@@ -8,10 +8,7 @@ from app.models import Group, User
 async def is_group_exist(db: AsyncSession, user_id: int, group_name: str) -> bool:
     """Проверяет существование группы с таким именем у пользователя, который ее создает"""
     result = await db.execute(
-        select(Group).where(
-            Group.name == group_name,
-            Group.creator == user_id
-        )
+        select(Group).where(Group.name == group_name, Group.creator == user_id)
     )
     return result.scalar_one_or_none() is not None
 
@@ -45,9 +42,7 @@ async def create_group(
 
     # Загружаем с отношениями
     result = await db.execute(
-        select(Group)
-        .options(selectinload(Group.members))
-        .where(Group.id == group.id)
+        select(Group).options(selectinload(Group.members)).where(Group.id == group.id)
     )
     return result.scalar_one()
 

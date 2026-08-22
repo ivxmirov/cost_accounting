@@ -26,9 +26,7 @@ async def test_create_wallet_exists(db_session: AsyncSession, current_user, wall
     payload = WalletCreateSchema(name=wallet.name, initial_balance=Decimal(10))
 
     with pytest.raises(HTTPException) as exc:
-        await wallets_service.create_wallet(
-            db_session, current_user=current_user, wallet=payload
-        )
+        await wallets_service.create_wallet(db_session, current_user=current_user, wallet=payload)
 
     assert exc.value.status_code == 400
 

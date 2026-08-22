@@ -99,7 +99,9 @@ async def test_expense_idempotency(client, test_user, test_wallet, db: AsyncSess
     assert wallet.balance == initial_balance
 
 
-async def test_transfer_idempotency(client, test_user, db: AsyncSession, mock_currency_api, auth_headers):
+async def test_transfer_idempotency(
+    client, test_user, db: AsyncSession, mock_currency_api, auth_headers
+):
     """
     Повторный запрос transfer с тем же transaction_id возвращает 200 OK.
     Балансы кошельков не должны измениться при повторном запросе.

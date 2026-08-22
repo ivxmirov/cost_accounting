@@ -40,15 +40,13 @@ async def create_group(
             db, user_id=current_user.id, group_name=group_data.name
         ):
             raise HTTPException(
-                status_code=400,
-                detail="Нельзя создавать несколько групп с одинаковым названием"
+                status_code=400, detail="Нельзя создавать несколько групп с одинаковым названием"
             )
 
         # 2. Проверка, что создатель группы не в списке участников
         if current_user.login in group_data.members_logins:
             raise HTTPException(
-                status_code=400,
-                detail="Создателя группы нельзя повторно добавить в нее"
+                status_code=400, detail="Создателя группы нельзя повторно добавить в нее"
             )
 
         # 3. Получаем всех участников по логинам с проверкой на существование
@@ -57,8 +55,7 @@ async def create_group(
             user = await users_repository.get_user(db, login)
             if not user:
                 raise HTTPException(
-                    status_code=400,
-                    detail=f"Пользователь с логином '{login}' не найден"
+                    status_code=400, detail=f"Пользователь с логином '{login}' не найден"
                 )
             members.append(user)
 

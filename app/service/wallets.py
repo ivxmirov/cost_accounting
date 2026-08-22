@@ -13,6 +13,7 @@ from app.service import exchange_service
 async def get_total_balance(db: AsyncSession, current_user: User) -> TotalBalance:
     """
     Получает общий баланс всех кошельков пользователя с конвертацией валют в рубли
+
     Args:
         db: Сессия базы данных
         current_user: Текущий пользователь
@@ -23,20 +24,20 @@ async def get_total_balance(db: AsyncSession, current_user: User) -> TotalBalanc
     total_balance = Decimal(0)
 
     for wallet in wallets:
-
-        if wallet.type == WalletType.DEBIT:
+        # Это условие выполнится только у дебетовых кошельков
+        if wallet.credit_limit is None:
             credit_limit = 0
-
-        if wallet.type == WalletType.CREDIT and wallet.credit_limit is not None:
+        else:
+            # Это условие выполнится только у кредитных кошельков
             credit_limit = wallet.credit_limit
 
-            if wallet.currency == CurrencyEnum.RUB:
-                total_balance += (wallet.balance - credit_limit)
-            else:
-                exchange_rate = await exchange_service.get_exchange_rate(
-                    wallet.currency, CurrencyEnum.RUB
-                )
-                total_balance += exchange_rate * (wallet.balance - credit_limit)
+        if wallet.currency == CurrencyEnum.RUB:
+            total_balance += wallet.balance - credit_limit
+        else:
+            exchange_rate = await exchange_service.get_exchange_rate(
+                wallet.currency, CurrencyEnum.RUB
+            )
+            total_balance += exchange_rate * (wallet.balance - credit_limit)
 
     return TotalBalance(total_balance=total_balance)
 
@@ -80,7 +81,7 @@ async def create_wallet(
         amount=wallet.initial_balance,
         currency=wallet.currency,
         wallet_type=wallet.type,
-        credit_limit=credit_limit
+        credit_limit=credit_limit,
     )
 
     await db.commit()

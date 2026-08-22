@@ -1,8 +1,5 @@
 import uuid
 
-import pytest
-
-
 from app.models import Wallet
 
 
@@ -13,7 +10,8 @@ async def test_e2e_basic_user_flow_registration_to_expense(client, db, mock_curr
     1. Регистрация нового пользователя через POST /api/v1/users с логином "e2e_user_1"
        - Ожидаемый статус: 201
        - Сохранить login и id из ответа для дальнейших запросов
-    2. Создание кошелька через POST /api/v1/wallets с именем "Main Wallet", валютой "USD", балансом 0.0
+    2. Создание кошелька через POST /api/v1/wallets с именем "Main Wallet",
+       валютой "USD", балансом 0.0
        - Использовать Authorization заголовок: Bearer {user_login}
        - Ожидаемый статус: 201
        - Проверить, что баланс кошелька равен 0.0

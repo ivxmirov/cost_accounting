@@ -17,9 +17,7 @@ from main import app
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-TestSessionLocal = async_sessionmaker(
-    bind=test_engine, class_=AsyncSession, expire_on_commit=False
-)
+TestSessionLocal = async_sessionmaker(bind=test_engine, class_=AsyncSession, expire_on_commit=False)
 
 
 async def get_test_db() -> AsyncGenerator[AsyncSession, None]:

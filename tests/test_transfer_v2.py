@@ -7,7 +7,9 @@ from app.enum import CurrencyEnum
 from app.models import Wallet
 
 
-async def test_transfer_v2_with_custom_amount_success(client, test_user, db: AsyncSession, auth_headers):
+async def test_transfer_v2_with_custom_amount_success(
+    client, test_user, db: AsyncSession, auth_headers
+):
     """v2: Перевод с кастомной суммой получения успешно выполняется."""
     wallet1 = Wallet(
         user_id=test_user.id,
@@ -81,7 +83,9 @@ async def test_transfer_v2_without_custom_amount_fallback_to_v1(
     assert float(data["to_wallet"]["balance"]) > 0
 
 
-async def test_transfer_v2_custom_amount_same_currency(client, test_user, db: AsyncSession, auth_headers):
+async def test_transfer_v2_custom_amount_same_currency(
+    client, test_user, db: AsyncSession, auth_headers
+):
     """v2: Перевод с кастомной суммой между кошельками с одинаковой валютой."""
     wallet1 = Wallet(
         user_id=test_user.id, name="Wallet 1", currency=CurrencyEnum.USD, balance=Decimal("500.0")
@@ -176,7 +180,9 @@ def test_transfer_v2_custom_amount_same_wallet(client, test_user, test_wallet, a
     assert response.status_code == 422
 
 
-async def test_transfer_v2_implied_rate_calculation(client, test_user, db: AsyncSession, auth_headers):
+async def test_transfer_v2_implied_rate_calculation(
+    client, test_user, db: AsyncSession, auth_headers
+):
     """v2: Проверка расчета implied exchange rate."""
     wallet1 = Wallet(
         user_id=test_user.id,

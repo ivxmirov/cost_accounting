@@ -12,7 +12,7 @@ class GroupCreateSchema(BaseModel):
     name: str = Field(..., min_length=1, max_length=127)
     members_logins: list[str] = Field(..., min_length=1)
 
-    @field_validator('name')
+    @field_validator("name")
     @classmethod
     def group_name_not_empty(cls, v: str) -> str:
         v = v.strip()
@@ -20,7 +20,7 @@ class GroupCreateSchema(BaseModel):
             raise ValueError("Название группы не может быть пустым")
         return v
 
-    @field_validator('members_logins')
+    @field_validator("members_logins")
     @classmethod
     def validate_members_logins(cls, v: list[str]) -> list[str]:
         # Нормализуем и убираем дубликаты
@@ -37,11 +37,11 @@ class GroupResponseSchema(BaseModel):
     creator: int
     members: list[str]
 
-    @field_validator('members', mode='before')
+    @field_validator("members", mode="before")
     @classmethod
     def extract_member_logins(cls, v):
         """Извлекает логины из объектов User"""
-        if v and hasattr(v[0], 'login'):
+        if v and hasattr(v[0], "login"):
             return [member.login for member in v]
         return v
 

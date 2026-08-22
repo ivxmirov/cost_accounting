@@ -6,7 +6,9 @@ from app.enum import CurrencyEnum
 from app.models import Operation
 
 
-async def test_report_csv_format(client, test_user, test_wallet, db, auth_headers, mock_currency_api):
+async def test_report_csv_format(
+    client, test_user, test_wallet, db, auth_headers, mock_currency_api
+):
     """CSV отчёт должен иметь правильный формат с заголовками."""
     operation = Operation(
         wallet_id=test_wallet.id,
@@ -38,7 +40,9 @@ async def test_report_csv_format(client, test_user, test_wallet, db, auth_header
     assert lines[0] == "date,type,wallet_id,amount,category,currency"
 
 
-async def test_report_csv_content(client, test_user, test_wallet, db, auth_headers, mock_currency_api):
+async def test_report_csv_content(
+    client, test_user, test_wallet, db, auth_headers, mock_currency_api
+):
     """CSV отчёт должен содержать правильные данные операций."""
     operation1 = Operation(
         wallet_id=test_wallet.id,
@@ -184,7 +188,9 @@ async def test_report_csv_with_multiple_operations(
     assert len(lines) == 5
 
 
-async def test_report_csv_empty(client, test_user, test_wallet, db, auth_headers, mock_currency_api):
+async def test_report_csv_empty(
+    client, test_user, test_wallet, db, auth_headers, mock_currency_api
+):
     """Пустой CSV отчёт должен содержать только заголовки."""
     response = client.get(
         "/api/v1/reports",
