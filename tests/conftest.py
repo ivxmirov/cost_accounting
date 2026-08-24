@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.database import Base
 from app.dependency import get_db
-from app.enum import CurrencyEnum
+from app.enum import CurrencyEnum, WalletType
 from app.models import User, Wallet
 from app.utils.jwt import create_access_token
 from app.utils.password import hash_password
@@ -74,12 +74,32 @@ def auth_headers(test_user):
 
 
 @pytest_asyncio.fixture
-async def wallet(db_session: AsyncSession, test_user):
+async def debit_wallet(db_session: AsyncSession, test_user):
+    """Фикстура для дебетового кошелька"""
     wallet_obj = Wallet(
-        name="test_wallet",
+        name="test_debit_wallet",
         balance=Decimal(1000),
         user_id=test_user.id,
         currency=CurrencyEnum.USD,
+        type=WalletType.DEBIT,
+        credit_limit=None
+    )
+    db_session.add(wallet_obj)
+    await db_session.commit()
+    await db_session.refresh(wallet_obj)
+    return wallet_obj
+
+
+@pytest_asyncio.fixture
+async def credit_wallet(db_session: AsyncSession, test_user):
+    """Фикстура для кредитного кошелька"""
+    wallet_obj = Wallet(
+        name="test_credit_wallet",
+        balance=Decimal(2000),
+        user_id=test_user.id,
+        currency=CurrencyEnum.RUB,
+        type=WalletType.CREDIT,
+        credit_limit=Decimal(50000)
     )
     db_session.add(wallet_obj)
     await db_session.commit()
@@ -88,8 +108,13 @@ async def wallet(db_session: AsyncSession, test_user):
 
 
 @pytest.fixture
-def test_wallet(wallet):
-    return wallet
+def test_debit_wallet(debit_wallet):
+    return debit_wallet
+
+
+@pytest.fixture
+def test_credit_wallet(credit_wallet):
+    return credit_wallet
 
 
 @pytest.fixture

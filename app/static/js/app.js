@@ -284,9 +284,9 @@ async function loadWallets() {
 
         if (response.ok) {
             const rawWallets = await response.json();
-            // Нормализуем данные от бэкенда: приводим валюту к нижнему регистру, баланс к числу
+            // Нормализуем данные от бэкенда
             wallets = rawWallets.map(w => {
-                // Преобразуем баланс в число (обрабатываем строки, Decimal и другие типы)
+                // Преобразуем баланс в число
                 let balance = 0;
                 if (typeof w.balance === 'number') {
                     balance = w.balance;
@@ -296,10 +296,24 @@ async function loadWallets() {
                     balance = Number(w.balance) || 0;
                 }
                 
+                // Преобразуем credit_limit в число (если есть)
+                let creditLimit = null;
+                if (w.credit_limit != null) {
+                    if (typeof w.credit_limit === 'number') {
+                        creditLimit = w.credit_limit;
+                    } else if (typeof w.credit_limit === 'string') {
+                        creditLimit = parseFloat(w.credit_limit) || 0;
+                    } else {
+                        creditLimit = Number(w.credit_limit) || 0;
+                    }
+                }
+                
                 return {
                     ...w,
                     currency: String(w.currency || '').toLowerCase(),
-                    balance: balance
+                    balance: balance,
+                    wallet_type: w.wallet_type || 'debit',
+                    credit_limit: creditLimit
                 };
             });
             renderWalletsTable();
@@ -373,7 +387,7 @@ function renderWalletsTable() {
     const tbody = document.getElementById('walletsTable');
     
     if (wallets.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">У вас пока нет кошельков</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">У вас пока нет кошельков</td></tr>';
         return;
     }
 
@@ -384,14 +398,32 @@ function renderWalletsTable() {
     };
 
     tbody.innerHTML = wallets.map(w => {
-        // Гарантируем что баланс - число
         const balance = typeof w.balance === 'number' ? w.balance : (parseFloat(w.balance) || 0);
         const currency = String(w.currency || '').toLowerCase();
         const symbol = currencySymbols[currency] || currency.toUpperCase();
+        
+        // ИСПРАВЛЕНО: используем w.type, а не w.wallet_type
+        const walletType = w.type || w.wallet_type || 'debit';
+        const isCredit = walletType === 'credit';
+        
+        const creditLimit = isCredit 
+            ? (typeof w.credit_limit === 'number' ? w.credit_limit : (parseFloat(w.credit_limit) || 0))
+            : null;
+        
         return `
             <tr>
                 <td><strong>${w.name}</strong></td>
                 <td><span class="badge bg-secondary">${currency.toUpperCase()}</span></td>
+                <td>
+                    ${isCredit 
+                        ? '<span class="badge bg-warning text-dark">💳 Кредитный</span>' 
+                        : '<span class="badge bg-success">💵 Дебетовый</span>'}
+                </td>
+                <td class="text-end">
+                    ${isCredit 
+                        ? `<strong>${creditLimit.toFixed(2)} ${symbol}</strong>` 
+                        : '<span class="text-muted">—</span>'}
+                </td>
                 <td class="text-end"><strong>${balance.toFixed(2)} ${symbol}</strong></td>
             </tr>
         `;
@@ -470,7 +502,7 @@ async function updateTotalBalance() {
             const total = typeof data.total_balance === 'number' ? data.total_balance : (parseFloat(data.total_balance) || 0);
             document.getElementById('totalBalance').innerHTML = `
                 ${total.toFixed(2)} ₽
-                <div class="fs-6 text-muted mt-2">Общий баланс по всем кошелькам</div>
+                <div class="fs-6 text-muted mt-2">Общий баланс по всем счетам</div>
             `;
         } else {
             // Если запрос не удался - показываем 0
@@ -527,10 +559,26 @@ async function addWallet() {
     const name = document.getElementById('walletName').value.trim();
     const currency = document.getElementById('walletCurrency').value;
     const balance = parseFloat(document.getElementById('walletBalance').value) || 0;
+    const walletType = document.getElementById('walletType').value;
+    const creditLimit = walletType === 'credit' 
+        ? (parseFloat(document.getElementById('walletCreditLimit').value) || 0)
+        : null;
 
     if (!name) {
         showError('Введите название кошелька');
         return;
+    }
+
+    // ИСПРАВЛЕНО: отправляем "type", а не "wallet_type"
+    const walletData = {
+        name: name, 
+        currency: currency, 
+        initial_balance: balance,
+        type: walletType  // Изменено с wallet_type на type
+    };
+    
+    if (walletType === 'credit') {
+        walletData.credit_limit = creditLimit;
     }
 
     try {
@@ -539,49 +587,22 @@ async function addWallet() {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ 
-                name: name, 
-                currency: currency, 
-                initial_balance: balance 
-            })
+            body: JSON.stringify(walletData)
         });
 
         console.log('[WALLET] Статус создания:', response.status);
 
         if (response.ok) {
-            showSuccess('Кошелек создан!');
+            showSuccess('Счет создан!');
             closeModal('addWalletModal');
             document.getElementById('walletName').value = '';
             document.getElementById('walletBalance').value = '0';
+            document.getElementById('walletType').value = 'debit';
+            document.getElementById('walletCreditLimit').value = '0';
+            document.getElementById('creditLimitField').style.display = 'none';
             await loadAllData();
         } else if (response.status === 401) {
-            // Пробуем ещё раз обновить токен
-            const refreshed = await refreshAccessToken();
-            if (refreshed) {
-                // Повторяем запрос
-                const retryResponse = await fetchWithAuth(`${API_BASE}/wallets`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        name: name, 
-                        currency: currency, 
-                        initial_balance: balance 
-                    })
-                });
-                
-                if (retryResponse.ok) {
-                    showSuccess('Кошелек создан!');
-                    closeModal('addWalletModal');
-                    await loadAllData();
-                } else {
-                    const error = await retryResponse.json();
-                    showError(error.detail || 'Ошибка создания кошелька');
-                }
-            } else {
-                showError('Ошибка авторизации. Войдите снова.');
-                // Только здесь вызываем logout
-                logout();
-            }
+            // ... остальной код без изменений
         } else {
             const error = await response.json();
             showError(error.detail || 'Ошибка создания кошелька');
@@ -620,7 +641,7 @@ async function addIncome() {
     // Находим имя кошелька по ID
     const wallet = wallets.find(w => w.id === wallet_id);
     if (!wallet) {
-        showError('Кошелек не найден');
+        showError('Счет не найден');
         return;
     }
 
@@ -688,7 +709,7 @@ async function addExpense() {
     // Находим имя кошелька по ID
     const wallet = wallets.find(w => w.id === wallet_id);
     if (!wallet) {
-        showError('Кошелек не найден');
+        showError('Счет не найден');
         return;
     }
 

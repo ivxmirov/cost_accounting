@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.enum import CurrencyEnum
+from app.enum import CurrencyEnum, WalletType
 from app.models import User, Wallet
 from app.repository import wallets as wallets_repository
 
@@ -14,6 +14,8 @@ async def test_create_wallet(db_session: AsyncSession, current_user):
         wallet_name="test",
         amount=Decimal(10),
         currency=CurrencyEnum.USD,
+        wallet_type=WalletType.DEBIT,
+        credit_limit=Decimal(0)
     )
 
     assert wallet.id == 1

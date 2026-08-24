@@ -4,14 +4,23 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.enum import CurrencyEnum
+from app.enum import CurrencyEnum, WalletType
 from app.models import User, Wallet
 from app.schemas import TotalBalance, WalletCreateSchema
 from app.service import wallets as wallets_service
 
 
-async def test_create_wallet(db_session: AsyncSession, current_user):
-    payload = WalletCreateSchema(name="test", initial_balance=Decimal(10))
+async def test_create_debit_wallet_without_credit_limit_success(
+    db_session: AsyncSession, current_user
+):
+    """
+    Проверяет, что дебетовый кошелек без указания кредитного лимита создастся успешно
+    """
+    payload = WalletCreateSchema(
+        name="test",
+        initial_balance=Decimal(10),
+        type=WalletType.DEBIT
+    )
 
     wallet = await wallets_service.create_wallet(
         db_session, current_user=current_user, wallet=payload
@@ -20,10 +29,45 @@ async def test_create_wallet(db_session: AsyncSession, current_user):
     assert wallet.id == 1
     assert wallet.name == "test"
     assert wallet.balance == Decimal(10)
+    assert wallet.type == WalletType.DEBIT
+    assert wallet.credit_limit is None
 
 
-async def test_create_wallet_exists(db_session: AsyncSession, current_user, wallet):
-    payload = WalletCreateSchema(name=wallet.name, initial_balance=Decimal(10))
+async def test_create_debit_wallet_with_credit_limit_success(
+    db_session: AsyncSession, current_user
+):
+    """
+    Проверяет, что дебетовый кошелек с указанным кредитным лимитом создастся успешно
+    """
+    payload = WalletCreateSchema(
+        name="test",
+        initial_balance=Decimal(10),
+        type=WalletType.DEBIT,
+        credit_limit=Decimal(554),
+    )
+
+    wallet = await wallets_service.create_wallet(
+        db_session, current_user=current_user, wallet=payload
+    )
+
+    assert wallet.id == 1
+    assert wallet.name == "test"
+    assert wallet.balance == Decimal(10)
+    assert wallet.type == WalletType.DEBIT
+    assert wallet.credit_limit is None
+
+
+async def test_create_wallet_exists(db_session: AsyncSession, current_user, debit_wallet):
+    # В этот момент:
+    # 1. База данных создана
+    # 2. Сессия db_session открыта
+    # 3. Пользователь testuser создан в БД (id=1)
+    # 4. Кошелек "test_wallet" создан для пользователя testuser
+    payload = WalletCreateSchema(
+        name=debit_wallet.name,
+        initial_balance=Decimal(10),
+        type=WalletType.DEBIT
+    )
 
     with pytest.raises(HTTPException) as exc:
         await wallets_service.create_wallet(db_session, current_user=current_user, wallet=payload)
