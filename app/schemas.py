@@ -10,7 +10,7 @@ from app.enum import CurrencyEnum, OperationType, WalletType
 
 class GroupCreateSchema(BaseModel):
     name: str = Field(..., min_length=1, max_length=127)
-    members_logins: list[str] = Field(..., min_length=1)
+    members_logins: list[str] = Field(...)
 
     @field_validator("name")
     @classmethod
@@ -25,8 +25,6 @@ class GroupCreateSchema(BaseModel):
     def validate_members_logins(cls, v: list[str]) -> list[str]:
         # Нормализуем и убираем дубликаты
         normalized = list(set(login.strip().lower() for login in v))
-        if not normalized:
-            raise ValueError("Добавьте в группу хотя бы одного участника")
         return normalized
 
 
@@ -36,6 +34,7 @@ class GroupResponseSchema(BaseModel):
     name: str
     creator: int
     members: list[str]
+    created_at: datetime
 
     @field_validator("members", mode="before")
     @classmethod

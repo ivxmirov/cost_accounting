@@ -26,7 +26,7 @@ async def create_group(
     Args:
         db: Сессия базы данных
         current_user: Текущий пользователь
-        group: Данные для создания группы (название, члены группы)
+        group_data: Данные для создания группы (название, члены группы)
     Returns:
         Информация о созданной группе
     Raises:
@@ -43,11 +43,9 @@ async def create_group(
                 status_code=400, detail="Нельзя создавать несколько групп с одинаковым названием"
             )
 
-        # 2. Проверка, что создатель группы не в списке участников
-        if current_user.login in group_data.members_logins:
-            raise HTTPException(
-                status_code=400, detail="Создателя группы нельзя повторно добавить в нее"
-            )
+        # 2. Проверка, что в группу добавлен хотя бы один участник
+        if len(group_data.members_logins) == 0:
+            raise HTTPException(status_code=400, detail="Добавьте хотя бы одного участника")
 
         # 3. Получаем всех участников по логинам с проверкой на существование
         members = []
@@ -59,8 +57,17 @@ async def create_group(
                 )
             members.append(user)
 
+        # 4. Убираем создателя из списка участников (безопасно по ID)
+        other_members = [m for m in members if m.id != current_user.id]
+
+        # 5. Проверяем, что остался хотя бы один участник помимо создателя группы
+        if not other_members:
+            raise HTTPException(
+                status_code=400, detail="Добавьте хотя бы одного участника помимо себя"
+            )
+
         new_group: Group = await groups_repository.create_group(
-            db, creator_id=current_user.id, group_name=group_data.name, members=members
+            db, creator_id=current_user.id, group_name=group_data.name, members=other_members
         )
 
         logger.info(f"Group created: {new_group.id}")
@@ -73,6 +80,22 @@ async def create_group(
         logger.error(f"Error: {e}")
         logger.error(traceback.format_exc())
         raise
+
+
+async def get_current_user_groups(
+    db: AsyncSession, current_user: User
+) -> list[GroupResponseSchema]:
+    """
+    Возвращает список всех групп, в которых состоит текущий пользователь.
+
+    Args:
+        db: Сессия базы данных
+        current_user: Текущий пользователь
+    Returns:
+        Список всех групп, в которых состоит текущий пользователь
+    """
+    groups = await groups_repository.get_user_groups(db, user_id=current_user.id)
+    return [GroupResponseSchema.model_validate(group) for group in groups]
 
 
 # async def get_group_by_id(db: AsyncSession, user_id: int, group_id: int) -> Group | None:

@@ -30,8 +30,8 @@ async def create_wallet(
 
 
 @router.get("/wallets", response_model=list[WalletResponseSchema])
-async def get_all_wallets(
+async def get_user_wallets(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await wallets_service.get_all_wallets(db, current_user)
+    return await wallets_service.get_user_wallets(db, current_user)

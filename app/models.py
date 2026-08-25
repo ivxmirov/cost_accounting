@@ -60,6 +60,9 @@ class Group(Base):
     creator: Mapped[int] = mapped_column(
         ForeignKey(column="users.id", ondelete="CASCADE"), nullable=False
     )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=False), default=datetime.now, server_default=func.now(), nullable=False
+    )
     members: Mapped[list["User"]] = relationship(secondary=group_members, back_populates="groups")
 
 

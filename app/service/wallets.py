@@ -20,7 +20,7 @@ async def get_total_balance(db: AsyncSession, current_user: User) -> TotalBalanc
     Returns:
         Общий баланс всех кошельков в рублях
     """
-    wallets = await wallets_repository.get_all_wallets(db, current_user.id)
+    wallets = await wallets_repository.get_user_wallets(db, current_user.id)
     total_balance = Decimal(0)
 
     for wallet in wallets:
@@ -88,7 +88,7 @@ async def create_wallet(
     return WalletResponseSchema.model_validate(new_wallet)
 
 
-async def get_all_wallets(db: AsyncSession, current_user: User) -> list[WalletResponseSchema]:
+async def get_user_wallets(db: AsyncSession, current_user: User) -> list[WalletResponseSchema]:
     """
     Получает список всех кошельков пользователя
     Args:
@@ -97,7 +97,7 @@ async def get_all_wallets(db: AsyncSession, current_user: User) -> list[WalletRe
     Returns:
         Список всех кошельков пользователя
     """
-    wallets = await wallets_repository.get_all_wallets(db, current_user.id)
+    wallets = await wallets_repository.get_user_wallets(db, current_user.id)
     return [WalletResponseSchema.model_validate(wallet) for wallet in wallets]
 
 

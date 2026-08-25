@@ -1,5 +1,6 @@
 // API базовый URL
-const API_BASE = '../api/v1';
+const API_BASE_V1 = '../api/v1';
+const API_BASE_V2 = '../api/v2';
 // Текущий пользователь (логин)
 let currentUser = null;
 // JWT токены
@@ -33,7 +34,7 @@ async function refreshAccessToken() {
 
     try {
         console.log('[REFRESH] Отправляем запрос на обновление...');
-        const response = await fetch(`${API_BASE}/auth/refresh`, {
+        const response = await fetch(`${API_BASE_V1}/auth/refresh`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ refresh_token: refreshToken })
@@ -170,7 +171,7 @@ async function register() {
     }
 
     try {
-        const response = await fetch(`${API_BASE}/users`, {
+        const response = await fetch(`${API_BASE_V1}/users`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ login: username, password: password })
@@ -210,7 +211,7 @@ async function login() {
 // Функция для входа с явной передачей логина и пароля
 async function loginAfterRegister(username, password) {
     try {
-        const response = await fetch(`${API_BASE}/auth/login`, {
+        const response = await fetch(`${API_BASE_V1}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ login: username, password: password })
@@ -271,22 +272,45 @@ function showMainSection() {
 }
 
 async function loadAllData() {
-    await loadWallets();
-    await loadOperations();
-    await updateTotalBalance();
-    updateWalletSelects();
+    console.log('[LOAD] Начало загрузки данных...');
+    
+    try {
+        // Загружаем кошельки
+        await loadWallets();
+        console.log('[LOAD] Кошельки загружены');
+        
+        // Загружаем операции
+        await loadOperations();
+        console.log('[LOAD] Операции загружены');
+        
+        // Обновляем общий баланс
+        await updateTotalBalance();
+        console.log('[LOAD] Баланс обновлен');
+        
+        // Обновляем селекты
+        updateWalletSelects();
+        console.log('[LOAD] Селекты обновлены');
+        
+    } catch (e) {
+        console.error('[LOAD] Ошибка загрузки данных:', e);
+        
+        // При ошибке все равно показываем интерфейс
+        wallets = [];
+        operations = [];
+        renderWalletsTable();
+        renderOperationsTable();
+        updateWalletSelects();
+        await updateTotalBalance();
+    }
 }
 
-// Функция загрузки списка кошельков
 async function loadWallets() {
     try {
-        const response = await fetchWithAuth(`${API_BASE}/wallets`);
+        const response = await fetchWithAuth(`${API_BASE_V1}/wallets`);
 
         if (response.ok) {
             const rawWallets = await response.json();
-            // Нормализуем данные от бэкенда
             wallets = rawWallets.map(w => {
-                // Преобразуем баланс в число
                 let balance = 0;
                 if (typeof w.balance === 'number') {
                     balance = w.balance;
@@ -296,7 +320,6 @@ async function loadWallets() {
                     balance = Number(w.balance) || 0;
                 }
                 
-                // Преобразуем credit_limit в число (если есть)
                 let creditLimit = null;
                 if (w.credit_limit != null) {
                     if (typeof w.credit_limit === 'number') {
@@ -318,39 +341,27 @@ async function loadWallets() {
             });
             renderWalletsTable();
             updateWalletSelects();
-            await updateTotalBalance();
         } else if (response.status === 401) {
-            console.log('Пользователь не авторизован, кошельков нет');
             wallets = [];
             renderWalletsTable();
             updateWalletSelects();
-            await updateTotalBalance();
-        } else if (response.status === 404) {
-            console.log('Эндпоинт GET /wallets не найден, используем пустой список');
-            wallets = [];
-            renderWalletsTable();
-            updateWalletSelects();
-            await updateTotalBalance();
         } else {
-            console.error('Ошибка загрузки кошельков:', response.status);
             wallets = [];
             renderWalletsTable();
             updateWalletSelects();
-            await updateTotalBalance();
         }
     } catch (e) {
-        console.error('Ошибка подключения:', e);
+        console.error('Ошибка загрузки кошельков:', e);
         wallets = [];
         renderWalletsTable();
         updateWalletSelects();
-        await updateTotalBalance();
     }
 }
 
 // Функция загрузки списка операций
 async function loadOperations() {
     try {
-        const response = await fetchWithAuth(`${API_BASE}/operations`);
+        const response = await fetchWithAuth(`${API_BASE_V1}/operations`);
 
         if (response.ok) {
             const rawOperations = await response.json();
@@ -495,14 +506,14 @@ async function updateTotalBalance() {
 
     try {
         // Получаем общий баланс в рублях с сервера (с конвертацией валют)
-        const response = await fetchWithAuth(`${API_BASE}/balance`);
+        const response = await fetchWithAuth(`${API_BASE_V1}/balance`);
 
         if (response.ok) {
             const data = await response.json();
             const total = typeof data.total_balance === 'number' ? data.total_balance : (parseFloat(data.total_balance) || 0);
             document.getElementById('totalBalance').innerHTML = `
                 ${total.toFixed(2)} ₽
-                <div class="fs-6 text-muted mt-2">Общий баланс по всем счетам</div>
+                <div class="fs-6 text-muted mt-2">Общий баланс по всем кошелькам (с учетом долгов по кредитам)</div>
             `;
         } else {
             // Если запрос не удался - показываем 0
@@ -582,7 +593,7 @@ async function addWallet() {
     }
 
     try {
-        const response = await fetchWithAuth(`${API_BASE}/wallets`, {
+        const response = await fetchWithAuth(`${API_BASE_V1}/wallets`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -593,7 +604,7 @@ async function addWallet() {
         console.log('[WALLET] Статус создания:', response.status);
 
         if (response.ok) {
-            showSuccess('Счет создан!');
+            showSuccess('Кошелеклеклек создан!');
             closeModal('addWalletModal');
             document.getElementById('walletName').value = '';
             document.getElementById('walletBalance').value = '0';
@@ -641,12 +652,12 @@ async function addIncome() {
     // Находим имя кошелька по ID
     const wallet = wallets.find(w => w.id === wallet_id);
     if (!wallet) {
-        showError('Счет не найден');
+        showError('Кошелеклек не найден');
         return;
     }
 
     try {
-        const response = await fetchWithAuth(`${API_BASE}/operations/income`, {
+        const response = await fetchWithAuth(`${API_BASE_V1}/operations/income`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
@@ -709,12 +720,12 @@ async function addExpense() {
     // Находим имя кошелька по ID
     const wallet = wallets.find(w => w.id === wallet_id);
     if (!wallet) {
-        showError('Счет не найден');
+        showError('Кошелеклеклек не найден');
         return;
     }
 
     try {
-        const response = await fetchWithAuth(`${API_BASE}/operations/expense`, {
+        const response = await fetchWithAuth(`${API_BASE_V1}/operations/expense`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
@@ -780,7 +791,7 @@ async function transfer() {
     }
 
     try {
-        const response = await fetchWithAuth(`${API_BASE}/operations/transfer`, {
+        const response = await fetchWithAuth(`${API_BASE_V1}/operations/transfer`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
@@ -843,7 +854,7 @@ async function loadReport() {
             date_to: `${dateTo}T23:59:59`
         });
 
-        const response = await fetchWithAuth(`${API_BASE}/operations?${params}`);
+        const response = await fetchWithAuth(`${API_BASE_V1}/operations?${params}`);
 
         if (response.ok) {
             const rawReportOperations = await response.json();
@@ -931,4 +942,84 @@ async function loadReport() {
         console.error('Ошибка загрузки отчета:', e);
         showError('Ошибка подключения к серверу');
     }
+}
+
+// Функция загрузки групп пользователя
+async function loadGroups() {
+    if (!accessToken) {
+        showError('Сначала войдите в систему');
+        return;
+    }
+
+    try {
+        // Показываем модалку с загрузкой
+        const modal = new bootstrap.Modal(document.getElementById('groupsModal'));
+        modal.show();
+        
+        // Делаем запрос к API
+        const response = await fetchWithAuth(`${API_BASE_V2}/users/me/groups`);
+        
+        if (response.ok) {
+            const groups = await response.json();
+            renderGroups(groups);
+        } else if (response.status === 401) {
+            showError('Не авторизован');
+            modal.hide();
+        } else {
+            const error = await response.json();
+            showError(error.detail || 'Ошибка загрузки групп');
+        }
+    } catch (e) {
+        console.error('Ошибка загрузки групп:', e);
+        showError('Не удалось загрузить группы');
+    }
+}
+
+// Функция отображения групп в таблице
+function renderGroups(groups) {
+    const tbody = document.getElementById('groupsTable');
+    
+    if (!groups || groups.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-muted">
+                    Вы пока не состоите ни в одной группе
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = groups.map(group => {
+        // Форматируем дату
+        const date = new Date(group.created_at).toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        // Получаем список участников
+        const membersList = group.members 
+            ? group.members.map(m => m.login).join(', ') 
+            : 'Нет участников';
+        
+        // Определяем, является ли текущий пользователь создателем
+        const isCreator = group.creator === currentUser;
+        
+        return `
+            <tr>
+                <td>
+                    <strong>${group.name}</strong>
+                    ${isCreator ? '<span class="badge bg-info ms-1">Создатель</span>' : ''}
+                </td>
+                <td>${isCreator ? 'Вы' : 'Другой пользователь'}</td>
+                <td>${date}</td>
+                <td>
+                    <small>${membersList}</small>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }

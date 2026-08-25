@@ -39,7 +39,7 @@ async def add_expense(db: AsyncSession, user_id: int, wallet_name: str, amount: 
     return wallet
 
 
-async def get_all_wallets(
+async def get_user_wallets(
     db: AsyncSession,
     user_id: int,
 ) -> list[Wallet]:

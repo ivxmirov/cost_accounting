@@ -82,7 +82,7 @@ async def debit_wallet(db_session: AsyncSession, test_user):
         user_id=test_user.id,
         currency=CurrencyEnum.USD,
         type=WalletType.DEBIT,
-        credit_limit=None
+        credit_limit=None,
     )
     db_session.add(wallet_obj)
     await db_session.commit()
@@ -99,7 +99,7 @@ async def credit_wallet(db_session: AsyncSession, test_user):
         user_id=test_user.id,
         currency=CurrencyEnum.RUB,
         type=WalletType.CREDIT,
-        credit_limit=Decimal(50000)
+        credit_limit=Decimal(50000),
     )
     db_session.add(wallet_obj)
     await db_session.commit()

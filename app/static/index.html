@@ -47,7 +47,7 @@
             <div class="row mb-4">
                 <div class="col-md-3 mb-2">
                     <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#addWalletModal">
-                        💼 Добавить счет
+                        💼 Добавить кошелек
                     </button>
                 </div>
                 <div class="col-md-2 mb-2">
@@ -70,12 +70,19 @@
                         📊 Отчет
                     </button>
                 </div>
-            </div>
+                </div>
+                <div class="row mb-4">
+                    <div class="col-md-3 mb-2">
+                        <button class="btn btn-purple w-100" onclick="loadGroups()">
+                            👥 Мои группы
+                        </button>
+                    </div>
+                </div>
 
             <!-- Таблица кошельков -->
             <div class="card mb-4">
                 <div class="card-body">
-                    <h4 class="card-title">💳 Мои счета</h4>
+                    <h4 class="card-title">💳 Мои кошельки</h4>
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead>
@@ -103,7 +110,7 @@
                                 <tr>
                                     <th>Дата</th>
                                     <th>Тип</th>
-                                    <th>Счет</th>
+                                    <th>Кошелек</th>
                                     <th>Категория</th>
                                     <th class="text-end">Сумма</th>
                                 </tr>
@@ -171,7 +178,7 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Счет</label>
+                        <label class="form-label">Кошелек</label>
                         <select class="form-select" id="incomeWallet"></select>
                     </div>
                     <div class="mb-3">
@@ -201,7 +208,7 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Счет</label>
+                        <label class="form-label">Кошелек</label>
                         <select class="form-select" id="expenseWallet"></select>
                     </div>
                     <div class="mb-3">
@@ -284,7 +291,7 @@
                                     <tr>
                                         <th>Дата</th>
                                         <th>Тип</th>
-                                        <th>Счет</th>
+                                        <th>Кошелек</th>
                                         <th>Категория</th>
                                         <th class="text-end">Сумма</th>
                                     </tr>
@@ -293,6 +300,42 @@
                             </table>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка групп -->
+    <div class="modal fade" id="groupsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">👥 Мои группы</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Название</th>
+                                    <th>Создатель</th>
+                                    <th>Дата создания</th>
+                                    <th>Участники</th>
+                                </tr>
+                            </thead>
+                            <tbody id="groupsTable">
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">
+                                        Загрузка групп...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
                 </div>
             </div>
         </div>

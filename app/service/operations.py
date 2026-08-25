@@ -136,7 +136,7 @@ async def get_operations_list(
             raise HTTPException(status_code=404, detail=f"Wallet '{wallet_id}' not found")
         wallets_ids = [wallet.id]
     else:
-        wallets = await wallets_repository.get_all_wallets(db, current_user.id)
+        wallets = await wallets_repository.get_user_wallets(db, current_user.id)
         wallets_ids = [w.id for w in wallets]
 
     operations = await operations_repository.get_operations_list(

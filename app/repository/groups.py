@@ -17,7 +17,7 @@ async def create_group(
     db: AsyncSession, creator_id: int, group_name: str, members: list[User]
 ) -> Group:
     """
-    Создаёт группу и добавляет админа как участника.
+    Создаёт группу и добавляет создателя как участника.
 
     Args:
         db: Асинхронная сессия БД
@@ -27,7 +27,7 @@ async def create_group(
     Returns:
         Созданная группа с загруженными участниками
     """
-    # Получаем создателя
+    # Получаем создателя группы
     creator = await db.get(User, creator_id)
     group = Group(name=group_name, creator=creator_id)
     group.members.append(creator)  # ty: ignore[invalid-argument-type]  # pyright: ignore[reportArgumentType]
@@ -38,13 +38,34 @@ async def create_group(
     db.add(group)
     await db.flush()
 
-    print(f"Members before select: {group.members}")  # Может вызвать ошибку!
+    print(f"Members before select: {group.members}")
 
     # Загружаем с отношениями
     result = await db.execute(
         select(Group).options(selectinload(Group.members)).where(Group.id == group.id)
     )
     return result.scalar_one()
+
+
+async def get_user_groups(db: AsyncSession, user_id: int) -> list[Group]:
+    """
+    Возвращает из базы данных список всех групп, в которых состоит пользователь.
+
+    Args:
+        db: Сессия базы данных
+        user_id: Уникальный идентификатор пользователя
+
+    Returns:
+        Список групп, в которых состоит пользователь
+    """
+    result = await db.execute(
+        select(Group)
+        .join(Group.members)
+        .where(User.id == user_id)
+        .options(selectinload(Group.members))
+        .distinct()
+    )
+    return list(result.scalars().unique().all())
 
 
 # async def get_group_by_id(db: AsyncSession, user_id: int, group_id: int) -> Group | None:
