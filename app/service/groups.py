@@ -60,9 +60,7 @@ async def create_group(
 
     # 5. Проверяем, что остался хотя бы один участник помимо создателя группы
     if not other_members:
-        raise HTTPException(
-            status_code=400, detail="Добавьте хотя бы одного участника помимо себя"
-        )
+        raise HTTPException(status_code=400, detail="Добавьте хотя бы одного участника помимо себя")
 
     new_group: Group = await groups_repository.create_group(
         db, creator_id=current_user.id, group_name=group_data.name, members=other_members
@@ -88,7 +86,9 @@ async def get_current_user_groups(
     return [GroupResponseSchema.model_validate(group) for group in groups]
 
 
-async def get_user_group_by_id(db: AsyncSession, current_user: User, group_id: int) -> GroupResponseSchema:
+async def get_user_group_by_id(
+    db: AsyncSession, current_user: User, group_id: int
+) -> GroupResponseSchema:
     """Получает группу с проверкой прав доступа пользователя"""
 
     group = await groups_repository.get_group_by_id(db, group_id)

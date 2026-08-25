@@ -71,8 +71,6 @@ async def get_user_groups(db: AsyncSession, user_id: int) -> list[Group]:
 async def get_group_by_id(db: AsyncSession, group_id: int) -> Group | None:
     """Получает группу по ID без проверки прав пользователя"""
     result = await db.execute(
-        select(Group)
-        .where(Group.id == group_id)
-        .options(selectinload(Group.members))
+        select(Group).where(Group.id == group_id).options(selectinload(Group.members))
     )
     return result.scalar_one_or_none()
