@@ -15,7 +15,7 @@ async def test_create_wallet(db_session: AsyncSession, current_user):
         amount=Decimal(10),
         currency=CurrencyEnum.USD,
         wallet_type=WalletType.DEBIT,
-        credit_limit=Decimal(0)
+        credit_limit=Decimal(0),
     )
 
     assert wallet.id == 1
@@ -114,7 +114,7 @@ async def test_add_expense(db_session: AsyncSession, current_user, wallet):
     assert updated_wallet.id == wallet.id
 
 
-async def test_get_all_wallets(db_session: AsyncSession, current_user):
+async def test_get_user_wallets(db_session: AsyncSession, current_user):
     wallet1 = Wallet(
         name="wallet1",
         balance=Decimal(100),
@@ -132,25 +132,25 @@ async def test_get_all_wallets(db_session: AsyncSession, current_user):
     db_session.add(wallet2)
     await db_session.flush()
 
-    wallets = await wallets_repository.get_all_wallets(db_session, user_id=current_user.id)
+    wallets = await wallets_repository.get_user_wallets(db_session, user_id=current_user.id)
 
     assert len(wallets) == 2
     assert wallets[0].name == "wallet1" or wallets[1].name == "wallet1"
     assert wallets[0].name == "wallet2" or wallets[1].name == "wallet2"
 
 
-async def test_get_all_wallets_empty(db_session: AsyncSession, current_user):
-    wallets = await wallets_repository.get_all_wallets(db_session, user_id=current_user.id)
+async def test_get_user_wallets_empty(db_session: AsyncSession, current_user):
+    wallets = await wallets_repository.get_user_wallets(db_session, user_id=current_user.id)
 
     assert len(wallets) == 0
 
 
-async def test_get_all_wallets_other_user(db_session: AsyncSession):
+async def test_get_user_wallets_other_user(db_session: AsyncSession):
     other_user = User(login="other_user")
     db_session.add(other_user)
     await db_session.flush()
 
-    wallets = await wallets_repository.get_all_wallets(db_session, user_id=other_user.id)
+    wallets = await wallets_repository.get_user_wallets(db_session, user_id=other_user.id)
 
     assert len(wallets) == 0
 

@@ -16,11 +16,7 @@ async def test_create_debit_wallet_without_credit_limit_success(
     """
     Проверяет, что дебетовый кошелек без указания кредитного лимита создастся успешно
     """
-    payload = WalletCreateSchema(
-        name="test",
-        initial_balance=Decimal(10),
-        type=WalletType.DEBIT
-    )
+    payload = WalletCreateSchema(name="test", initial_balance=Decimal(10), type=WalletType.DEBIT)
 
     wallet = await wallets_service.create_wallet(
         db_session, current_user=current_user, wallet=payload
@@ -64,9 +60,7 @@ async def test_create_wallet_exists(db_session: AsyncSession, current_user, debi
     # 3. Пользователь testuser создан в БД (id=1)
     # 4. Кошелек "test_wallet" создан для пользователя testuser
     payload = WalletCreateSchema(
-        name=debit_wallet.name,
-        initial_balance=Decimal(10),
-        type=WalletType.DEBIT
+        name=debit_wallet.name, initial_balance=Decimal(10), type=WalletType.DEBIT
     )
 
     with pytest.raises(HTTPException) as exc:
