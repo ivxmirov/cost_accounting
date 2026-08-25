@@ -144,7 +144,7 @@ async def test_get_debit_wallet_by_name(db_session: AsyncSession, current_user, 
     debit_wallet.balance = Decimal(150)
     await db_session.flush()
 
-    result = await wallets_service.get_wallet(
+    result = await wallets_service.get_wallet_by_name(
         db_session, current_user=current_user, wallet_name=debit_wallet.name
     )
 
@@ -159,7 +159,7 @@ async def test_get_credit_wallet_by_name(db_session: AsyncSession, current_user,
     credit_wallet.credit_limit = Decimal(200)
     await db_session.flush()
 
-    result = await wallets_service.get_wallet(
+    result = await wallets_service.get_wallet_by_name(
         db_session, current_user=current_user, wallet_name=credit_wallet.name
     )
 
@@ -172,7 +172,7 @@ async def test_get_credit_wallet_by_name(db_session: AsyncSession, current_user,
 
 async def test_get_wallet_not_exists(db_session: AsyncSession, current_user):
     with pytest.raises(HTTPException) as exc:
-        await wallets_service.get_wallet(
+        await wallets_service.get_wallet_by_name(
             db_session, current_user=current_user, wallet_name="nonexistent"
         )
 
@@ -186,7 +186,7 @@ async def test_get_debit_wallet_other_user(db_session: AsyncSession, debit_walle
     await db_session.flush()
 
     with pytest.raises(HTTPException) as exc:
-        await wallets_service.get_wallet(
+        await wallets_service.get_wallet_by_name(
             db_session, current_user=other_user, wallet_name=debit_wallet.name
         )
 
@@ -199,7 +199,7 @@ async def test_get_credit_wallet_other_user(db_session: AsyncSession, credit_wal
     await db_session.flush()
 
     with pytest.raises(HTTPException) as exc:
-        await wallets_service.get_wallet(
+        await wallets_service.get_wallet_by_name(
             db_session, current_user=other_user, wallet_name=credit_wallet.name
         )
 

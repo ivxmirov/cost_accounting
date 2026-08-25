@@ -12,10 +12,19 @@ from app.service import groups as groups_service
 router = APIRouter()
 
 
-@router.post(path="/groups/", response_model=GroupResponseSchema, status_code=201)
+@router.post(path="/groups", response_model=GroupResponseSchema, status_code=201)
 async def create_group_v2(
     group: GroupCreateSchema,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     return await groups_service.create_group(db, current_user, group)
+
+
+@router.get(path="/groups/{group_id}", response_model=GroupResponseSchema, status_code=200)
+async def get_group_v2(
+    group_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await groups_service.get_user_group_by_id(db, current_user, group_id)

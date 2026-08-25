@@ -101,7 +101,7 @@ async def get_user_wallets(db: AsyncSession, current_user: User) -> list[WalletR
     return [WalletResponseSchema.model_validate(wallet) for wallet in wallets]
 
 
-async def get_wallet(
+async def get_wallet_by_name(
     db: AsyncSession, current_user: User, wallet_name: str
 ) -> WalletResponseSchema:
     """

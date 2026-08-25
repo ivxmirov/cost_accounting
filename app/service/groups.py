@@ -1,5 +1,4 @@
 import logging
-import traceback
 
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,52 +33,43 @@ async def create_group(
         HTTPException: Если создатель в списке участников
         HTTPException: Если какой-то пользователь не найден
     """
-    try:
-        # 1. Проверка на дубликат
-        if await groups_repository.is_group_exist(
-            db, user_id=current_user.id, group_name=group_data.name
-        ):
-            raise HTTPException(
-                status_code=400, detail="Нельзя создавать несколько групп с одинаковым названием"
-            )
-
-        # 2. Проверка, что в группу добавлен хотя бы один участник
-        if len(group_data.members_logins) == 0:
-            raise HTTPException(status_code=400, detail="Добавьте хотя бы одного участника")
-
-        # 3. Получаем всех участников по логинам с проверкой на существование
-        members = []
-        for login in group_data.members_logins:
-            user = await users_repository.get_user(db, login)
-            if not user:
-                raise HTTPException(
-                    status_code=400, detail=f"Пользователь с логином '{login}' не найден"
-                )
-            members.append(user)
-
-        # 4. Убираем создателя из списка участников (безопасно по ID)
-        other_members = [m for m in members if m.id != current_user.id]
-
-        # 5. Проверяем, что остался хотя бы один участник помимо создателя группы
-        if not other_members:
-            raise HTTPException(
-                status_code=400, detail="Добавьте хотя бы одного участника помимо себя"
-            )
-
-        new_group: Group = await groups_repository.create_group(
-            db, creator_id=current_user.id, group_name=group_data.name, members=other_members
+    # 1. Проверка на дубликат
+    if await groups_repository.is_group_exist(
+        db, user_id=current_user.id, group_name=group_data.name
+    ):
+        raise HTTPException(
+            status_code=400, detail="Нельзя создавать несколько групп с одинаковым названием"
         )
 
-        logger.info(f"Group created: {new_group.id}")
-        logger.info(f"Members: {new_group.members}")
+    # 2. Проверка, что в группу добавлен хотя бы один участник
+    if len(group_data.members_logins) == 0:
+        raise HTTPException(status_code=400, detail="Добавьте хотя бы одного участника")
 
-        await db.commit()
-        return GroupResponseSchema.model_validate(obj=new_group)
+    # 3. Получаем всех участников по логинам с проверкой на существование
+    members = []
+    for login in group_data.members_logins:
+        user = await users_repository.get_user(db, login)
+        if not user:
+            raise HTTPException(
+                status_code=400, detail=f"Пользователь с логином '{login}' не найден"
+            )
+        members.append(user)
 
-    except Exception as e:
-        logger.error(f"Error: {e}")
-        logger.error(traceback.format_exc())
-        raise
+    # 4. Убираем создателя из списка участников (безопасно по ID)
+    other_members = [m for m in members if m.id != current_user.id]
+
+    # 5. Проверяем, что остался хотя бы один участник помимо создателя группы
+    if not other_members:
+        raise HTTPException(
+            status_code=400, detail="Добавьте хотя бы одного участника помимо себя"
+        )
+
+    new_group: Group = await groups_repository.create_group(
+        db, creator_id=current_user.id, group_name=group_data.name, members=other_members
+    )
+
+    await db.commit()
+    return GroupResponseSchema.model_validate(obj=new_group)
 
 
 async def get_current_user_groups(
@@ -98,8 +88,16 @@ async def get_current_user_groups(
     return [GroupResponseSchema.model_validate(group) for group in groups]
 
 
-# async def get_group_by_id(db: AsyncSession, user_id: int, group_id: int) -> Group | None:
-#     result = await db.execute(
-#         select(Group).where(Group.id == group_id, Group.user_id == user_id)
-#     )
-#     return result.scalar_one_or_none()
+async def get_user_group_by_id(db: AsyncSession, current_user: User, group_id: int) -> GroupResponseSchema:
+    """Получает группу с проверкой прав доступа пользователя"""
+
+    group = await groups_repository.get_group_by_id(db, group_id)
+
+    if not group:
+        raise HTTPException(status_code=404, detail="Такой группы не существует")
+
+    # Проверяем, является ли пользователь участником группы
+    if current_user.id not in [member.id for member in group.members]:
+        raise HTTPException(status_code=403, detail="Вы не состоите в этой группе")
+
+    return GroupResponseSchema.model_validate(group)
