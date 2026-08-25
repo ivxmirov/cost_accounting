@@ -39,7 +39,7 @@ async def test_create_debit_wallet_with_credit_limit_success(
         name="test",
         initial_balance=Decimal(10),
         type=WalletType.DEBIT,
-        credit_limit=Decimal(554),
+        credit_limit=Decimal(200),
     )
 
     wallet = await wallets_service.create_wallet(
@@ -51,6 +51,32 @@ async def test_create_debit_wallet_with_credit_limit_success(
     assert wallet.balance == Decimal(10)
     assert wallet.type == WalletType.DEBIT
     assert wallet.credit_limit is None
+
+
+async def test_create_credit_wallet_with_credit_limit_more_initial_balance_success(
+    db_session: AsyncSession, current_user
+):
+    """
+    Проверяет успешное создание кредитного кошелька при выполнении условия
+
+    Условие: кредитный лимит указан, и он больше начального баланса
+    """
+    payload = WalletCreateSchema(
+        name="test",
+        initial_balance=Decimal(10),
+        type=WalletType.CREDIT,
+        credit_limit=Decimal(200),
+    )
+
+    wallet = await wallets_service.create_wallet(
+        db_session, current_user=current_user, wallet=payload
+    )
+
+    assert wallet.id == 1
+    assert wallet.name == "test"
+    assert wallet.balance == Decimal(10)
+    assert wallet.type == WalletType.CREDIT
+    assert wallet.credit_limit == Decimal(200)
 
 
 async def test_create_wallet_exists(db_session: AsyncSession, current_user, debit_wallet):
@@ -75,6 +101,8 @@ async def test_get_wallet_total_balance(db_session: AsyncSession, current_user):
         balance=Decimal(100),
         user_id=current_user.id,
         currency=CurrencyEnum.RUB,
+        type=WalletType.DEBIT,
+        credit_limit=None,
     )
     db_session.add(wallet1)
 
@@ -83,14 +111,26 @@ async def test_get_wallet_total_balance(db_session: AsyncSession, current_user):
         balance=Decimal(200),
         user_id=current_user.id,
         currency=CurrencyEnum.RUB,
+        type=WalletType.DEBIT,
+        credit_limit=None,
     )
     db_session.add(wallet2)
+
+    wallet3 = Wallet(
+        name="wallet3",
+        balance=Decimal(0),
+        user_id=current_user.id,
+        currency=CurrencyEnum.RUB,
+        type=WalletType.CREDIT,
+        credit_limit=Decimal(300),
+    )
+    db_session.add(wallet3)
     await db_session.commit()
 
     result = await wallets_service.get_total_balance(db_session, current_user=current_user)
 
     assert isinstance(result, TotalBalance)
-    assert float(result.total_balance) == 300.0
+    assert float(result.total_balance) == 0
 
 
 async def test_get_wallet_total_balance_empty(db_session: AsyncSession, current_user):
@@ -100,17 +140,34 @@ async def test_get_wallet_total_balance_empty(db_session: AsyncSession, current_
     assert float(result.total_balance) == 0.0
 
 
-async def test_get_wallet_by_name(db_session: AsyncSession, current_user, wallet):
-    wallet.balance = Decimal(150)
+async def test_get_debit_wallet_by_name(db_session: AsyncSession, current_user, debit_wallet):
+    debit_wallet.balance = Decimal(150)
     await db_session.flush()
 
     result = await wallets_service.get_wallet(
-        db_session, current_user=current_user, wallet_name=wallet.name
+        db_session, current_user=current_user, wallet_name=debit_wallet.name
     )
 
-    assert result.id == wallet.id
-    assert result.name == wallet.name
+    assert result.id == debit_wallet.id
+    assert result.name == debit_wallet.name
     assert result.balance == Decimal(150)
+    assert result.type == WalletType.DEBIT
+
+
+async def test_get_credit_wallet_by_name(db_session: AsyncSession, current_user, credit_wallet):
+    credit_wallet.balance = Decimal(150)
+    credit_wallet.credit_limit = Decimal(200)
+    await db_session.flush()
+
+    result = await wallets_service.get_wallet(
+        db_session, current_user=current_user, wallet_name=credit_wallet.name
+    )
+
+    assert result.id == credit_wallet.id
+    assert result.name == credit_wallet.name
+    assert result.balance == Decimal(150)
+    assert result.type == WalletType.CREDIT
+    assert result.credit_limit == Decimal(200)
 
 
 async def test_get_wallet_not_exists(db_session: AsyncSession, current_user):
@@ -123,14 +180,27 @@ async def test_get_wallet_not_exists(db_session: AsyncSession, current_user):
     assert "nonexistent" in exc.value.detail
 
 
-async def test_get_wallet_other_user(db_session: AsyncSession, wallet):
+async def test_get_debit_wallet_other_user(db_session: AsyncSession, debit_wallet):
     other_user = User(login="other_user")
     db_session.add(other_user)
     await db_session.flush()
 
     with pytest.raises(HTTPException) as exc:
         await wallets_service.get_wallet(
-            db_session, current_user=other_user, wallet_name=wallet.name
+            db_session, current_user=other_user, wallet_name=debit_wallet.name
+        )
+
+    assert exc.value.status_code == 404
+
+
+async def test_get_credit_wallet_other_user(db_session: AsyncSession, credit_wallet):
+    other_user = User(login="other_user")
+    db_session.add(other_user)
+    await db_session.flush()
+
+    with pytest.raises(HTTPException) as exc:
+        await wallets_service.get_wallet(
+            db_session, current_user=other_user, wallet_name=credit_wallet.name
         )
 
     assert exc.value.status_code == 404
