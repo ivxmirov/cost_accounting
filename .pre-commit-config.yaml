@@ -3,20 +3,21 @@ repos:
     hooks:
       - id: ruff
         name: ruff
-        entry: uv run ruff check
+        entry: ruff check --fix
         language: system
         types: [python]
-        args: [--fix]
         exclude: ^(alembic/|\.venv/|venv/)
+        
       - id: ruff-format
         name: ruff-format
-        entry: uv run ruff format
+        entry: ruff format
         language: system
         types: [python]
         exclude: ^(alembic/|\.venv/|venv/)
+        
       - id: ty
         name: ty
-        entry: uv run ty check
+        entry: ty check
         language: system
         pass_filenames: false
         args: [app/, main.py]
