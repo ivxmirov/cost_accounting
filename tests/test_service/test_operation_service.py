@@ -11,18 +11,18 @@ from app.service import operations as operations_service
 
 
 async def test_add_income_success(db_session: AsyncSession, current_user, wallet):
-    wallet.balance = Decimal(50)
+    wallet.balance = Decimal("50")
     await db_session.flush()
 
     payload = IncomeCreateSchema(
         transaction_id=uuid.uuid4(),
         wallet_name=wallet.name,
-        amount=Decimal(100),
+        amount=Decimal("100"),
         description="Salary",
     )
 
     response, status_code = await operations_service.add_income(
-        db_session, current_user=current_user, operation=payload
+        db_session, current_user=current_user, operation=payload,
     )
 
     assert response is not None
@@ -37,13 +37,13 @@ async def test_add_income_wallet_not_exists(db_session: AsyncSession, current_us
     payload = IncomeCreateSchema(
         transaction_id=uuid.uuid4(),
         wallet_name="nonexistent",
-        amount=Decimal(100),
+        amount=Decimal("100"),
         description="Salary",
     )
 
     with pytest.raises(HTTPException) as exc:
         await operations_service.add_income(
-            db_session, current_user=current_user, operation=payload
+            db_session, current_user=current_user, operation=payload,
         )
 
     assert exc.value.status_code == 404
@@ -58,7 +58,7 @@ async def test_add_income_other_user(db_session: AsyncSession, wallet):
     payload = IncomeCreateSchema(
         transaction_id=uuid.uuid4(),
         wallet_name=wallet.name,
-        amount=Decimal(100),
+        amount=Decimal("100"),
         description="Salary",
     )
 
@@ -69,18 +69,18 @@ async def test_add_income_other_user(db_session: AsyncSession, wallet):
 
 
 async def test_add_expense_success(db_session: AsyncSession, current_user, wallet):
-    wallet.balance = Decimal(200)
+    wallet.balance = Decimal("200")
     await db_session.flush()
 
     payload = ExpenseCreateSchema(
         transaction_id=uuid.uuid4(),
         wallet_name=wallet.name,
-        amount=Decimal(50),
+        amount=Decimal("50"),
         description="Groceries",
     )
 
     response, status_code = await operations_service.add_expense(
-        db_session, current_user=current_user, operation=payload
+        db_session, current_user=current_user, operation=payload,
     )
 
     assert response is not None
@@ -95,13 +95,13 @@ async def test_add_expense_wallet_not_exists(db_session: AsyncSession, current_u
     payload = ExpenseCreateSchema(
         transaction_id=uuid.uuid4(),
         wallet_name="nonexistent",
-        amount=Decimal(50),
+        amount=Decimal("50"),
         description="Groceries",
     )
 
     with pytest.raises(HTTPException) as exc:
         await operations_service.add_expense(
-            db_session, current_user=current_user, operation=payload
+            db_session, current_user=current_user, operation=payload,
         )
 
     assert exc.value.status_code == 404
@@ -116,7 +116,7 @@ async def test_add_expense_other_user(db_session: AsyncSession, wallet):
     payload = ExpenseCreateSchema(
         transaction_id=uuid.uuid4(),
         wallet_name=wallet.name,
-        amount=Decimal(50),
+        amount=Decimal("50"),
         description="Groceries",
     )
 
@@ -127,19 +127,19 @@ async def test_add_expense_other_user(db_session: AsyncSession, wallet):
 
 
 async def test_add_expense_insufficient_funds(db_session: AsyncSession, current_user, wallet):
-    wallet.balance = Decimal(30)
+    wallet.balance = Decimal("30")
     await db_session.flush()
 
     payload = ExpenseCreateSchema(
         transaction_id=uuid.uuid4(),
         wallet_name=wallet.name,
-        amount=Decimal(50),
+        amount=Decimal("50"),
         description="Groceries",
     )
 
     with pytest.raises(HTTPException) as exc:
         await operations_service.add_expense(
-            db_session, current_user=current_user, operation=payload
+            db_session, current_user=current_user, operation=payload,
         )
 
     assert exc.value.status_code == 400

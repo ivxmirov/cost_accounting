@@ -1,7 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.exceptions import (
-    RequestValidationError,
-)
+from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.auth import router as auth_router

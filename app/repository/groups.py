@@ -1,6 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.models import Group, User
 
@@ -8,13 +8,13 @@ from app.models import Group, User
 async def is_group_exist(db: AsyncSession, user_id: int, group_name: str) -> bool:
     """Проверяет существование группы с таким именем у пользователя, который ее создает"""
     result = await db.execute(
-        select(Group).where(Group.name == group_name, Group.creator == user_id)
+        select(Group).where(Group.name == group_name, Group.creator == user_id),
     )
     return result.scalar_one_or_none() is not None
 
 
 async def create_group(
-    db: AsyncSession, creator_id: int, group_name: str, members: list[User]
+    db: AsyncSession, creator_id: int, group_name: str, members: list[User],
 ) -> Group:
     """
     Создаёт группу и добавляет создателя как участника.
@@ -42,7 +42,7 @@ async def create_group(
 
     # Загружаем с отношениями
     result = await db.execute(
-        select(Group).options(selectinload(Group.members)).where(Group.id == group.id)
+        select(Group).options(selectinload(Group.members)).where(Group.id == group.id),
     )
     return result.scalar_one()
 
@@ -62,8 +62,10 @@ async def get_user_groups(db: AsyncSession, user_id: int) -> list[Group]:
         select(Group)
         .join(Group.members)
         .where(User.id == user_id)
-        .options(selectinload(Group.members))
-        .distinct()
+        .options(
+            selectinload(Group.members),
+            joinedload(Group.creator_user),
+        ),
     )
     return list(result.scalars().unique().all())
 
@@ -71,6 +73,6 @@ async def get_user_groups(db: AsyncSession, user_id: int) -> list[Group]:
 async def get_group_by_id(db: AsyncSession, group_id: int) -> Group | None:
     """Получает группу по ID без проверки прав пользователя"""
     result = await db.execute(
-        select(Group).where(Group.id == group_id).options(selectinload(Group.members))
+        select(Group).where(Group.id == group_id).options(selectinload(Group.members)),
     )
     return result.scalar_one_or_none()

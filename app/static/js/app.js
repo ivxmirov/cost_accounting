@@ -3,6 +3,7 @@ const API_BASE_V1 = '../api/v1';
 const API_BASE_V2 = '../api/v2';
 // Текущий пользователь (логин)
 let currentUser = null;
+let currentUserId = null;
 // JWT токены
 let accessToken = null;
 let refreshToken = null;
@@ -103,11 +104,13 @@ function tryAutoLogin() {
     const savedAccessToken = localStorage.getItem('accessToken');
     const savedRefreshToken = localStorage.getItem('refreshToken');
     const savedUser = localStorage.getItem('currentUser');
+    const savedUserId = localStorage.getItem('currentUserId');
 
     if (savedAccessToken && savedRefreshToken && savedUser) {
         accessToken = savedAccessToken;
         refreshToken = savedRefreshToken;
         currentUser = savedUser;
+        currentUserId = savedUserId ? parseInt(savedUserId) : null;
         showMainSection();
     }
 }
@@ -219,16 +222,19 @@ async function loginAfterRegister(username, password) {
 
         if (response.ok) {
             const data = await response.json();
+            console.log('Ответ API при входе:', data);
             
             // Сохраняем токены и пользователя
             accessToken = data.access_token;
             refreshToken = data.refresh_token;
             currentUser = username;
+            currentUserId = data.user_id;
             
             // Сохраняем в localStorage
             localStorage.setItem('accessToken', accessToken);
             localStorage.setItem('refreshToken', refreshToken);
             localStorage.setItem('currentUser', currentUser);
+            localStorage.setItem('currentUserId', currentUserId);
             
             showSuccess('Вход выполнен успешно!');
             showMainSection();
@@ -245,6 +251,7 @@ async function loginAfterRegister(username, password) {
 function logout() {
     // Очищаем данные в памяти
     currentUser = null;
+    currentUserId = null;
     accessToken = null;
     refreshToken = null;
     wallets = [];
@@ -254,6 +261,7 @@ function logout() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('currentUser');
+    localStorage.removeItem('currentUserId');
     
     // Переключаем интерфейс
     document.getElementById('authSection').style.display = 'block';
@@ -976,6 +984,7 @@ async function loadGroups() {
 }
 
 // Функция отображения групп в таблице
+// Функция отображения групп в таблице
 function renderGroups(groups) {
     const tbody = document.getElementById('groupsTable');
     
@@ -989,8 +998,9 @@ function renderGroups(groups) {
         `;
         return;
     }
-    
+
     tbody.innerHTML = groups.map(group => {
+       
         // Форматируем дату
         const date = new Date(group.created_at).toLocaleString('ru-RU', {
             day: '2-digit',
@@ -1000,24 +1010,36 @@ function renderGroups(groups) {
             minute: '2-digit'
         });
         
-        // Получаем список участников
-        const membersList = group.members 
-            ? group.members.map(m => m.login).join(', ') 
-            : 'Нет участников';
-        
         // Определяем, является ли текущий пользователь создателем
-        const isCreator = group.creator === currentUser;
+        const isCreator = group.creator === currentUserId;
+        
+        // Определяем, что показывать в столбце "Создатель"
+        let creatorDisplay;
+        if (isCreator) {
+            creatorDisplay = '⭐ Вы';
+        } else if (group.creator_login) {
+            creatorDisplay = group.creator_login;
+        } else {
+            creatorDisplay = `${group.creator}`;
+        }
+        
+        // Количество участников
+        const membersCount = group.members ? group.members.length : 0;
+        
+        // Генерируем точки для участников (не более 10)
+        const dotsCount = Math.min(membersCount, 10);
+        const dots = '•'.repeat(dotsCount);
         
         return `
             <tr>
                 <td>
                     <strong>${group.name}</strong>
-                    ${isCreator ? '<span class="badge bg-info ms-1">Создатель</span>' : ''}
                 </td>
-                <td>${isCreator ? 'Вы' : 'Другой пользователь'}</td>
+                <td>${creatorDisplay}</td>
                 <td>${date}</td>
                 <td>
-                    <small>${membersList}</small>
+                    <span class="badge bg-primary">${membersCount}</span>
+                    <span class="ms-2" title="Участники: ${membersCount}">${dots}</span>
                 </td>
             </tr>
         `;

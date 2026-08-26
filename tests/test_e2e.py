@@ -48,8 +48,7 @@ async def test_e2e_basic_user_flow_registration_to_expense(client, db, mock_curr
     user_data["login"]
 
     login_response = client.post(
-        "/api/v1/auth/login",
-        json={"login": "e2e_user_1", "password": "password123"},
+        "/api/v1/auth/login", json={"login": "e2e_user_1", "password": "password123"},
     )
     assert login_response.status_code == 200
     access_token = login_response.json()["access_token"]
@@ -160,8 +159,7 @@ async def test_e2e_multi_wallet_flow_with_transfer(client, db, mock_currency_api
     user_data["login"]
 
     login_response = client.post(
-        "/api/v1/auth/login",
-        json={"login": "e2e_user_2", "password": "password123"},
+        "/api/v1/auth/login", json={"login": "e2e_user_2", "password": "password123"},
     )
     assert login_response.status_code == 200
     access_token = login_response.json()["access_token"]
@@ -281,8 +279,7 @@ async def test_e2e_operations_history_and_report(client, db, mock_currency_api):
     user_data["login"]
 
     login_response = client.post(
-        "/api/v1/auth/login",
-        json={"login": "e2e_user_3", "password": "password123"},
+        "/api/v1/auth/login", json={"login": "e2e_user_3", "password": "password123"},
     )
     assert login_response.status_code == 200
     access_token = login_response.json()["access_token"]
@@ -353,7 +350,7 @@ async def test_e2e_operations_history_and_report(client, db, mock_currency_api):
     assert len(operations_data) == 4
 
     operations_by_wallet_response = client.get(
-        f"/api/v1/operations?wallet_id={wallet_id}", headers=headers
+        f"/api/v1/operations?wallet_id={wallet_id}", headers=headers,
     )
     assert operations_by_wallet_response.status_code == 200
     operations_by_wallet_data = operations_by_wallet_response.json()
@@ -412,8 +409,7 @@ async def test_e2e_insufficient_funds_after_income(client, db, mock_currency_api
     user_data["login"]
 
     login_response = client.post(
-        "/api/v1/auth/login",
-        json={"login": "e2e_user_4", "password": "password123"},
+        "/api/v1/auth/login", json={"login": "e2e_user_4", "password": "password123"},
     )
     assert login_response.status_code == 200
     access_token = login_response.json()["access_token"]
@@ -513,8 +509,7 @@ async def test_e2e_expense_without_income(client, db, mock_currency_api):
     user_data["login"]
 
     login_response = client.post(
-        "/api/v1/auth/login",
-        json={"login": "e2e_user_5", "password": "password123"},
+        "/api/v1/auth/login", json={"login": "e2e_user_5", "password": "password123"},
     )
     assert login_response.status_code == 200
     access_token = login_response.json()["access_token"]
@@ -607,8 +602,7 @@ async def test_e2e_transfer_insufficient_funds(client, db, mock_currency_api):
     user_data["login"]
 
     login_response = client.post(
-        "/api/v1/auth/login",
-        json={"login": "e2e_user_6", "password": "password123"},
+        "/api/v1/auth/login", json={"login": "e2e_user_6", "password": "password123"},
     )
     assert login_response.status_code == 200
     access_token = login_response.json()["access_token"]

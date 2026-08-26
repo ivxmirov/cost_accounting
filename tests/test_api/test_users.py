@@ -12,7 +12,7 @@ def test_create_user_success(client):
 def test_create_user_exists(client, current_user):
 
     response = client.post(
-        "/api/v1/users", json={"login": current_user.login, "password": "password123"}
+        "/api/v1/users", json={"login": current_user.login, "password": "password123"},
     )
 
     assert response.status_code == 400

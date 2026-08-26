@@ -5,12 +5,10 @@ from app.repository import groups as groups_repository
 
 
 async def test_create_group_without_adding_members_not_exists(
-    db_session: AsyncSession, current_user
+    db_session: AsyncSession, current_user,
 ):
     group: Group = await groups_repository.create_group(
-        db_session,
-        creator_id=current_user.id,
-        group_name="test_group",
+        db_session, creator_id=current_user.id, group_name="test_group",
     )
 
     # members уже загружен через selectinload в репозитории

@@ -23,7 +23,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         logger.info(  # Логируем метаданные запроса
             f"{request.method} {request.url.path} | query={query_params} "
-            f"| request_id={request_id} | time={duration:.2f}ms"
+            f"| request_id={request_id} | time={duration:.2f}ms",
         )
 
         return response  # Возвращаем ответ клиенту

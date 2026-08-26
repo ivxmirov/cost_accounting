@@ -9,10 +9,7 @@ from app.models import Wallet
 
 async def test_add_income_success(db_session: AsyncSession, client, test_user, auth_headers):
     wallet = Wallet(
-        name="card",
-        balance=Decimal(50),
-        user_id=test_user.id,
-        currency=CurrencyEnum.USD,
+        name="card", balance=Decimal("50"), user_id=test_user.id, currency=CurrencyEnum.USD,
     )
     db_session.add(wallet)
     await db_session.commit()
@@ -33,11 +30,11 @@ async def test_add_income_success(db_session: AsyncSession, client, test_user, a
     data = response.json()
     assert data["type"] == "income"
     assert data["wallet_id"] == wallet.id
-    assert Decimal(str(data["amount"])) == Decimal(100)
+    assert Decimal(str(data["amount"])) == Decimal("100")
     assert data["category"] == "Salary"
 
     await db_session.refresh(wallet)
-    assert wallet.balance == Decimal(150)
+    assert wallet.balance == Decimal("150")
 
 
 def test_add_income_wallet_not_exists(client, auth_headers):
@@ -92,15 +89,15 @@ async def test_add_expense_success(db_session: AsyncSession, client, test_user, 
     data = response.json()
     assert data["type"] == "expense"
     assert data["wallet_id"] == wallet.id
-    assert Decimal(str(data["amount"])) == Decimal(50)
+    assert Decimal(str(data["amount"])) == Decimal("50")
     assert data["category"] == "Food"
 
     await db_session.refresh(wallet)
-    assert wallet.balance == Decimal(150)
+    assert wallet.balance == Decimal("150")
 
 
 async def test_add_expense_negative_amount(
-    db_session: AsyncSession, client, test_user, auth_headers
+    db_session: AsyncSession, client, test_user, auth_headers,
 ):
     wallet = Wallet(name="card", balance=200, user_id=test_user.id, currency=CurrencyEnum.USD)
     db_session.add(wallet)
@@ -172,7 +169,7 @@ def test_add_expense_unauthorized(client):
 
 
 async def test_add_expense_not_enough_money(
-    db_session: AsyncSession, client, test_user, auth_headers
+    db_session: AsyncSession, client, test_user, auth_headers,
 ):
     wallet = Wallet(name="card", balance=200, user_id=test_user.id, currency=CurrencyEnum.USD)
     db_session.add(wallet)

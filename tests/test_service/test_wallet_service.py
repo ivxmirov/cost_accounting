@@ -2,6 +2,7 @@ from decimal import Decimal
 
 import pytest
 from fastapi import HTTPException
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.enum import CurrencyEnum, WalletType
@@ -11,72 +12,113 @@ from app.service import wallets as wallets_service
 
 
 async def test_create_debit_wallet_without_credit_limit_success(
-    db_session: AsyncSession, current_user
+    db_session: AsyncSession, current_user,
 ):
     """
     Проверяет, что дебетовый кошелек без указания кредитного лимита создастся успешно
     """
-    payload = WalletCreateSchema(name="test", initial_balance=Decimal(10), type=WalletType.DEBIT)
+    payload = WalletCreateSchema(name="test", initial_balance=Decimal("10"), type=WalletType.DEBIT)
 
     wallet = await wallets_service.create_wallet(
-        db_session, current_user=current_user, wallet=payload
+        db_session, current_user=current_user, wallet=payload,
     )
 
     assert wallet.id == 1
     assert wallet.name == "test"
-    assert wallet.balance == Decimal(10)
+    assert wallet.balance == Decimal("10")
     assert wallet.type == WalletType.DEBIT
     assert wallet.credit_limit is None
 
 
 async def test_create_debit_wallet_with_credit_limit_success(
-    db_session: AsyncSession, current_user
+    db_session: AsyncSession, current_user,
 ):
     """
     Проверяет, что дебетовый кошелек с указанным кредитным лимитом создастся успешно
     """
     payload = WalletCreateSchema(
         name="test",
-        initial_balance=Decimal(10),
+        initial_balance=Decimal("10"),
         type=WalletType.DEBIT,
-        credit_limit=Decimal(200),
+        credit_limit=Decimal("200"),
     )
 
     wallet = await wallets_service.create_wallet(
-        db_session, current_user=current_user, wallet=payload
+        db_session, current_user=current_user, wallet=payload,
     )
 
     assert wallet.id == 1
     assert wallet.name == "test"
-    assert wallet.balance == Decimal(10)
+    assert wallet.balance == Decimal("10")
     assert wallet.type == WalletType.DEBIT
     assert wallet.credit_limit is None
 
 
 async def test_create_credit_wallet_with_credit_limit_more_initial_balance_success(
-    db_session: AsyncSession, current_user
+    db_session: AsyncSession, current_user,
 ):
     """
-    Проверяет успешное создание кредитного кошелька при выполнении условия
+    Проверяет успешное создание кредитного кошелька
 
-    Условие: кредитный лимит указан, и он больше начального баланса
+    Условие: кредитный лимит больше начального баланса
     """
     payload = WalletCreateSchema(
         name="test",
-        initial_balance=Decimal(10),
+        initial_balance=Decimal("10"),
         type=WalletType.CREDIT,
-        credit_limit=Decimal(200),
+        credit_limit=Decimal("200"),
     )
 
     wallet = await wallets_service.create_wallet(
-        db_session, current_user=current_user, wallet=payload
+        db_session, current_user=current_user, wallet=payload,
     )
 
     assert wallet.id == 1
     assert wallet.name == "test"
-    assert wallet.balance == Decimal(10)
+    assert wallet.balance == Decimal("10")
     assert wallet.type == WalletType.CREDIT
-    assert wallet.credit_limit == Decimal(200)
+    assert wallet.credit_limit == Decimal("200")
+
+
+@pytest.mark.parametrize(
+    "credit_limit",
+    [
+        Decimal("100.0001"),  # слишком точное значение
+    ],
+)
+def test_invalid_credit_limit(credit_limit):
+    """Pydantic должен отлавливать невалидные значения"""
+    with pytest.raises(ValidationError):
+        WalletCreateSchema(
+            name="test",
+            initial_balance=Decimal("100"),
+            type=WalletType.CREDIT,
+            credit_limit=credit_limit,
+        )
+
+
+@pytest.mark.parametrize(
+    "credit_limit",
+    [
+        None,  # не указан
+        Decimal("-100"),  # отрицательный
+        Decimal("0"),  # нулевой
+        Decimal("50"),  # меньше начального баланса
+    ],
+)
+async def test_create_credit_wallet_invalid_credit_limit(db_session, current_user, credit_limit):
+    """Проверка валидации кредитного лимита в бизнес-логике при создании кредитного кошелька"""
+    payload = WalletCreateSchema(
+        name="test",
+        initial_balance=Decimal("100"),
+        type=WalletType.CREDIT,
+        credit_limit=credit_limit,
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await wallets_service.create_wallet(db_session, current_user=current_user, wallet=payload)
+
+    assert exc.value.status_code == 400
 
 
 async def test_create_wallet_exists(db_session: AsyncSession, current_user, debit_wallet):
@@ -86,7 +128,7 @@ async def test_create_wallet_exists(db_session: AsyncSession, current_user, debi
     # 3. Пользователь testuser создан в БД (id=1)
     # 4. Кошелек "test_wallet" создан для пользователя testuser
     payload = WalletCreateSchema(
-        name=debit_wallet.name, initial_balance=Decimal(10), type=WalletType.DEBIT
+        name=debit_wallet.name, initial_balance=Decimal("10"), type=WalletType.DEBIT,
     )
 
     with pytest.raises(HTTPException) as exc:
@@ -96,9 +138,15 @@ async def test_create_wallet_exists(db_session: AsyncSession, current_user, debi
 
 
 async def test_get_wallet_total_balance(db_session: AsyncSession, current_user):
+    """
+    Проверяет подсчет общего баланса пользователя
+
+    Логика проверки такова, что кредитный кошелек с кредитным лимитом 300 и текущим балансом 0,
+    дает -300 к общему балансу.
+    """
     wallet1 = Wallet(
         name="wallet1",
-        balance=Decimal(100),
+        balance=Decimal("100"),
         user_id=current_user.id,
         currency=CurrencyEnum.RUB,
         type=WalletType.DEBIT,
@@ -108,7 +156,7 @@ async def test_get_wallet_total_balance(db_session: AsyncSession, current_user):
 
     wallet2 = Wallet(
         name="wallet2",
-        balance=Decimal(200),
+        balance=Decimal("200"),
         user_id=current_user.id,
         currency=CurrencyEnum.RUB,
         type=WalletType.DEBIT,
@@ -118,11 +166,11 @@ async def test_get_wallet_total_balance(db_session: AsyncSession, current_user):
 
     wallet3 = Wallet(
         name="wallet3",
-        balance=Decimal(0),
+        balance=Decimal("0"),
         user_id=current_user.id,
         currency=CurrencyEnum.RUB,
         type=WalletType.CREDIT,
-        credit_limit=Decimal(300),
+        credit_limit=Decimal("300"),
     )
     db_session.add(wallet3)
     await db_session.commit()
@@ -141,39 +189,39 @@ async def test_get_wallet_total_balance_empty(db_session: AsyncSession, current_
 
 
 async def test_get_debit_wallet_by_name(db_session: AsyncSession, current_user, debit_wallet):
-    debit_wallet.balance = Decimal(150)
+    debit_wallet.balance = Decimal("150")
     await db_session.flush()
 
     result = await wallets_service.get_wallet_by_name(
-        db_session, current_user=current_user, wallet_name=debit_wallet.name
+        db_session, current_user=current_user, wallet_name=debit_wallet.name,
     )
 
     assert result.id == debit_wallet.id
     assert result.name == debit_wallet.name
-    assert result.balance == Decimal(150)
+    assert result.balance == Decimal("150")
     assert result.type == WalletType.DEBIT
 
 
 async def test_get_credit_wallet_by_name(db_session: AsyncSession, current_user, credit_wallet):
-    credit_wallet.balance = Decimal(150)
-    credit_wallet.credit_limit = Decimal(200)
+    credit_wallet.balance = Decimal("150")
+    credit_wallet.credit_limit = Decimal("200")
     await db_session.flush()
 
     result = await wallets_service.get_wallet_by_name(
-        db_session, current_user=current_user, wallet_name=credit_wallet.name
+        db_session, current_user=current_user, wallet_name=credit_wallet.name,
     )
 
     assert result.id == credit_wallet.id
     assert result.name == credit_wallet.name
-    assert result.balance == Decimal(150)
+    assert result.balance == Decimal("150")
     assert result.type == WalletType.CREDIT
-    assert result.credit_limit == Decimal(200)
+    assert result.credit_limit == Decimal("200")
 
 
 async def test_get_wallet_not_exists(db_session: AsyncSession, current_user):
     with pytest.raises(HTTPException) as exc:
         await wallets_service.get_wallet_by_name(
-            db_session, current_user=current_user, wallet_name="nonexistent"
+            db_session, current_user=current_user, wallet_name="nonexistent",
         )
 
     assert exc.value.status_code == 404
@@ -187,7 +235,7 @@ async def test_get_debit_wallet_other_user(db_session: AsyncSession, debit_walle
 
     with pytest.raises(HTTPException) as exc:
         await wallets_service.get_wallet_by_name(
-            db_session, current_user=other_user, wallet_name=debit_wallet.name
+            db_session, current_user=other_user, wallet_name=debit_wallet.name,
         )
 
     assert exc.value.status_code == 404
@@ -200,7 +248,7 @@ async def test_get_credit_wallet_other_user(db_session: AsyncSession, credit_wal
 
     with pytest.raises(HTTPException) as exc:
         await wallets_service.get_wallet_by_name(
-            db_session, current_user=other_user, wallet_name=credit_wallet.name
+            db_session, current_user=other_user, wallet_name=credit_wallet.name,
         )
 
     assert exc.value.status_code == 404

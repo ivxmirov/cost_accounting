@@ -8,7 +8,7 @@ from app.models import Wallet
 
 
 async def test_transfer_v1_success(
-    client, test_user, db: AsyncSession, mock_currency_api, auth_headers
+    client, test_user, db: AsyncSession, mock_currency_api, auth_headers,
 ):
     """v1: Перевод между кошельками должен успешно списать/зачислить средства."""
     wallet1 = Wallet(
@@ -18,7 +18,7 @@ async def test_transfer_v1_success(
         balance=Decimal("1000.0"),
     )
     wallet2 = Wallet(
-        user_id=test_user.id, name="EUR Wallet", currency=CurrencyEnum.EUR, balance=Decimal("0.0")
+        user_id=test_user.id, name="EUR Wallet", currency=CurrencyEnum.EUR, balance=Decimal("0.0"),
     )
     db.add(wallet1)
     db.add(wallet2)
@@ -66,10 +66,10 @@ def test_transfer_v1_wallet_not_found(client, test_user, auth_headers):
 async def test_transfer_v1_insufficient_funds(client, test_user, db: AsyncSession, auth_headers):
     """v1: Перевод при недостатке средств — 400."""
     wallet1 = Wallet(
-        user_id=test_user.id, name="Wallet 1", currency=CurrencyEnum.USD, balance=Decimal("50.0")
+        user_id=test_user.id, name="Wallet 1", currency=CurrencyEnum.USD, balance=Decimal("50.0"),
     )
     wallet2 = Wallet(
-        user_id=test_user.id, name="Wallet 2", currency=CurrencyEnum.USD, balance=Decimal("0.0")
+        user_id=test_user.id, name="Wallet 2", currency=CurrencyEnum.USD, balance=Decimal("0.0"),
     )
     db.add(wallet1)
     db.add(wallet2)
@@ -108,10 +108,10 @@ def test_transfer_v1_same_wallet(client, test_user, test_wallet, auth_headers):
 async def test_transfer_v1_same_currency(client, test_user, db: AsyncSession, auth_headers):
     """v1: Перевод между кошельками с одной валютой."""
     wallet1 = Wallet(
-        user_id=test_user.id, name="Wallet 1", currency=CurrencyEnum.USD, balance=Decimal("500.0")
+        user_id=test_user.id, name="Wallet 1", currency=CurrencyEnum.USD, balance=Decimal("500.0"),
     )
     wallet2 = Wallet(
-        user_id=test_user.id, name="Wallet 2", currency=CurrencyEnum.USD, balance=Decimal("200.0")
+        user_id=test_user.id, name="Wallet 2", currency=CurrencyEnum.USD, balance=Decimal("200.0"),
     )
     db.add(wallet1)
     db.add(wallet2)
@@ -141,14 +141,14 @@ async def test_transfer_v1_same_currency(client, test_user, db: AsyncSession, au
 
 
 async def test_transfer_v1_idempotency(
-    client, test_user, db: AsyncSession, mock_currency_api, auth_headers
+    client, test_user, db: AsyncSession, mock_currency_api, auth_headers,
 ):
     """v1: Повторный запрос с тем же transaction_id возвращает 200."""
     wallet1 = Wallet(
-        user_id=test_user.id, name="Wallet 1", currency=CurrencyEnum.USD, balance=Decimal("1000.0")
+        user_id=test_user.id, name="Wallet 1", currency=CurrencyEnum.USD, balance=Decimal("1000.0"),
     )
     wallet2 = Wallet(
-        user_id=test_user.id, name="Wallet 2", currency=CurrencyEnum.EUR, balance=Decimal("0.0")
+        user_id=test_user.id, name="Wallet 2", currency=CurrencyEnum.EUR, balance=Decimal("0.0"),
     )
     db.add(wallet1)
     db.add(wallet2)

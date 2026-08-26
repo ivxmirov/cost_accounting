@@ -1,11 +1,6 @@
 from datetime import datetime
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    Query,
-    Response,
-)
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependency import get_current_user, get_db
@@ -94,7 +89,7 @@ async def get_csv_report(
     db: AsyncSession = Depends(get_db),
 ):
     csv_content = await operations_service.generate_csv_report(
-        db, user, date_from, date_to, currency
+        db, user, date_from, date_to, currency,
     )
     return Response(
         content=csv_content,

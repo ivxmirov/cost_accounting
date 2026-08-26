@@ -100,7 +100,7 @@ async def test_expense_idempotency(client, test_user, test_wallet, db: AsyncSess
 
 
 async def test_transfer_idempotency(
-    client, test_user, db: AsyncSession, mock_currency_api, auth_headers
+    client, test_user, db: AsyncSession, mock_currency_api, auth_headers,
 ):
     """
     Повторный запрос transfer с тем же transaction_id возвращает 200 OK.
@@ -109,10 +109,10 @@ async def test_transfer_idempotency(
     from app.enum import CurrencyEnum
 
     wallet1 = Wallet(
-        user_id=test_user.id, name="USD Wallet", currency=CurrencyEnum.USD, balance=1000.0
+        user_id=test_user.id, name="USD Wallet", currency=CurrencyEnum.USD, balance=1000.0,
     )
     wallet2 = Wallet(
-        user_id=test_user.id, name="EUR Wallet", currency=CurrencyEnum.EUR, balance=0.0
+        user_id=test_user.id, name="EUR Wallet", currency=CurrencyEnum.EUR, balance=0.0,
     )
     db.add(wallet1)
     db.add(wallet2)
@@ -162,7 +162,7 @@ async def test_transfer_idempotency(
 
 
 def test_different_transaction_ids_create_separate_operations(
-    client, test_user, test_wallet, auth_headers
+    client, test_user, test_wallet, auth_headers,
 ):
     """
     Разные transaction_id должны создавать отдельные операции.
@@ -196,7 +196,7 @@ def test_different_transaction_ids_create_separate_operations(
 
 
 async def test_idempotency_preserves_wallet_balance(
-    client, test_user, test_wallet, db: AsyncSession, auth_headers
+    client, test_user, test_wallet, db: AsyncSession, auth_headers,
 ):
     """
     Идемпотентность должна сохранять баланс кошелька при повторных запросах.

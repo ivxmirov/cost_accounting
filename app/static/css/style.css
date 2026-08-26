@@ -120,3 +120,7 @@ h1 {
     background-color: #4a2a85;
     color: white;
 }
+
+#groupsModal .modal-dialog {
+    max-width: 850px; /* modal-lg = 800px + 50px (5см) */
+}

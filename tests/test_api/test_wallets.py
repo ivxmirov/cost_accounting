@@ -8,18 +8,12 @@ from app.models import Wallet
 
 async def test_get_balance_total(client, auth_headers, current_user, db_session: AsyncSession):
     wallet1 = Wallet(
-        name="wallet1",
-        balance=Decimal(100),
-        user_id=current_user.id,
-        currency=CurrencyEnum.RUB,
+        name="wallet1", balance=Decimal("100"), user_id=current_user.id, currency=CurrencyEnum.RUB,
     )
     db_session.add(wallet1)
 
     wallet2 = Wallet(
-        name="wallet2",
-        balance=Decimal(200),
-        user_id=current_user.id,
-        currency=CurrencyEnum.RUB,
+        name="wallet2", balance=Decimal("200"), user_id=current_user.id, currency=CurrencyEnum.RUB,
     )
     db_session.add(wallet2)
     await db_session.commit()
@@ -40,7 +34,7 @@ def test_get_balance_total_empty(client, auth_headers):
 
 
 async def test_get_balance_by_name(client, auth_headers, wallet, db_session: AsyncSession):
-    wallet.balance = Decimal(150)
+    wallet.balance = Decimal("150")
     await db_session.commit()
     await db_session.refresh(wallet)
 
@@ -71,7 +65,7 @@ def test_create_wallet_success(client, auth_headers):
 
     assert response.status_code == 201
     assert response.json()["name"] == "my_wallet"
-    assert Decimal(str(response.json()["balance"])) == Decimal(100)
+    assert Decimal(str(response.json()["balance"])) == Decimal("100")
 
 
 def test_create_wallet_exists(client, auth_headers, wallet):

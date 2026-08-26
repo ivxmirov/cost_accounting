@@ -32,6 +32,8 @@ async def login(db: AsyncSession, request: LoginRequest) -> TokenResponse:
         access_token=access_token,
         refresh_token=refresh_token,
         token_type="bearer",
+        user_id=user.id,
+        login=user.login,
     )
 
 
@@ -62,4 +64,6 @@ async def refresh_token(db: AsyncSession, request: RefreshRequest) -> TokenRespo
         access_token=new_access_token,
         refresh_token=request.refresh_token,
         token_type="bearer",
+        user_id=user.id,
+        login=user.login,
     )

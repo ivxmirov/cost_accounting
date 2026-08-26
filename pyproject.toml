@@ -56,6 +56,7 @@ select = [
     "I",   # isort
     "N",   # pep8-naming
     "W",   # pycodestyle warnings
+    "COM", # flake8-commas
 ]
 
 [tool.ruff.format]
@@ -63,12 +64,12 @@ select = [
 docstring-code-format = true
 # Стиль кавычек
 quote-style = "double"
-# Перенос элементов в зависимости от запятой в конце строки
+# Перенос элементов в зависимости от запятой в конце строки (уважать запятые)
 skip-magic-trailing-comma = false
 
 [tool.ruff.lint.isort]
-# Перенос импортов в зависимости от запятой в конце строки
-split-on-trailing-comma = true
+# Перенос импортов в зависимости от запятой в конце строки (уважать запятые)
+split-on-trailing-comma = false
 
 [tool.mypy]
 python_version = "3.12"

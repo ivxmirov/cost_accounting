@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 async def create_group(
-    db: AsyncSession, current_user: User, group_data: GroupCreateSchema
+    db: AsyncSession, current_user: User, group_data: GroupCreateSchema,
 ) -> GroupResponseSchema:
     """
     Создает новую группу с бизнес-валидацией.
@@ -35,10 +35,10 @@ async def create_group(
     """
     # 1. Проверка на дубликат
     if await groups_repository.is_group_exist(
-        db, user_id=current_user.id, group_name=group_data.name
+        db, user_id=current_user.id, group_name=group_data.name,
     ):
         raise HTTPException(
-            status_code=400, detail="Нельзя создавать несколько групп с одинаковым названием"
+            status_code=400, detail="Нельзя создавать несколько групп с одинаковым названием",
         )
 
     # 2. Проверка, что в группу добавлен хотя бы один участник
@@ -51,7 +51,7 @@ async def create_group(
         user = await users_repository.get_user(db, login)
         if not user:
             raise HTTPException(
-                status_code=400, detail=f"Пользователь с логином '{login}' не найден"
+                status_code=400, detail=f"Пользователь с логином '{login}' не найден",
             )
         members.append(user)
 
@@ -63,7 +63,7 @@ async def create_group(
         raise HTTPException(status_code=400, detail="Добавьте хотя бы одного участника помимо себя")
 
     new_group: Group = await groups_repository.create_group(
-        db, creator_id=current_user.id, group_name=group_data.name, members=other_members
+        db, creator_id=current_user.id, group_name=group_data.name, members=other_members,
     )
 
     await db.commit()
@@ -71,7 +71,7 @@ async def create_group(
 
 
 async def get_current_user_groups(
-    db: AsyncSession, current_user: User
+    db: AsyncSession, current_user: User,
 ) -> list[GroupResponseSchema]:
     """
     Возвращает список всех групп, в которых состоит текущий пользователь.
@@ -83,11 +83,24 @@ async def get_current_user_groups(
         Список всех групп, в которых состоит текущий пользователь
     """
     groups = await groups_repository.get_user_groups(db, user_id=current_user.id)
-    return [GroupResponseSchema.model_validate(group) for group in groups]
+    result = []
+    for group in groups:
+        schema = GroupResponseSchema(
+            name=group.name,
+            creator=group.creator,
+            creator_login=(
+                group.creator_user.login if group.creator_user else f"User_{group.creator}"
+            ),
+            members=[member.login for member in group.members],
+            created_at=group.created_at,
+        )
+        result.append(schema)
+
+    return result
 
 
 async def get_user_group_by_id(
-    db: AsyncSession, current_user: User, group_id: int
+    db: AsyncSession, current_user: User, group_id: int,
 ) -> GroupResponseSchema:
     """Получает группу с проверкой прав доступа пользователя"""
 
@@ -100,4 +113,10 @@ async def get_user_group_by_id(
     if current_user.id not in [member.id for member in group.members]:
         raise HTTPException(status_code=403, detail="Вы не состоите в этой группе")
 
-    return GroupResponseSchema.model_validate(group)
+    return GroupResponseSchema(
+        name=group.name,
+        creator=group.creator,
+        creator_login=group.creator_user.login if group.creator_user else f"User_{group.creator}",
+        members=[member.login for member in group.members],
+        created_at=group.created_at,
+    )

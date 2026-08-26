@@ -78,7 +78,7 @@ async def debit_wallet(db_session: AsyncSession, test_user):
     """Фикстура для дебетового кошелька"""
     wallet_obj = Wallet(
         name="test_debit_wallet",
-        balance=Decimal(1000),
+        balance=Decimal("1000"),
         user_id=test_user.id,
         currency=CurrencyEnum.USD,
         type=WalletType.DEBIT,
@@ -95,11 +95,11 @@ async def credit_wallet(db_session: AsyncSession, test_user):
     """Фикстура для кредитного кошелька"""
     wallet_obj = Wallet(
         name="test_credit_wallet",
-        balance=Decimal(2000),
+        balance=Decimal("2000"),
         user_id=test_user.id,
         currency=CurrencyEnum.RUB,
         type=WalletType.CREDIT,
-        credit_limit=Decimal(50000),
+        credit_limit=Decimal("50000"),
     )
     db_session.add(wallet_obj)
     await db_session.commit()

@@ -60,7 +60,7 @@ async def http_exception_handler(request: Request, exc: HTTPException | Exceptio
 
 
 async def validation_exception_handler(
-    request: Request, exc: RequestValidationError | Exception
+    request: Request, exc: RequestValidationError | Exception,
 ) -> JSONResponse:
     """
     Обработчик для RequestValidationError (422)
@@ -86,6 +86,5 @@ async def validation_exception_handler(
         )
 
     return JSONResponse(
-        status_code=422,
-        content={"code": "422", "message": "Validation error", "details": None},
+        status_code=422, content={"code": "422", "message": "Validation error", "details": None},
     )

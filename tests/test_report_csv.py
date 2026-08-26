@@ -7,7 +7,7 @@ from app.models import Operation
 
 
 async def test_report_csv_format(
-    client, test_user, test_wallet, db, auth_headers, mock_currency_api
+    client, test_user, test_wallet, db, auth_headers, mock_currency_api,
 ):
     """CSV отчёт должен иметь правильный формат с заголовками."""
     operation = Operation(
@@ -24,11 +24,7 @@ async def test_report_csv_format(
 
     response = client.get(
         "/api/v1/reports",
-        params={
-            "date_from": "2024-06-01",
-            "date_to": "2024-06-30",
-            "currency": "USD",
-        },
+        params={"date_from": "2024-06-01", "date_to": "2024-06-30", "currency": "USD"},
         headers=auth_headers,
     )
 
@@ -41,7 +37,7 @@ async def test_report_csv_format(
 
 
 async def test_report_csv_content(
-    client, test_user, test_wallet, db, auth_headers, mock_currency_api
+    client, test_user, test_wallet, db, auth_headers, mock_currency_api,
 ):
     """CSV отчёт должен содержать правильные данные операций."""
     operation1 = Operation(
@@ -68,11 +64,7 @@ async def test_report_csv_content(
 
     response = client.get(
         "/api/v1/reports",
-        params={
-            "date_from": "2024-06-01",
-            "date_to": "2024-06-30",
-            "currency": "USD",
-        },
+        params={"date_from": "2024-06-01", "date_to": "2024-06-30", "currency": "USD"},
         headers=auth_headers,
     )
 
@@ -92,7 +84,7 @@ async def test_report_csv_content(
 
 
 async def test_report_csv_download_headers(
-    client, test_user, test_wallet, db, auth_headers, mock_currency_api
+    client, test_user, test_wallet, db, auth_headers, mock_currency_api,
 ):
     """CSV отчёт должен иметь заголовки для скачивания файла."""
     operation = Operation(
@@ -111,11 +103,7 @@ async def test_report_csv_download_headers(
 
     response = client.get(
         "/api/v1/reports",
-        params={
-            "date_from": date_from,
-            "date_to": date_to,
-            "currency": "USD",
-        },
+        params={"date_from": date_from, "date_to": date_to, "currency": "USD"},
         headers=auth_headers,
     )
 
@@ -127,7 +115,7 @@ async def test_report_csv_download_headers(
 
 
 async def test_report_csv_with_multiple_operations(
-    client, test_user, test_wallet, db, auth_headers, mock_currency_api
+    client, test_user, test_wallet, db, auth_headers, mock_currency_api,
 ):
     """CSV отчёт с несколькими операциями должен содержать все данные."""
     operations = [
@@ -175,11 +163,7 @@ async def test_report_csv_with_multiple_operations(
 
     response = client.get(
         "/api/v1/reports",
-        params={
-            "date_from": "2024-06-01",
-            "date_to": "2024-06-30",
-            "currency": "USD",
-        },
+        params={"date_from": "2024-06-01", "date_to": "2024-06-30", "currency": "USD"},
         headers=auth_headers,
     )
 
@@ -189,16 +173,12 @@ async def test_report_csv_with_multiple_operations(
 
 
 async def test_report_csv_empty(
-    client, test_user, test_wallet, db, auth_headers, mock_currency_api
+    client, test_user, test_wallet, db, auth_headers, mock_currency_api,
 ):
     """Пустой CSV отчёт должен содержать только заголовки."""
     response = client.get(
         "/api/v1/reports",
-        params={
-            "date_from": "2024-06-01",
-            "date_to": "2024-06-30",
-            "currency": "USD",
-        },
+        params={"date_from": "2024-06-01", "date_to": "2024-06-30", "currency": "USD"},
         headers=auth_headers,
     )
 
@@ -209,7 +189,7 @@ async def test_report_csv_empty(
 
 
 async def test_report_csv_special_characters(
-    client, test_user, test_wallet, db, auth_headers, mock_currency_api
+    client, test_user, test_wallet, db, auth_headers, mock_currency_api,
 ):
     """CSV должен правильно обрабатывать спецсимволы в категории."""
     operation = Operation(
@@ -226,11 +206,7 @@ async def test_report_csv_special_characters(
 
     response = client.get(
         "/api/v1/reports",
-        params={
-            "date_from": "2024-06-01",
-            "date_to": "2024-06-30",
-            "currency": "USD",
-        },
+        params={"date_from": "2024-06-01", "date_to": "2024-06-30", "currency": "USD"},
         headers=auth_headers,
     )
 
@@ -240,7 +216,7 @@ async def test_report_csv_special_characters(
 
 
 async def test_report_csv_currency_conversion(
-    client, test_user, test_wallet, db, auth_headers, mock_currency_api
+    client, test_user, test_wallet, db, auth_headers, mock_currency_api,
 ):
     """CSV отчёт должен конвертировать валюты правильно."""
     operation = Operation(
@@ -257,11 +233,7 @@ async def test_report_csv_currency_conversion(
 
     response = client.get(
         "/api/v1/reports",
-        params={
-            "date_from": "2024-06-01",
-            "date_to": "2024-06-30",
-            "currency": "RUB",
-        },
+        params={"date_from": "2024-06-01", "date_to": "2024-06-30", "currency": "RUB"},
         headers=auth_headers,
     )
 
@@ -272,7 +244,7 @@ async def test_report_csv_currency_conversion(
 
 
 async def test_report_csv_empty_category(
-    client, test_user, test_wallet, db, auth_headers, mock_currency_api
+    client, test_user, test_wallet, db, auth_headers, mock_currency_api,
 ):
     """CSV отчёт должен правильно обрабатывать пустые категории."""
     operation = Operation(
@@ -289,11 +261,7 @@ async def test_report_csv_empty_category(
 
     response = client.get(
         "/api/v1/reports",
-        params={
-            "date_from": "2024-06-01",
-            "date_to": "2024-06-30",
-            "currency": "USD",
-        },
+        params={"date_from": "2024-06-01", "date_to": "2024-06-30", "currency": "USD"},
         headers=auth_headers,
     )
 

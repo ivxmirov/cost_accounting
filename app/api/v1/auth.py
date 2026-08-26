@@ -9,10 +9,7 @@ router = APIRouter()
 
 
 @router.post("/auth/login", response_model=TokenResponse)
-async def login(
-    request: LoginRequest,
-    db: AsyncSession = Depends(get_db),
-):
+async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     """
     Эндпоинт для входа в систему (аутентификации пользователя)
     Принимает логин и пароль, проверяет их корректность
@@ -27,10 +24,7 @@ async def login(
 
 
 @router.post("/auth/refresh", response_model=TokenResponse)
-async def refresh(
-    request: RefreshRequest,
-    db: AsyncSession = Depends(get_db),
-):
+async def refresh(request: RefreshRequest, db: AsyncSession = Depends(get_db)):
     """
     Эндпоинт для обновления access токена
     Принимает refresh токен и возвращает новый access токен

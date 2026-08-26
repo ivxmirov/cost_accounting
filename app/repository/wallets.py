@@ -9,14 +9,14 @@ from app.models import Wallet
 
 async def is_wallet_exist(db: AsyncSession, user_id: int, wallet_name: str) -> bool:
     result = await db.execute(
-        select(Wallet).where(Wallet.name == wallet_name, Wallet.user_id == user_id)
+        select(Wallet).where(Wallet.name == wallet_name, Wallet.user_id == user_id),
     )
     return result.scalar_one_or_none() is not None
 
 
 async def add_income(db: AsyncSession, user_id: int, wallet_name: str, amount: Decimal) -> Wallet:
     result = await db.execute(
-        select(Wallet).where(Wallet.name == wallet_name, Wallet.user_id == user_id)
+        select(Wallet).where(Wallet.name == wallet_name, Wallet.user_id == user_id),
     )
     wallet = result.scalar_one()
     wallet.balance += amount
@@ -25,24 +25,21 @@ async def add_income(db: AsyncSession, user_id: int, wallet_name: str, amount: D
 
 async def get_wallet_by_name(db: AsyncSession, user_id: int, wallet_name: str) -> Wallet | None:
     result = await db.execute(
-        select(Wallet).where(Wallet.name == wallet_name, Wallet.user_id == user_id)
+        select(Wallet).where(Wallet.name == wallet_name, Wallet.user_id == user_id),
     )
     return result.scalar_one_or_none()
 
 
 async def add_expense(db: AsyncSession, user_id: int, wallet_name: str, amount: Decimal) -> Wallet:
     result = await db.execute(
-        select(Wallet).where(Wallet.name == wallet_name, Wallet.user_id == user_id)
+        select(Wallet).where(Wallet.name == wallet_name, Wallet.user_id == user_id),
     )
     wallet = result.scalar_one()
     wallet.balance -= amount
     return wallet
 
 
-async def get_user_wallets(
-    db: AsyncSession,
-    user_id: int,
-) -> list[Wallet]:
+async def get_user_wallets(db: AsyncSession, user_id: int) -> list[Wallet]:
     result = await db.execute(select(Wallet).where(Wallet.user_id == user_id))
     return list(result.scalars().all())
 
@@ -71,7 +68,7 @@ async def create_wallet(
 
 async def get_wallet_by_id(db: AsyncSession, user_id: int, wallet_id: int) -> Wallet | None:
     result = await db.execute(
-        select(Wallet).where(Wallet.id == wallet_id, Wallet.user_id == user_id)
+        select(Wallet).where(Wallet.id == wallet_id, Wallet.user_id == user_id),
     )
     return result.scalar_one_or_none()
 

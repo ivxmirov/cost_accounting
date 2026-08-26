@@ -5,7 +5,7 @@ from app.service import users as user_service
 
 def test_http_exception_format(client, test_user):
     response = client.post(
-        "/api/v1/users", json={"login": test_user.login, "password": "password123"}
+        "/api/v1/users", json={"login": test_user.login, "password": "password123"},
     )
     assert response.status_code == 400
     data = response.json()
@@ -19,8 +19,7 @@ def test_http_exception_format(client, test_user):
 def test_http_exception_with_dict_detail(client, monkeypatch):
     async def failing_create_user(*args, **kwargs):
         raise HTTPException(
-            status_code=400,
-            detail={"message": "Custom message", "reason": "duplicate"},
+            status_code=400, detail={"message": "Custom message", "reason": "duplicate"},
         )
 
     monkeypatch.setattr(user_service, "create_user", failing_create_user)

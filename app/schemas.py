@@ -33,6 +33,7 @@ class GroupResponseSchema(BaseModel):
 
     name: str
     creator: int
+    creator_login: str
     members: list[str]
     created_at: datetime
 
@@ -68,7 +69,7 @@ class OperationRequest(BaseModel):
 
 class WalletCreateSchema(BaseModel):
     name: str = Field(..., max_length=127)
-    initial_balance: Decimal = Decimal(0)
+    initial_balance: Decimal = Decimal("0")
     currency: CurrencyEnum = CurrencyEnum.RUB
     type: WalletType
     credit_limit: Decimal | None = None
@@ -86,6 +87,17 @@ class WalletCreateSchema(BaseModel):
     def balance_not_negative(cls, v: Decimal) -> Decimal:
         if v < 0:
             raise ValueError("Начальный баланс кошелька не должен быть отрицательным")
+        return v
+
+    @field_validator("credit_limit")
+    @classmethod
+    def validate_credit_limit_precision(cls, v: Decimal) -> Decimal:
+        if v is not None:
+            # Правильный способ получить экспоненту
+            exponent = v.as_tuple().exponent
+            # exponent может быть int или str ('n', 'N', 'F' для special values)
+            if isinstance(exponent, int) and exponent < -2:
+                raise ValueError("Кредитный лимит не может иметь более 2 знаков после запятой")
         return v
 
 
@@ -279,6 +291,8 @@ class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+    user_id: int
+    login: str
 
 
 class RefreshRequest(BaseModel):

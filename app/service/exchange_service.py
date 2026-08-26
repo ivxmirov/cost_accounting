@@ -38,4 +38,4 @@ async def get_exchange_rate(base: CurrencyEnum, target: CurrencyEnum) -> Decimal
             return Decimal(rate)
         raise KeyError("Rate not found")
     except Exception:
-        return FALLBACK_RATES.get((base, target), Decimal(1))
+        return FALLBACK_RATES.get((base, target), Decimal("1"))

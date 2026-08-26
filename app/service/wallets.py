@@ -12,16 +12,19 @@ from app.service import exchange_service
 
 async def get_total_balance(db: AsyncSession, current_user: User) -> TotalBalance:
     """
-    Получает общий баланс всех кошельков пользователя с конвертацией валют в рубли
+    Получает общий баланс всех кошельков пользователя с конвертацией валют в рубли.
+
+    Логика подсчета такова, что кредитный кошелек с кредитным лимитом 300 и текущим балансом 0,
+    дает -300 к общему балансу.
 
     Args:
         db: Сессия базы данных
         current_user: Текущий пользователь
     Returns:
-        Общий баланс всех кошельков в рублях
+        Общий баланс всех кошельков пользователя в рублях
     """
     wallets = await wallets_repository.get_user_wallets(db, current_user.id)
-    total_balance = Decimal(0)
+    total_balance = Decimal("0")
 
     for wallet in wallets:
         # Это условие выполнится только у дебетовых кошельков
@@ -35,7 +38,7 @@ async def get_total_balance(db: AsyncSession, current_user: User) -> TotalBalanc
             total_balance += wallet.balance - credit_limit
         else:
             exchange_rate = await exchange_service.get_exchange_rate(
-                wallet.currency, CurrencyEnum.RUB
+                wallet.currency, CurrencyEnum.RUB,
             )
             total_balance += exchange_rate * (wallet.balance - credit_limit)
 
@@ -43,7 +46,7 @@ async def get_total_balance(db: AsyncSession, current_user: User) -> TotalBalanc
 
 
 async def create_wallet(
-    db: AsyncSession, current_user: User, wallet: WalletCreateSchema
+    db: AsyncSession, current_user: User, wallet: WalletCreateSchema,
 ) -> WalletResponseSchema:
     """
     Создает новый кошелек для пользователя с проверкой на дубликаты
@@ -68,7 +71,7 @@ async def create_wallet(
             raise HTTPException(400, "Кредитный лимит должен быть положительным")
         if wallet.initial_balance > wallet.credit_limit:
             raise HTTPException(
-                400, "Баланс кредитного кошелька не может быть больше кредитного лимита"
+                400, "Баланс кредитного кошелька не может быть больше кредитного лимита",
             )
 
     elif wallet.type == WalletType.DEBIT:
@@ -102,7 +105,7 @@ async def get_user_wallets(db: AsyncSession, current_user: User) -> list[WalletR
 
 
 async def get_wallet_by_name(
-    db: AsyncSession, current_user: User, wallet_name: str
+    db: AsyncSession, current_user: User, wallet_name: str,
 ) -> WalletResponseSchema:
     """
     Получает кошелек пользователя по названию
