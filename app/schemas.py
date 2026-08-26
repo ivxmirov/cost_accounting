@@ -31,6 +31,7 @@ class GroupCreateSchema(BaseModel):
 class GroupResponseSchema(BaseModel):
     model_config = {"from_attributes": True}
 
+    id: int
     name: str
     creator: int
     creator_login: str

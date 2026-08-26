@@ -20,7 +20,6 @@ async def create_group(
     Бизнес-правила:
     1. Группа с таким названием у пользователя-создателя не должна существовать
     2. Минимум 2 участника (создатель + минимум 1 дополнительный)
-    3. Создатель не может быть в списке дополнительных участников
 
     Args:
         db: Сессия базы данных
@@ -41,13 +40,10 @@ async def create_group(
             status_code=400, detail="Нельзя создавать несколько групп с одинаковым названием",
         )
 
-    # 2. Проверка, что в группу добавлен хотя бы один участник
-    if len(group_data.members_logins) == 0:
-        raise HTTPException(status_code=400, detail="Добавьте хотя бы одного участника")
-
-    # 3. Получаем всех участников по логинам с проверкой на существование
+    # 2. Получаем всех участников по логинам с проверкой на существование
+    unique_logins = set(group_data.members_logins)
     members = []
-    for login in group_data.members_logins:
+    for login in unique_logins:
         user = await users_repository.get_user(db, login)
         if not user:
             raise HTTPException(
@@ -55,10 +51,10 @@ async def create_group(
             )
         members.append(user)
 
-    # 4. Убираем создателя из списка участников (безопасно по ID)
+    # 3. Убираем создателя из списка участников (безопасно по ID)
     other_members = [m for m in members if m.id != current_user.id]
 
-    # 5. Проверяем, что остался хотя бы один участник помимо создателя группы
+    # 4. Проверяем, что остался хотя бы один участник помимо создателя группы
     if not other_members:
         raise HTTPException(status_code=400, detail="Добавьте хотя бы одного участника помимо себя")
 
@@ -84,16 +80,9 @@ async def get_current_user_groups(
     """
     groups = await groups_repository.get_user_groups(db, user_id=current_user.id)
     result = []
+
     for group in groups:
-        schema = GroupResponseSchema(
-            name=group.name,
-            creator=group.creator,
-            creator_login=(
-                group.creator_user.login if group.creator_user else f"User_{group.creator}"
-            ),
-            members=[member.login for member in group.members],
-            created_at=group.created_at,
-        )
+        schema = GroupResponseSchema.model_validate(obj=group)
         result.append(schema)
 
     return result
@@ -113,10 +102,4 @@ async def get_user_group_by_id(
     if current_user.id not in [member.id for member in group.members]:
         raise HTTPException(status_code=403, detail="Вы не состоите в этой группе")
 
-    return GroupResponseSchema(
-        name=group.name,
-        creator=group.creator,
-        creator_login=group.creator_user.login if group.creator_user else f"User_{group.creator}",
-        members=[member.login for member in group.members],
-        created_at=group.created_at,
-    )
+    return GroupResponseSchema.model_validate(obj=group)

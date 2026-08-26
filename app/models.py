@@ -69,6 +69,11 @@ class Group(Base):
     members: Mapped[list["User"]] = relationship(secondary=group_members, back_populates="groups")
     creator_user: Mapped["User"] = relationship(foreign_keys=[creator])
 
+    @property
+    def creator_login(self) -> str:
+        """Возвращает логин создателя"""
+        return self.creator_user.login if self.creator_user else f"User_{self.creator}"
+
 
 class Wallet(Base):
     __tablename__ = "wallets"

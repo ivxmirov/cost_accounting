@@ -521,7 +521,7 @@ async function updateTotalBalance() {
             const total = typeof data.total_balance === 'number' ? data.total_balance : (parseFloat(data.total_balance) || 0);
             document.getElementById('totalBalance').innerHTML = `
                 ${total.toFixed(2)} ₽
-                <div class="fs-6 text-muted mt-2">Общий баланс по всем кошелькам (с учетом долгов по кредитам)</div>
+                <div class="fs-6 text-muted mt-2">Общий баланс по всем кошелькам</div>
             `;
         } else {
             // Если запрос не удался - показываем 0
@@ -969,6 +969,7 @@ async function loadGroups() {
         
         if (response.ok) {
             const groups = await response.json();
+            console.log('[GROUPS] Ответ API:', groups);  // ← Посмотрите, есть ли id
             renderGroups(groups);
         } else if (response.status === 401) {
             showError('Не авторизован');
@@ -983,7 +984,33 @@ async function loadGroups() {
     }
 }
 
-// Функция отображения групп в таблице
+// Функция для форматирования относительной даты (сокращенно)
+function formatRelativeDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = now - date;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+    const diffYears = Math.floor(diffDays / 365);
+    
+    if (diffDays === 0) {
+        return 'сегодня';
+    } else if (diffDays === 1) {
+        return 'вчера';
+    } else if (diffDays >= 2 && diffDays < 7) {
+        return `${diffDays} дн.`;
+    } else if (diffDays >= 7 && diffDays < 30) {
+        return `${diffWeeks} нед.`;
+    } else if (diffDays >= 30 && diffDays < 365) {
+        return `${diffMonths} мес.`;
+    } else if (diffDays >= 365 && diffDays < 1825) {
+        return `${diffYears} г.`;
+    } else {
+        return 'давно';
+    }
+}
+
 // Функция отображения групп в таблице
 function renderGroups(groups) {
     const tbody = document.getElementById('groupsTable');
@@ -1000,43 +1027,29 @@ function renderGroups(groups) {
     }
 
     tbody.innerHTML = groups.map(group => {
-       
-        // Форматируем дату
-        const date = new Date(group.created_at).toLocaleString('ru-RU', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        // Форматируем относительную дату
+        const relativeDate = formatRelativeDate(group.created_at);
         
         // Определяем, является ли текущий пользователь создателем
         const isCreator = group.creator === currentUserId;
         
         // Определяем, что показывать в столбце "Создатель"
-        let creatorDisplay;
-        if (isCreator) {
-            creatorDisplay = '⭐ Вы';
-        } else if (group.creator_login) {
-            creatorDisplay = group.creator_login;
-        } else {
-            creatorDisplay = `${group.creator}`;
-        }
+        const creatorDisplay = isCreator ? 'Вы' : 'Другой пользователь';
         
         // Количество участников
         const membersCount = group.members ? group.members.length : 0;
         
-        // Генерируем точки для участников (не более 10)
-        const dotsCount = Math.min(membersCount, 10);
+        // Генерируем точки для участников (не более 12)
+        const dotsCount = Math.min(membersCount, 12);
         const dots = '•'.repeat(dotsCount);
         
         return `
-            <tr>
+            <tr class="group-row" data-group-id="${group.id}" style="cursor: pointer;" title="Открыть группу">
                 <td>
                     <strong>${group.name}</strong>
                 </td>
                 <td>${creatorDisplay}</td>
-                <td>${date}</td>
+                <td>${relativeDate}</td>
                 <td>
                     <span class="badge bg-primary">${membersCount}</span>
                     <span class="ms-2" title="Участники: ${membersCount}">${dots}</span>
@@ -1044,4 +1057,113 @@ function renderGroups(groups) {
             </tr>
         `;
     }).join('');
+    
+    // Добавляем обработчики кликов на строки
+    document.querySelectorAll('.group-row').forEach(row => {
+        row.addEventListener('click', function() {
+            const groupId = this.getAttribute('data-group-id');
+            openGroup(groupId);
+        });
+    });
+}
+
+// Функция открытия группы
+async function openGroup(groupId) {
+    if (!accessToken) {
+        showError('Сначала войдите в систему');
+        return;
+    }
+
+    try {
+        // Делаем запрос к API для получения информации о группе
+        const response = await fetchWithAuth(`${API_BASE_V2}/groups/${groupId}`);
+        
+        if (response.ok) {
+            const group = await response.json();
+            console.log('[GROUP] Информация о группе:', group);
+            
+            // Показываем информацию о группе
+            showGroupDetails(group);
+        } else if (response.status === 401) {
+            showError('Не авторизован');
+        } else if (response.status === 403) {
+            showError('Вы не состоите в этой группе');
+        } else if (response.status === 404) {
+            showError('Группа не найдена');
+        } else {
+            const error = await response.json();
+            showError(error.detail || 'Ошибка загрузки группы');
+        }
+    } catch (e) {
+        console.error('Ошибка загрузки группы:', e);
+        showError('Не удалось загрузить группу');
+    }
+}
+
+// Функция отображения деталей группы
+function showGroupDetails(group) {
+    // Форматируем дату
+    const date = new Date(group.created_at).toLocaleString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    
+    // Определяем создателя
+    const isCreator = group.creator === currentUserId;
+    const creatorDisplay = isCreator 
+        ? `${group.creator_login || currentUser} ⭐` 
+        : (group.creator_login || `Пользователь ${group.creator}`);
+    
+    // Создаем модальное окно с информацией о группе
+    const modalHTML = `
+        <div class="modal fade" id="groupDetailsModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${group.name}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <strong>Создатель:</strong> ${creatorDisplay}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Дата создания:</strong> ${date}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Участники (${group.members.length}):</strong>
+                            <ul class="list-group mt-2">
+                                ${group.members.map(member => {
+                                    // Проверяем, является ли участник текущим пользователем
+                                    const isCurrentUser = member === currentUser;
+                                    return `<li class="list-group-item">
+                                        ${member} ${isCurrentUser ? '⭐' : ''}
+                                    </li>`;
+                                }).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Удаляем старое модальное окно, если оно есть
+    const oldModal = document.getElementById('groupDetailsModal');
+    if (oldModal) {
+        oldModal.remove();
+    }
+    
+    // Добавляем новое модальное окно
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Показываем модальное окно
+    const modal = new bootstrap.Modal(document.getElementById('groupDetailsModal'));
+    modal.show();
 }

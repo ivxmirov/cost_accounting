@@ -124,3 +124,12 @@ h1 {
 #groupsModal .modal-dialog {
     max-width: 850px; /* modal-lg = 800px + 50px (5см) */
 }
+
+.group-row:hover {
+    background-color: #f8f9fa !important;
+    transition: background-color 0.2s ease;
+}
+
+.group-row:active {
+    background-color: #e9ecef !important;
+}

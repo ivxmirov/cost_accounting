@@ -27,7 +27,6 @@ async def create_group(
     Returns:
         Созданная группа с загруженными участниками
     """
-    # Получаем создателя группы
     creator = await db.get(User, creator_id)
     group = Group(name=group_name, creator=creator_id)
     group.members.append(creator)  # ty: ignore[invalid-argument-type]  # pyright: ignore[reportArgumentType]
@@ -37,8 +36,6 @@ async def create_group(
 
     db.add(group)
     await db.flush()
-
-    print(f"Members before select: {group.members}")
 
     # Загружаем с отношениями
     result = await db.execute(
