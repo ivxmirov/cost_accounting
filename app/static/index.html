@@ -334,8 +334,38 @@
                         </table>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer d-flex justify-content-between">
+                    <button type="button" class="btn btn-purple" onclick="showCreateGroupModal()">
+                        Создать группу
+                    </button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка создания группы -->
+    <div class="modal fade" id="createGroupModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">✨ Создать группу</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="groupName" class="form-label">Название группы</label>
+                        <input type="text" class="form-control" id="groupName" placeholder="Например: Семейный бюджет">
+                    </div>
+                    <div class="mb-3">
+                        <label for="groupMembers" class="form-label">Участники (логины через запятую)</label>
+                        <input type="text" class="form-control" id="groupMembers" placeholder="Например: user1, user2, user3">
+                        <div class="form-text">Укажите логины пользователей, которых хотите добавить в группу</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-purple" onclick="createGroup()">Создать</button>
                 </div>
             </div>
         </div>

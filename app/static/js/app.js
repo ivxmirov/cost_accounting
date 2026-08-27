@@ -960,20 +960,18 @@ async function loadGroups() {
     }
 
     try {
-        // Показываем модалку с загрузкой
-        const modal = new bootstrap.Modal(document.getElementById('groupsModal'));
-        modal.show();
-        
         // Делаем запрос к API
         const response = await fetchWithAuth(`${API_BASE_V2}/users/me/groups`);
         
         if (response.ok) {
             const groups = await response.json();
-            console.log('[GROUPS] Ответ API:', groups);  // ← Посмотрите, есть ли id
             renderGroups(groups);
+            
+            // Показываем модалку
+            const modal = new bootstrap.Modal(document.getElementById('groupsModal'));
+            modal.show();
         } else if (response.status === 401) {
             showError('Не авторизован');
-            modal.hide();
         } else {
             const error = await response.json();
             showError(error.detail || 'Ошибка загрузки групп');
@@ -988,8 +986,14 @@ async function loadGroups() {
 function formatRelativeDate(dateString) {
     const date = new Date(dateString);
     const now = new Date();
-    const diffTime = now - date;
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Сбрасываем время для сравнения календарных дней
+    const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    // Разница в календарных днях
+    const diffTime = nowOnly - dateOnly;
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
     const diffWeeks = Math.floor(diffDays / 7);
     const diffMonths = Math.floor(diffDays / 30);
     const diffYears = Math.floor(diffDays / 365);
@@ -1034,7 +1038,7 @@ function renderGroups(groups) {
         const isCreator = group.creator === currentUserId;
         
         // Определяем, что показывать в столбце "Создатель"
-        const creatorDisplay = isCreator ? 'Вы' : 'Другой пользователь';
+        const creatorDisplay = isCreator ? 'Вы ⭐' : 'Другой пользователь';
         
         // Количество участников
         const membersCount = group.members ? group.members.length : 0;
@@ -1166,4 +1170,96 @@ function showGroupDetails(group) {
     // Показываем модальное окно
     const modal = new bootstrap.Modal(document.getElementById('groupDetailsModal'));
     modal.show();
+}
+
+// Функция показа модального окна создания группы
+function showCreateGroupModal() {
+    // Закрываем модалку групп
+    const groupsModal = bootstrap.Modal.getInstance(document.getElementById('groupsModal'));
+    if (groupsModal) {
+        groupsModal.hide();
+    }
+    
+    // Показываем модалку создания группы
+    const createModal = new bootstrap.Modal(document.getElementById('createGroupModal'));
+    createModal.show();
+}
+
+// Функция создания группы
+async function createGroup() {
+    if (!accessToken) {
+        showError('Сначала войдите в систему');
+        return;
+    }
+
+    const name = document.getElementById('groupName').value.trim();
+    const membersInput = document.getElementById('groupMembers').value.trim();
+
+    if (!name) {
+        showError('Введите название группы');
+        return;
+    }
+
+    if (!membersInput) {
+        showError('Добавьте хотя бы одного участника');
+        return;
+    }
+
+    // Разбиваем строку на массив логинов
+    const membersLogins = membersInput
+        .split(',')
+        .map(login => login.trim())
+        .filter(login => login.length > 0);
+
+    if (membersLogins.length === 0) {
+        showError('Добавьте хотя бы одного участника');
+        return;
+    }
+
+    try {
+        const response = await fetchWithAuth(`${API_BASE_V2}/groups`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: name,
+                members_logins: membersLogins
+            })
+        });
+
+        console.log('[GROUP] Статус создания:', response.status);
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('[GROUP] Группа создана:', data);
+            
+            showSuccess('Группа успешно создана!');
+            
+            // Закрываем модалку создания
+            const createModal = bootstrap.Modal.getInstance(document.getElementById('createGroupModal'));
+            if (createModal) {
+                createModal.hide();
+            }
+            
+            // Очищаем поля
+            document.getElementById('groupName').value = '';
+            document.getElementById('groupMembers').value = '';
+            
+            // Перезагружаем список групп
+            await loadGroups();
+            
+            // Показываем модалку групп снова
+            const groupsModal = new bootstrap.Modal(document.getElementById('groupsModal'));
+            groupsModal.show();
+            
+        } else {
+            const errorData = await response.json();
+            console.error('[GROUP] Ошибка:', errorData);
+            showError(errorData.detail || 'Ошибка создания группы');
+        }
+    } catch (e) {
+        console.error('[GROUP] Исключение:', e);
+        showError('Ошибка подключения: ' + e.message);
+    }
 }
