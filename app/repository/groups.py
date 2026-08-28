@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.models import Group, User
+from app.models import Group, User, Wallet, group_wallets
 
 
 async def is_group_exist(db: AsyncSession, user_id: int, group_name: str) -> bool:
@@ -73,3 +73,58 @@ async def get_group_by_id(db: AsyncSession, group_id: int) -> Group | None:
         select(Group).where(Group.id == group_id).options(selectinload(Group.members)),
     )
     return result.scalar_one_or_none()
+
+
+async def attach_wallet_to_group(
+    db: AsyncSession, group_id: int, wallet_id: int,
+) -> None:
+    """
+    Прикрепляет кошелек к группе.
+
+    Args:
+        db: Сессия БД
+        group_id: ID группы
+        wallet_id: ID кошелька
+    """
+
+    await db.execute(
+        group_wallets.insert().values(
+            group_id=group_id,
+            wallet_id=wallet_id,
+        ),
+    )
+
+
+async def detach_wallet_from_group(
+    db: AsyncSession, group_id: int, wallet_id: int,
+) -> None:
+    """
+    Открепляет кошелек от группы.
+    """
+    await db.execute(
+        group_wallets.delete().where(
+            group_wallets.c.group_id == group_id,
+            group_wallets.c.wallet_id == wallet_id,
+        ),
+    )
+
+
+async def get_group_wallets(
+    db: AsyncSession, group_id: int,
+) -> list[Wallet]:
+    """
+    Получает все кошельки, прикрепленные к группе.
+
+    Args:
+        db: Сессия БД
+        group_id: ID группы
+
+    Returns:
+        Список кошельков группы
+    """
+    result = await db.execute(
+        select(Wallet)
+        .join(group_wallets)
+        .where(group_wallets.c.group_id == group_id),
+    )
+    return list(result.scalars().all())

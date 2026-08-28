@@ -175,14 +175,14 @@ async def test_get_wallet_total_balance(db_session: AsyncSession, current_user):
     db_session.add(wallet3)
     await db_session.commit()
 
-    result = await wallets_service.get_total_balance(db_session, current_user=current_user)
+    result = await wallets_service.get_total_user_balance(db_session, current_user=current_user)
 
     assert isinstance(result, TotalBalance)
     assert float(result.total_balance) == 0
 
 
 async def test_get_wallet_total_balance_empty(db_session: AsyncSession, current_user):
-    result = await wallets_service.get_total_balance(db_session, current_user=current_user)
+    result = await wallets_service.get_total_user_balance(db_session, current_user=current_user)
 
     assert isinstance(result, TotalBalance)
     assert float(result.total_balance) == 0.0

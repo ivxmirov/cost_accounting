@@ -1,12 +1,15 @@
 import logging
+from decimal import Decimal
 
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import app.repository.users as users_repository
+from app.enum import CurrencyEnum
 from app.models import Group, User
 from app.repository import groups as groups_repository
 from app.schemas import GroupCreateSchema, GroupResponseSchema
+from app.service import exchange_service
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +94,20 @@ async def get_current_user_groups(
 async def get_user_group_by_id(
     db: AsyncSession, current_user: User, group_id: int,
 ) -> GroupResponseSchema:
-    """Получает группу с проверкой прав доступа пользователя"""
+    """
+    Получает информацию о группе с общим балансом.
+
+    Args:
+        db: Сессия БД
+        current_user: Текущий пользователь
+        group_id: Уникальный идентификатор группы
+
+    Returns:
+        Информация о группе с балансом
+
+    Raises:
+        HTTPException: Если группа не найдена или у пользователя нет к ней доступа
+    """
 
     group = await groups_repository.get_group_by_id(db, group_id)
 
@@ -102,4 +118,88 @@ async def get_user_group_by_id(
     if current_user.id not in [member.id for member in group.members]:
         raise HTTPException(status_code=403, detail="Вы не состоите в этой группе")
 
-    return GroupResponseSchema.model_validate(obj=group)
+    total_balance: Decimal = await calculate_group_balance(db, group_id)
+
+    group_schema: GroupResponseSchema = GroupResponseSchema.model_validate(group)
+    group_schema.total_balance = total_balance
+
+    return group_schema
+
+
+async def calculate_group_balance(db: AsyncSession, group_id: int) -> Decimal:
+    """
+    Получает общий баланс группы с конвертацией валют в рубли.
+
+    Бизнес-логика:
+        Учитываются только те кошельки, которые участники прикрепили к группе.
+        Каждый участник группы сам решает, какие из своих кошельков прикреплять.
+        Участник группы может не прикреплять ни одного кошелька.
+
+        При расчете баланса группы учитывается эффективный баланс кошелька.
+        Для дебетовых кошельков: эффективный баланс = текущий баланс.
+        Для кредитных кошельков: эффективный баланс = текущий баланс - кредитный лимит.
+
+    Args:
+        db: Сессия базы данных
+        group_id: Уникальный идентификатор группы
+    Returns:
+        Общий баланс группы в рублях
+    """
+    wallets = await groups_repository.get_group_wallets(db, group_id)
+
+    total_balance = Decimal("0")
+    for wallet in wallets:
+        # Это условие выполнится только у дебетовых кошельков
+        if wallet.credit_limit is None:
+            credit_limit = Decimal("0")
+        else:
+            # Это условие выполнится только у кредитных кошельков
+            credit_limit: Decimal = wallet.credit_limit
+
+        if wallet.currency == CurrencyEnum.RUB:
+            total_balance += wallet.balance - credit_limit
+        else:
+            exchange_rate = await exchange_service.get_exchange_rate(
+                wallet.currency, CurrencyEnum.RUB,
+            )
+            total_balance += exchange_rate * (wallet.balance - credit_limit)
+
+    return total_balance
+
+
+# async def attach_wallet_to_group(
+#     db: AsyncSession, group_id: int, wallet_id: int,
+# ) -> None:
+#     """
+#     Прикрепляет кошелек к группе.
+
+#     Args:
+#         db: Сессия БД
+#         group_id: ID группы
+#         wallet_id: ID кошелька
+#     """
+#     # Проверяем, что кошелек принадлежит участнику группы
+#     result = await db.execute(
+#         select(Group)
+#         .join(group_members)
+#         .join(Wallet)
+#         .where(
+#             Group.id == group_id,
+#             Wallet.id == wallet_id,
+#             Wallet.user_id == group_members.c.user_id,
+#         )
+#     )
+
+#     if not result.scalar_one_or_none():
+#         raise HTTPException(
+#             status_code=403,
+#             detail="Кошелек должен принадлежать участнику группы",
+#         )
+
+#     # Вставляем связь
+#     await db.execute(
+#         group_wallets.insert().values(
+#             group_id=group_id,
+#             wallet_id=wallet_id,
+#         ),
+#     )

@@ -13,7 +13,7 @@ router = APIRouter()
 async def get_balance(
     db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user),
 ):
-    return await wallets_service.get_total_balance(db, current_user)
+    return await wallets_service.get_total_user_balance(db, current_user)
 
 
 @router.post("/wallets", response_model=WalletResponseSchema, status_code=201)

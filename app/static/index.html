@@ -17,7 +17,7 @@
                 <h3 class="card-title">Вход в систему</h3>
                 <div class="mb-3">
                     <label for="username" class="form-label">Логин</label>
-                    <input type="text" class="form-control" id="username" placeholder="Введите логин" minlength="3">
+                    <input type="text" class="form-control" id="username" placeholder="Введите логин" minlength="2">
                 </div>
                 <div class="mb-3">
                     <label for="password" class="form-label">Пароль</label>
@@ -100,10 +100,10 @@
                 </div>
             </div>
 
-            <!-- Последние операции -->
+            <!-- Недавние операции -->
             <div class="card mb-4">
                 <div class="card-body">
-                    <h4 class="card-title">Последние операции</h4>
+                    <h4 class="card-title">Недавние операции</h4>
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead>
@@ -128,7 +128,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">💼 Новый кошелек</h5>
+                    <h5 class="modal-title">Новый кошелек</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -139,9 +139,9 @@
                     <div class="mb-3">
                         <label class="form-label">Валюта</label>
                         <select class="form-select" id="walletCurrency">
+                            <option value="rub">RUB</option>
                             <option value="usd">USD</option>
                             <option value="eur">EUR</option>
-                            <option value="rub">RUB</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -310,7 +310,7 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">👨‍👩‍👧‍👦 Мои группы</h5>
+                    <h5 class="modal-title">Мои группы</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -349,7 +349,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">✨ Создать группу</h5>
+                    <h5 class="modal-title">Создать группу</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -366,6 +366,48 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                     <button type="button" class="btn btn-purple" onclick="createGroup()">Создать</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка просмотра группы -->
+    <div class="modal fade" id="groupDetailsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Информация о группе</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col">
+                            <h5>Информация о группе</h5>
+                            <p><strong>Название:</strong> <span id="groupName"></span></p>
+                            <p><strong>Создатель:</strong> <span id="groupCreator"></span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-subtitle mb-2 text-muted">Общий баланс группы</h6>
+                                    <h3 id="groupTotalBalance" class="card-title"></h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col">
+                            <h6>Участники:</h6>
+                            <ul id="groupMembersList" class="list-group"></ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
                 </div>
             </div>
         </div>

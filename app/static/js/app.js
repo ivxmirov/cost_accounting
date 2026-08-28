@@ -453,7 +453,7 @@ function renderOperationsTable() {
     const tbody = document.getElementById('transactionsTable');
     
     if (operations.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет транзакций</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет операций</td></tr>';
         return;
     }
 
@@ -465,19 +465,19 @@ function renderOperationsTable() {
         let typeClass, typeIcon, typeLabel;
         if (t.type === 'income') {
             typeClass = 'text-success';
-            typeIcon = '➕';
+            typeIcon = '';
             typeLabel = 'Доход';
         } else if (t.type === 'expense') {
             typeClass = 'text-danger';
-            typeIcon = '➖';
+            typeIcon = '';
             typeLabel = 'Расход';
         } else if (t.type === 'transfer') {
             typeClass = 'text-info';
-            typeIcon = '🔄';
+            typeIcon = '';
             typeLabel = 'Перевод';
         } else {
             typeClass = 'text-secondary';
-            typeIcon = '❓';
+            typeIcon = '';
             typeLabel = 'Неизвестно';
         }
         const date = new Date(t.created_at).toLocaleString('ru-RU', {
@@ -569,6 +569,45 @@ function updateWalletSelects() {
     });
 }
 
+// Вспомогательная функция для извлечения сообщения об ошибке
+function extractErrorMessage(data, defaultMessage = 'Произошла ошибка') {
+    if (!data) return defaultMessage;
+    
+    console.log('[ERROR] Формат ошибки:', data); // Для отладки
+    
+    // FastAPI HTTPException обычно возвращает {"detail": "сообщение"}
+    if (data.detail) {
+        if (typeof data.detail === 'string') {
+            return data.detail;
+        }
+        
+        // Для ошибок валидации Pydantic (массив ошибок)
+        if (Array.isArray(data.detail)) {
+            const errors = data.detail.map(err => {
+                if (err.msg) return err.msg;
+                if (err.message) return err.message;
+                return JSON.stringify(err);
+            });
+            return errors.join(', ');
+        }
+        
+        // Если detail - объект
+        if (typeof data.detail === 'object') {
+            // Проверяем различные поля в объекте
+            if (data.detail.message) return data.detail.message;
+            if (data.detail.error) return data.detail.error;
+            if (data.detail.msg) return data.detail.msg;
+            return JSON.stringify(data.detail);
+        }
+    }
+    
+    // Проверяем другие возможные поля
+    if (data.message) return data.message;
+    if (data.error) return data.error;
+    
+    return defaultMessage;
+}
+
 async function addWallet() {
     if (!accessToken) {
         showError('Сначала войдите в систему');
@@ -576,24 +615,24 @@ async function addWallet() {
     }
 
     const name = document.getElementById('walletName').value.trim();
-    const currency = document.getElementById('walletCurrency').value;
+    const currency = document.getElementById('walletCurrency').value || 'RUB';
     const balance = parseFloat(document.getElementById('walletBalance').value) || 0;
     const walletType = document.getElementById('walletType').value;
     const creditLimit = walletType === 'credit' 
         ? (parseFloat(document.getElementById('walletCreditLimit').value) || 0)
         : null;
 
+    // Проверяем только пустое поле названия
     if (!name) {
         showError('Введите название кошелька');
         return;
     }
 
-    // ИСПРАВЛЕНО: отправляем "type", а не "wallet_type"
     const walletData = {
         name: name, 
         currency: currency, 
         initial_balance: balance,
-        type: walletType  // Изменено с wallet_type на type
+        type: walletType
     };
     
     if (walletType === 'credit') {
@@ -611,8 +650,18 @@ async function addWallet() {
 
         console.log('[WALLET] Статус создания:', response.status);
 
+        // Пытаемся распарсить JSON
+        let data;
+        try {
+            data = await response.json();
+        } catch (parseError) {
+            // Если не удалось распарсить JSON
+            console.error('[WALLET] Не удалось распарсить ответ:', parseError);
+            data = null;
+        }
+        
         if (response.ok) {
-            showSuccess('Кошелеклеклек создан!');
+            showSuccess('Кошелек успешно создан!');
             closeModal('addWalletModal');
             document.getElementById('walletName').value = '';
             document.getElementById('walletBalance').value = '0';
@@ -620,15 +669,21 @@ async function addWallet() {
             document.getElementById('walletCreditLimit').value = '0';
             document.getElementById('creditLimitField').style.display = 'none';
             await loadAllData();
-        } else if (response.status === 401) {
-            // ... остальной код без изменений
         } else {
-            const error = await response.json();
-            showError(error.detail || 'Ошибка создания кошелька');
+            // Подробное логирование для отладки
+            console.error('[WALLET] Ошибка от сервера:', {
+                status: response.status,
+                statusText: response.statusText,
+                data: data
+            });
+            
+            // Показываем ошибку от бэкенда
+            const errorMessage = extractErrorMessage(data, 'Ошибка создания кошелька');
+            showError(errorMessage);
         }
     } catch (e) {
         console.error('[WALLET] Ошибка:', e);
-        showError('Ошибка подключения');
+        showError('Ошибка подключения: ' + e.message);
     }
 }
 
@@ -895,19 +950,19 @@ async function loadReport() {
                     let typeClass, typeIcon, typeLabel;
                     if (t.type === 'income') {
                         typeClass = 'text-success';
-                        typeIcon = '➕';
+                        typeIcon = '';
                         typeLabel = 'Доход';
                     } else if (t.type === 'expense') {
                         typeClass = 'text-danger';
-                        typeIcon = '➖';
+                        typeIcon = '';
                         typeLabel = 'Расход';
                     } else if (t.type === 'transfer') {
                         typeClass = 'text-info';
-                        typeIcon = '🔄';
+                        typeIcon = '';
                         typeLabel = 'Перевод';
                     } else {
                         typeClass = 'text-secondary';
-                        typeIcon = '❓';
+                        typeIcon = '';
                         typeLabel = 'Неизвестно';
                     }
                     const date = new Date(t.created_at).toLocaleString('ru-RU', {
@@ -1087,7 +1142,11 @@ async function openGroup(groupId) {
             console.log('[GROUP] Информация о группе:', group);
             
             // Показываем информацию о группе
-            showGroupDetails(group);
+            displayGroupDetails(group);
+            
+            // Показываем модалку
+            const modal = new bootstrap.Modal(document.getElementById('groupDetailsModal'));
+            modal.show();
         } else if (response.status === 401) {
             showError('Не авторизован');
         } else if (response.status === 403) {
@@ -1096,7 +1155,7 @@ async function openGroup(groupId) {
             showError('Группа не найдена');
         } else {
             const error = await response.json();
-            showError(error.detail || 'Ошибка загрузки группы');
+            showError(extractErrorMessage(error, 'Ошибка загрузки группы'));
         }
     } catch (e) {
         console.error('Ошибка загрузки группы:', e);
@@ -1104,72 +1163,72 @@ async function openGroup(groupId) {
     }
 }
 
-// Функция отображения деталей группы
-function showGroupDetails(group) {
-    // Форматируем дату
-    const date = new Date(group.created_at).toLocaleString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+// Функция для просмотра группы
+async function viewGroup(groupId) {
+    try {
+        const response = await fetchWithAuth(`${API_BASE_V2}/groups/${groupId}`);
+        
+        if (response.ok) {
+            const groupData = await response.json();
+            displayGroupDetails(groupData);
+            
+            // Показываем модалку
+            const modal = new bootstrap.Modal(document.getElementById('groupDetailsModal'));
+            modal.show();
+        } else {
+            const errorData = await response.json();
+            showError(extractErrorMessage(errorData, 'Ошибка получения группы'));
+        }
+    } catch (e) {
+        console.error('[GROUP] Ошибка:', e);
+        showError('Ошибка подключения: ' + e.message);
+    }
+}
+
+// Отображение деталей группы с балансом
+function displayGroupDetails(groupData) {
+    // Заполняем основную информацию
+    document.getElementById('groupName').textContent = groupData.name;
     
     // Определяем создателя
-    const isCreator = group.creator === currentUserId;
+    const isCreator = groupData.creator_id === currentUserId || groupData.creator === currentUserId;
     const creatorDisplay = isCreator 
-        ? `${group.creator_login || currentUser} ⭐` 
-        : (group.creator_login || `Пользователь ${group.creator}`);
+        ? `${groupData.creator_login || currentUser} ⭐` 
+        : (groupData.creator_login || `Пользователь ${groupData.creator_id || groupData.creator}`);
     
-    // Создаем модальное окно с информацией о группе
-    const modalHTML = `
-        <div class="modal fade" id="groupDetailsModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">${group.name}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <strong>Создатель:</strong> ${creatorDisplay}
-                        </div>
-                        <div class="mb-3">
-                            <strong>Дата создания:</strong> ${date}
-                        </div>
-                        <div class="mb-3">
-                            <strong>Участники (${group.members.length}):</strong>
-                            <ul class="list-group mt-2">
-                                ${group.members.map(member => {
-                                    // Проверяем, является ли участник текущим пользователем
-                                    const isCurrentUser = member === currentUser;
-                                    return `<li class="list-group-item">
-                                        ${member} ${isCurrentUser ? '⭐' : ''}
-                                    </li>`;
-                                }).join('')}
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+    document.getElementById('groupCreator').textContent = creatorDisplay;
     
-    // Удаляем старое модальное окно, если оно есть
-    const oldModal = document.getElementById('groupDetailsModal');
-    if (oldModal) {
-        oldModal.remove();
+    // Отображаем общий баланс
+    const balanceElement = document.getElementById('groupTotalBalance');
+    if (balanceElement && groupData.total_balance !== undefined) {
+        const balance = parseFloat(groupData.total_balance) || 0;
+        balanceElement.textContent = formatCurrency(balance);
+        // Добавляем цвет в зависимости от знака
+        balanceElement.className = 'card-title ' + (balance >= 0 ? 'text-success' : 'text-danger');
     }
     
-    // Добавляем новое модальное окно
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    // Показываем модальное окно
-    const modal = new bootstrap.Modal(document.getElementById('groupDetailsModal'));
-    modal.show();
+    // Отображаем участников
+    const membersList = document.getElementById('groupMembersList');
+    if (membersList && groupData.members) {
+        membersList.innerHTML = groupData.members.map(member => {
+            // Проверяем, является ли участник текущим пользователем
+            const isCurrentUser = member.id === currentUserId || member === currentUser;
+            const memberName = member.login || member;
+            return `<li class="list-group-item">
+                ${memberName} ${isCurrentUser ? '⭐' : ''}
+            </li>`;
+        }).join('');
+    }
+}
+
+// Функция форматирования валюты
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('ru-RU', {
+        style: 'currency',
+        currency: 'RUB',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(amount);
 }
 
 // Функция показа модального окна создания группы
@@ -1185,6 +1244,38 @@ function showCreateGroupModal() {
     createModal.show();
 }
 
+// Вспомогательная функция для извлечения сообщения об ошибке
+function extractErrorMessage(data, defaultMessage = 'Произошла ошибка') {
+    if (!data) return defaultMessage;
+    
+    // Если есть detail
+    if (data.detail) {
+        if (typeof data.detail === 'string') {
+            return data.detail;
+        }
+        
+        // Для FastAPI HTTPException
+        if (Array.isArray(data.detail)) {
+            return data.detail.map(err => {
+                if (err.msg) return err.msg;
+                if (err.message) return err.message;
+                return JSON.stringify(err);
+            }).join(', ');
+        }
+        
+        // Для объектов с полем message
+        if (typeof data.detail === 'object' && data.detail.message) {
+            return data.detail.message;
+        }
+    }
+    
+    // Проверяем другие поля
+    if (data.message) return data.message;
+    if (data.error) return data.error;
+    
+    return defaultMessage;
+}
+
 // Функция создания группы
 async function createGroup() {
     if (!accessToken) {
@@ -1195,6 +1286,7 @@ async function createGroup() {
     const name = document.getElementById('groupName').value.trim();
     const membersInput = document.getElementById('groupMembers').value.trim();
 
+    // Минимальные проверки на пустоту
     if (!name) {
         showError('Введите название группы');
         return;
@@ -1205,16 +1297,11 @@ async function createGroup() {
         return;
     }
 
-    // Разбиваем строку на массив логинов
+    // Отправляем на бэкенд как есть (даже если один участник)
     const membersLogins = membersInput
         .split(',')
         .map(login => login.trim())
         .filter(login => login.length > 0);
-
-    if (membersLogins.length === 0) {
-        showError('Добавьте хотя бы одного участника');
-        return;
-    }
 
     try {
         const response = await fetchWithAuth(`${API_BASE_V2}/groups`, {
@@ -1230,8 +1317,9 @@ async function createGroup() {
 
         console.log('[GROUP] Статус создания:', response.status);
 
+        const data = await response.json();
+        
         if (response.ok) {
-            const data = await response.json();
             console.log('[GROUP] Группа создана:', data);
             
             showSuccess('Группа успешно создана!');
@@ -1254,9 +1342,10 @@ async function createGroup() {
             groupsModal.show();
             
         } else {
-            const errorData = await response.json();
-            console.error('[GROUP] Ошибка:', errorData);
-            showError(errorData.detail || 'Ошибка создания группы');
+            // Показываем ошибку от бэкенда
+            const errorMessage = extractErrorMessage(data, 'Ошибка создания группы');
+            console.error('[GROUP] Ошибка от сервера:', data);
+            showError(errorMessage);
         }
     } catch (e) {
         console.error('[GROUP] Исключение:', e);

@@ -33,16 +33,19 @@ class GroupResponseSchema(BaseModel):
 
     id: int
     name: str
-    creator: int
-    creator_login: str
-    members: list[str]
+    creator: int | None = None
+    creator_login: str | None = None
+    members: list[str] = []
     created_at: datetime
+    total_balance: Decimal = Decimal("0")
 
     @field_validator("members", mode="before")
     @classmethod
     def extract_member_logins(cls, v):
         """Извлекает логины из объектов User"""
-        if v and hasattr(v[0], "login"):
+        if not v:
+            return []
+        if isinstance(v, list) and v and hasattr(v[0], "login"):
             return [member.login for member in v]
         return v
 
@@ -87,16 +90,25 @@ class WalletCreateSchema(BaseModel):
     @classmethod
     def balance_not_negative(cls, v: Decimal) -> Decimal:
         if v < 0:
-            raise ValueError("Начальный баланс кошелька не должен быть отрицательным")
+            raise ValueError("Текущий баланс кошелька не должен быть отрицательным")
+        return v
+
+    @field_validator("initial_balance")
+    @classmethod
+    def validate_initial_balance_precision(cls, v: Decimal) -> Decimal:
+        if v is not None:
+            # Правильный способ получить экспоненту
+            exponent = v.as_tuple().exponent
+            # exponent может быть int или str ('n', 'N', 'F' для special values)
+            if isinstance(exponent, int) and exponent < -2:
+                raise ValueError("Баланс кошелька не может иметь более 2 знаков после запятой")
         return v
 
     @field_validator("credit_limit")
     @classmethod
     def validate_credit_limit_precision(cls, v: Decimal) -> Decimal:
         if v is not None:
-            # Правильный способ получить экспоненту
             exponent = v.as_tuple().exponent
-            # exponent может быть int или str ('n', 'N', 'F' для special values)
             if isinstance(exponent, int) and exponent < -2:
                 raise ValueError("Кредитный лимит не может иметь более 2 знаков после запятой")
         return v

@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, Table, func, text
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -56,6 +56,21 @@ class User(Base):
     groups: Mapped[list["Group"]] = relationship(secondary=group_members, back_populates="members")
 
 
+group_wallets = Table(
+    "group_wallets",
+    Base.metadata,
+    Column("group_id", Integer, ForeignKey("groups.id", ondelete="CASCADE"), primary_key=True),
+    Column("wallet_id", Integer, ForeignKey("wallets.id", ondelete="CASCADE"), primary_key=True),
+    Column(
+        "attached_at",
+        DateTime(timezone=False),
+        default=datetime.now,
+        server_default=func.now(),
+        nullable=False,
+    ),
+)
+
+
 class Group(Base):
     __tablename__ = "groups"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -68,6 +83,9 @@ class Group(Base):
     )
     members: Mapped[list["User"]] = relationship(secondary=group_members, back_populates="groups")
     creator_user: Mapped["User"] = relationship(foreign_keys=[creator])
+    wallets: Mapped[list["Wallet"]] = relationship(
+        secondary=group_wallets, back_populates="groups",
+    )
 
     @property
     def creator_login(self) -> str:
@@ -88,3 +106,6 @@ class Wallet(Base):
     )
     type: Mapped[WalletType] = mapped_column(wallet_type_enum, nullable=False)
     credit_limit: Mapped[Decimal | None] = mapped_column(nullable=True)
+    groups: Mapped[list["Group"]] = relationship(
+        secondary=group_wallets, back_populates="wallets",
+    )

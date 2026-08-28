@@ -10,7 +10,7 @@ from app.schemas import TotalBalance, WalletCreateSchema, WalletResponseSchema
 from app.service import exchange_service
 
 
-async def get_total_balance(db: AsyncSession, current_user: User) -> TotalBalance:
+async def get_total_user_balance(db: AsyncSession, current_user: User) -> TotalBalance:
     """
     Получает общий баланс всех кошельков пользователя с конвертацией валют в рубли.
 
@@ -29,10 +29,10 @@ async def get_total_balance(db: AsyncSession, current_user: User) -> TotalBalanc
     for wallet in wallets:
         # Это условие выполнится только у дебетовых кошельков
         if wallet.credit_limit is None:
-            credit_limit = 0
+            credit_limit = Decimal("0")
         else:
             # Это условие выполнится только у кредитных кошельков
-            credit_limit = wallet.credit_limit
+            credit_limit: Decimal = wallet.credit_limit
 
         if wallet.currency == CurrencyEnum.RUB:
             total_balance += wallet.balance - credit_limit
@@ -65,9 +65,9 @@ async def create_wallet(
     credit_limit = wallet.credit_limit
 
     if wallet.type == WalletType.CREDIT:
-        if wallet.credit_limit is None:
-            raise HTTPException(400, "Кредитный кошелёк требует кредитный лимит")
-        if wallet.credit_limit <= 0:
+        if wallet.credit_limit is None or wallet.credit_limit == 0:
+            raise HTTPException(400, "Кредитный кошелёк должен иметь кредитный лимит")
+        if wallet.credit_limit < 0:
             raise HTTPException(400, "Кредитный лимит должен быть положительным")
         if wallet.initial_balance > wallet.credit_limit:
             raise HTTPException(
