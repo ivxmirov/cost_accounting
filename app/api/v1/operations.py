@@ -89,7 +89,11 @@ async def get_csv_report(
     db: AsyncSession = Depends(get_db),
 ):
     csv_content = await operations_service.generate_csv_report(
-        db, user, date_from, date_to, currency,
+        db,
+        user,
+        date_from,
+        date_to,
+        currency,
     )
     return Response(
         content=csv_content,

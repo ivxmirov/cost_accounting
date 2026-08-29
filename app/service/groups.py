@@ -8,6 +8,7 @@ import app.repository.users as users_repository
 from app.enum import CurrencyEnum
 from app.models import Group, User
 from app.repository import groups as groups_repository
+from app.repository.groups import is_user_in_group
 from app.schemas import GroupCreateSchema, GroupResponseSchema
 from app.service import exchange_service
 
@@ -15,7 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 async def create_group(
-    db: AsyncSession, current_user: User, group_data: GroupCreateSchema,
+    db: AsyncSession,
+    current_user: User,
+    group_data: GroupCreateSchema,
 ) -> GroupResponseSchema:
     """
     Создает новую группу с бизнес-валидацией.
@@ -37,10 +40,13 @@ async def create_group(
     """
     # 1. Проверка на дубликат
     if await groups_repository.is_group_exist(
-        db, user_id=current_user.id, group_name=group_data.name,
+        db,
+        user_id=current_user.id,
+        group_name=group_data.name,
     ):
         raise HTTPException(
-            status_code=400, detail="Нельзя создавать несколько групп с одинаковым названием",
+            status_code=400,
+            detail="Нельзя создавать несколько групп с одинаковым названием",
         )
 
     # 2. Получаем всех участников по логинам с проверкой на существование
@@ -50,7 +56,8 @@ async def create_group(
         user = await users_repository.get_user(db, login)
         if not user:
             raise HTTPException(
-                status_code=400, detail=f"Пользователь с логином '{login}' не найден",
+                status_code=400,
+                detail=f"Пользователь с логином '{login}' не найден",
             )
         members.append(user)
 
@@ -62,7 +69,10 @@ async def create_group(
         raise HTTPException(status_code=400, detail="Добавьте хотя бы одного участника помимо себя")
 
     new_group: Group = await groups_repository.create_group(
-        db, creator_id=current_user.id, group_name=group_data.name, members=other_members,
+        db,
+        creator_id=current_user.id,
+        group_name=group_data.name,
+        members=other_members,
     )
 
     await db.commit()
@@ -70,7 +80,8 @@ async def create_group(
 
 
 async def get_current_user_groups(
-    db: AsyncSession, current_user: User,
+    db: AsyncSession,
+    current_user: User,
 ) -> list[GroupResponseSchema]:
     """
     Возвращает список всех групп, в которых состоит текущий пользователь.
@@ -92,7 +103,9 @@ async def get_current_user_groups(
 
 
 async def get_user_group_by_id(
-    db: AsyncSession, current_user: User, group_id: int,
+    db: AsyncSession,
+    current_user: User,
+    group_id: int,
 ) -> GroupResponseSchema:
     """
     Получает информацию о группе с общим балансом.
@@ -115,12 +128,12 @@ async def get_user_group_by_id(
         raise HTTPException(status_code=404, detail="Такой группы не существует")
 
     # Проверяем, является ли пользователь участником группы
-    if current_user.id not in [member.id for member in group.members]:
+    if not await is_user_in_group(db, current_user.id, group_id):
         raise HTTPException(status_code=403, detail="Вы не состоите в этой группе")
 
     total_balance: Decimal = await calculate_group_balance(db, group_id)
 
-    group_schema: GroupResponseSchema = GroupResponseSchema.model_validate(group)
+    group_schema = GroupResponseSchema.model_validate(group)
     group_schema.total_balance = total_balance
 
     return group_schema
@@ -146,8 +159,8 @@ async def calculate_group_balance(db: AsyncSession, group_id: int) -> Decimal:
         Общий баланс группы в рублях
     """
     wallets = await groups_repository.get_group_wallets(db, group_id)
-
     total_balance = Decimal("0")
+
     for wallet in wallets:
         # Это условие выполнится только у дебетовых кошельков
         if wallet.credit_limit is None:
@@ -160,7 +173,8 @@ async def calculate_group_balance(db: AsyncSession, group_id: int) -> Decimal:
             total_balance += wallet.balance - credit_limit
         else:
             exchange_rate = await exchange_service.get_exchange_rate(
-                wallet.currency, CurrencyEnum.RUB,
+                wallet.currency,
+                CurrencyEnum.RUB,
             )
             total_balance += exchange_rate * (wallet.balance - credit_limit)
 

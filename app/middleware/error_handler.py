@@ -60,7 +60,8 @@ async def http_exception_handler(request: Request, exc: HTTPException | Exceptio
 
 
 async def validation_exception_handler(
-    request: Request, exc: RequestValidationError | Exception,
+    request: Request,
+    exc: RequestValidationError | Exception,
 ) -> JSONResponse:
     """
     Обработчик для RequestValidationError (422)
@@ -90,7 +91,9 @@ async def validation_exception_handler(
                 error_message = msg.replace("Value error, ", "", 1)
             else:
                 # Для других типов ошибок валидации
-                field = first_error.get("loc", ["unknown"])[-1] if first_error.get("loc") else "unknown"
+                field = (
+                    first_error.get("loc", ["unknown"])[-1] if first_error.get("loc") else "unknown"
+                )
                 error_type = first_error.get("type", "")
 
                 # Создаем понятные сообщения для разных типов ошибок

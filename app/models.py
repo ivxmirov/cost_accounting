@@ -21,7 +21,8 @@ class Operation(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     transaction_id: Mapped[UUID] = mapped_column(unique=True, nullable=False, index=True)
     wallet_id: Mapped[int] = mapped_column(
-        ForeignKey("wallets.id", ondelete="CASCADE"), nullable=False,
+        ForeignKey("wallets.id", ondelete="CASCADE"),
+        nullable=False,
     )
     type: Mapped[OperationType] = mapped_column(operation_type_enum, nullable=False)
     amount: Mapped[Decimal]
@@ -29,7 +30,10 @@ class Operation(Base):
     category: Mapped[str | None] = mapped_column(default=None)
     subcategory: Mapped[str | None] = mapped_column(default=None)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=False), default=datetime.now, server_default=func.now(), nullable=False,
+        DateTime(timezone=False),
+        default=datetime.now,
+        server_default=func.now(),
+        nullable=False,
     )
     wallet: Mapped["Wallet"] = relationship(back_populates="operations")
 
@@ -47,11 +51,13 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     login: Mapped[str] = mapped_column(unique=True)
     password_hash: Mapped[str | None] = mapped_column(String, nullable=True)
-    is_active: Mapped[bool] = mapped_column(default=True, server_default=text('true'))
+    is_active: Mapped[bool] = mapped_column(default=True, server_default=text("true"))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=False), nullable=True)
 
     wallets: Mapped[list["Wallet"]] = relationship(
-        back_populates="user", cascade="all, delete-orphan", passive_deletes=True,
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
     groups: Mapped[list["Group"]] = relationship(secondary=group_members, back_populates="members")
 
@@ -76,15 +82,20 @@ class Group(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     creator: Mapped[int] = mapped_column(
-        ForeignKey(column="users.id", ondelete="SET NULL"), nullable=True,
+        ForeignKey(column="users.id", ondelete="SET NULL"),
+        nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=False), default=datetime.now, server_default=func.now(), nullable=False,
+        DateTime(timezone=False),
+        default=datetime.now,
+        server_default=func.now(),
+        nullable=False,
     )
     members: Mapped[list["User"]] = relationship(secondary=group_members, back_populates="groups")
     creator_user: Mapped["User"] = relationship(foreign_keys=[creator])
     wallets: Mapped[list["Wallet"]] = relationship(
-        secondary=group_wallets, back_populates="groups",
+        secondary=group_wallets,
+        back_populates="groups",
     )
 
     @property
@@ -102,10 +113,13 @@ class Wallet(Base):
     currency: Mapped[CurrencyEnum] = mapped_column(currency_type_enum, nullable=False)
     user: Mapped["User"] = relationship(back_populates="wallets")
     operations: Mapped[list["Operation"]] = relationship(
-        back_populates="wallet", cascade="all, delete-orphan", passive_deletes=True,
+        back_populates="wallet",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
     type: Mapped[WalletType] = mapped_column(wallet_type_enum, nullable=False)
     credit_limit: Mapped[Decimal | None] = mapped_column(nullable=True)
     groups: Mapped[list["Group"]] = relationship(
-        secondary=group_wallets, back_populates="wallets",
+        secondary=group_wallets,
+        back_populates="wallets",
     )

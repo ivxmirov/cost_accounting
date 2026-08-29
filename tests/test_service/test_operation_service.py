@@ -10,7 +10,11 @@ from app.schemas import ExpenseCreateSchema, IncomeCreateSchema
 from app.service import operations as operations_service
 
 
-async def test_add_income_success(db_session: AsyncSession, current_user, wallet):
+@pytest.mark.parametrize("wallet_type", ["debit", "credit"])
+async def test_add_income_success(
+    db_session: AsyncSession, current_user, wallet_factory, wallet_type: str,
+):
+    wallet = await wallet_factory(wallet_type)
     wallet.balance = Decimal("50")
     await db_session.flush()
 
@@ -22,7 +26,9 @@ async def test_add_income_success(db_session: AsyncSession, current_user, wallet
     )
 
     response, status_code = await operations_service.add_income(
-        db_session, current_user=current_user, operation=payload,
+        db_session,
+        current_user=current_user,
+        operation=payload,
     )
 
     assert response is not None
@@ -31,6 +37,7 @@ async def test_add_income_success(db_session: AsyncSession, current_user, wallet
     assert response.type == "income"
     assert response.currency == wallet.currency
     assert response.category == payload.description
+    assert wallet.balance == Decimal("150")
 
 
 async def test_add_income_wallet_not_exists(db_session: AsyncSession, current_user):
@@ -43,14 +50,18 @@ async def test_add_income_wallet_not_exists(db_session: AsyncSession, current_us
 
     with pytest.raises(HTTPException) as exc:
         await operations_service.add_income(
-            db_session, current_user=current_user, operation=payload,
+            db_session,
+            current_user=current_user,
+            operation=payload,
         )
 
     assert exc.value.status_code == 404
     assert "nonexistent" in exc.value.detail
 
 
-async def test_add_income_other_user(db_session: AsyncSession, wallet):
+@pytest.mark.parametrize("wallet_type", ["debit", "credit"])
+async def test_add_income_other_user(db_session: AsyncSession, wallet_factory, wallet_type):
+    wallet = await wallet_factory(wallet_type)
     other_user = User(login="other_user")
     db_session.add(other_user)
     await db_session.flush()
@@ -68,7 +79,11 @@ async def test_add_income_other_user(db_session: AsyncSession, wallet):
     assert exc.value.status_code == 404
 
 
-async def test_add_expense_success(db_session: AsyncSession, current_user, wallet):
+@pytest.mark.parametrize("wallet_type", ["debit", "credit"])
+async def test_add_expense_success(
+    db_session: AsyncSession, current_user, wallet_factory, wallet_type,
+):
+    wallet = await wallet_factory(wallet_type)
     wallet.balance = Decimal("200")
     await db_session.flush()
 
@@ -80,7 +95,9 @@ async def test_add_expense_success(db_session: AsyncSession, current_user, walle
     )
 
     response, status_code = await operations_service.add_expense(
-        db_session, current_user=current_user, operation=payload,
+        db_session,
+        current_user=current_user,
+        operation=payload,
     )
 
     assert response is not None
@@ -89,6 +106,7 @@ async def test_add_expense_success(db_session: AsyncSession, current_user, walle
     assert response.type == "expense"
     assert response.currency == wallet.currency
     assert response.category == payload.description
+    assert wallet.balance == Decimal("150")
 
 
 async def test_add_expense_wallet_not_exists(db_session: AsyncSession, current_user):
@@ -101,14 +119,18 @@ async def test_add_expense_wallet_not_exists(db_session: AsyncSession, current_u
 
     with pytest.raises(HTTPException) as exc:
         await operations_service.add_expense(
-            db_session, current_user=current_user, operation=payload,
+            db_session,
+            current_user=current_user,
+            operation=payload,
         )
 
     assert exc.value.status_code == 404
     assert "nonexistent" in exc.value.detail
 
 
-async def test_add_expense_other_user(db_session: AsyncSession, wallet):
+@pytest.mark.parametrize("wallet_type", ["debit", "credit"])
+async def test_add_expense_other_user(db_session: AsyncSession, wallet_factory, wallet_type):
+    wallet = await wallet_factory(wallet_type)
     other_user = User(login="other_user")
     db_session.add(other_user)
     await db_session.flush()
@@ -126,7 +148,11 @@ async def test_add_expense_other_user(db_session: AsyncSession, wallet):
     assert exc.value.status_code == 404
 
 
-async def test_add_expense_insufficient_funds(db_session: AsyncSession, current_user, wallet):
+@pytest.mark.parametrize("wallet_type", ["debit", "credit"])
+async def test_add_expense_insufficient_funds(
+    db_session: AsyncSession, current_user, wallet_factory, wallet_type,
+):
+    wallet = await wallet_factory(wallet_type)
     wallet.balance = Decimal("30")
     await db_session.flush()
 
@@ -139,7 +165,9 @@ async def test_add_expense_insufficient_funds(db_session: AsyncSession, current_
 
     with pytest.raises(HTTPException) as exc:
         await operations_service.add_expense(
-            db_session, current_user=current_user, operation=payload,
+            db_session,
+            current_user=current_user,
+            operation=payload,
         )
 
     assert exc.value.status_code == 400

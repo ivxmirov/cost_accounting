@@ -65,7 +65,10 @@ async def create_operation(
 
 
 async def get_operations_list(
-    db: AsyncSession, wallets_ids: list[int], date_from: datetime | None, date_to: datetime | None,
+    db: AsyncSession,
+    wallets_ids: list[int],
+    date_from: datetime | None,
+    date_to: datetime | None,
 ) -> list[Operation]:
     """
     Получает список операций из базы данных с фильтрацией по кошелькам и датам
@@ -92,7 +95,8 @@ async def get_operations_list(
 
 
 async def create_operations_bulk(
-    db: AsyncSession, operations_payload: list[dict],
+    db: AsyncSession,
+    operations_payload: list[dict],
 ) -> list[Operation]:
     """
     Создает несколько операций за один раз (пакетная вставка)

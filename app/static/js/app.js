@@ -1098,8 +1098,8 @@ function renderGroups(groups) {
         // Количество участников
         const membersCount = group.members ? group.members.length : 0;
         
-        // Генерируем точки для участников (не более 12)
-        const dotsCount = Math.min(membersCount, 12);
+        // Генерируем точки для участников (не более 15)
+        const dotsCount = Math.min(membersCount, 15);
         const dots = '•'.repeat(dotsCount);
         
         return `
@@ -1163,32 +1163,17 @@ async function openGroup(groupId) {
     }
 }
 
-// Функция для просмотра группы
-async function viewGroup(groupId) {
-    try {
-        const response = await fetchWithAuth(`${API_BASE_V2}/groups/${groupId}`);
-        
-        if (response.ok) {
-            const groupData = await response.json();
-            displayGroupDetails(groupData);
-            
-            // Показываем модалку
-            const modal = new bootstrap.Modal(document.getElementById('groupDetailsModal'));
-            modal.show();
-        } else {
-            const errorData = await response.json();
-            showError(extractErrorMessage(errorData, 'Ошибка получения группы'));
-        }
-    } catch (e) {
-        console.error('[GROUP] Ошибка:', e);
-        showError('Ошибка подключения: ' + e.message);
-    }
-}
-
 // Отображение деталей группы с балансом
 function displayGroupDetails(groupData) {
-    // Заполняем основную информацию
-    document.getElementById('groupName').textContent = groupData.name;
+    
+    // Обновляем заголовок модального окна
+    const modalTitle = document.getElementById('groupModalTitle');
+    if (modalTitle) {
+        modalTitle.textContent = groupData.name || 'Информация о группе';
+        console.log('[GROUP] Заголовок обновлен на:', groupData.name);
+    } else {
+        console.error('[GROUP] Элемент groupModalTitle не найден');
+    }
     
     // Определяем создателя
     const isCreator = groupData.creator_id === currentUserId || groupData.creator === currentUserId;
@@ -1196,28 +1181,58 @@ function displayGroupDetails(groupData) {
         ? `${groupData.creator_login || currentUser} ⭐` 
         : (groupData.creator_login || `Пользователь ${groupData.creator_id || groupData.creator}`);
     
-    document.getElementById('groupCreator').textContent = creatorDisplay;
+    const creatorEl = document.getElementById('groupCreator');
+    if (creatorEl) {
+        creatorEl.textContent = creatorDisplay;
+    } else {
+        console.error('[GROUP] Элемент groupCreator не найден');
+    }
     
     // Отображаем общий баланс
     const balanceElement = document.getElementById('groupTotalBalance');
-    if (balanceElement && groupData.total_balance !== undefined) {
-        const balance = parseFloat(groupData.total_balance) || 0;
-        balanceElement.textContent = formatCurrency(balance);
-        // Добавляем цвет в зависимости от знака
-        balanceElement.className = 'card-title ' + (balance >= 0 ? 'text-success' : 'text-danger');
+    if (balanceElement) {
+        if (groupData.total_balance !== undefined && groupData.total_balance !== null) {
+            const balance = parseFloat(groupData.total_balance) || 0;
+            balanceElement.textContent = formatCurrency(balance);
+            balanceElement.className = 'card-title ' + (balance >= 0 ? 'text-success' : 'text-danger');
+        } else {
+            balanceElement.textContent = '0,00 ₽';
+            balanceElement.className = 'card-title text-muted';
+        }
+    } else {
+        console.error('[GROUP] Элемент groupTotalBalance не найден');
+    }
+    
+    // Обновляем количество участников
+    const membersCountEl = document.getElementById('groupMembersCount');
+    if (membersCountEl) {
+        if (groupData.members && Array.isArray(groupData.members)) {
+            membersCountEl.textContent = groupData.members.length;
+            console.log('[GROUP] Количество участников:', groupData.members.length);
+        } else {
+            membersCountEl.textContent = '0';
+            console.log('[GROUP] members не массив');
+        }
+    } else {
+        console.error('[GROUP] Элемент groupMembersCount не найден');
     }
     
     // Отображаем участников
     const membersList = document.getElementById('groupMembersList');
-    if (membersList && groupData.members) {
-        membersList.innerHTML = groupData.members.map(member => {
-            // Проверяем, является ли участник текущим пользователем
-            const isCurrentUser = member.id === currentUserId || member === currentUser;
-            const memberName = member.login || member;
-            return `<li class="list-group-item">
-                ${memberName} ${isCurrentUser ? '⭐' : ''}
-            </li>`;
-        }).join('');
+    if (membersList) {
+        if (groupData.members && Array.isArray(groupData.members) && groupData.members.length > 0) {
+            membersList.innerHTML = groupData.members.map(member => {
+                const isCurrentUser = member.id === currentUserId || member === currentUser;
+                const memberName = member.login || member;
+                return `<li class="list-group-item">
+                    ${memberName} ${isCurrentUser ? '⭐' : ''}
+                </li>`;
+            }).join('');
+        } else {
+            membersList.innerHTML = '<li class="list-group-item text-muted">Нет участников</li>';
+        }
+    } else {
+        console.error('[GROUP] Элемент groupMembersList не найден');
     }
 }
 

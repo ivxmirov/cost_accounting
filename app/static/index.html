@@ -376,14 +376,12 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Информация о группе</h5>
+                    <h5 class="modal-title" id="groupModalTitle">Информация о группе</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row mb-3">
                         <div class="col">
-                            <h5>Информация о группе</h5>
-                            <p><strong>Название:</strong> <span id="groupName"></span></p>
                             <p><strong>Создатель:</strong> <span id="groupCreator"></span></p>
                         </div>
                     </div>
@@ -401,7 +399,7 @@
                     
                     <div class="row">
                         <div class="col">
-                            <h6>Участники:</h6>
+                            <h6>Участники (<span id="groupMembersCount">0</span>):</h6>
                             <ul id="groupMembersList" class="list-group"></ul>
                         </div>
                     </div>

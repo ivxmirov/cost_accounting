@@ -11,7 +11,8 @@ router = APIRouter()
 
 @router.get("/balance")
 async def get_balance(
-    db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     return await wallets_service.get_total_user_balance(db, current_user)
 
@@ -27,6 +28,7 @@ async def create_wallet(
 
 @router.get("/wallets", response_model=list[WalletResponseSchema])
 async def get_user_wallets(
-    db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     return await wallets_service.get_user_wallets(db, current_user)

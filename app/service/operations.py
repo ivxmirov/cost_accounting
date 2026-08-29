@@ -22,7 +22,9 @@ from app.service.exchange_service import get_exchange_rate
 
 
 async def add_income(
-    db: AsyncSession, current_user: User, operation: IncomeCreateSchema,
+    db: AsyncSession,
+    current_user: User,
+    operation: IncomeCreateSchema,
 ) -> tuple[OperationResponse, int]:
     """
     Добавляет доход к балансу кошелька с проверкой существования кошелька и идемпотентностью
@@ -36,7 +38,8 @@ async def add_income(
         HTTPException: Если кошелек не найден
     """
     existing_operation = await operations_repository.get_by_transaction_id(
-        db, operation.transaction_id,
+        db,
+        operation.transaction_id,
     )
 
     if existing_operation:
@@ -46,7 +49,10 @@ async def add_income(
         raise HTTPException(status_code=404, detail=f"Wallet '{operation.wallet_name}' not found")
 
     wallet = await wallets_repository.add_income(
-        db, current_user.id, operation.wallet_name, operation.amount,
+        db,
+        current_user.id,
+        operation.wallet_name,
+        operation.amount,
     )
 
     new_operation = await operations_repository.create_operation(
@@ -63,7 +69,9 @@ async def add_income(
 
 
 async def add_expense(
-    db: AsyncSession, current_user: User, operation: ExpenseCreateSchema,
+    db: AsyncSession,
+    current_user: User,
+    operation: ExpenseCreateSchema,
 ) -> tuple[OperationResponse, int]:
     """
     Вычитает расход из баланса кошелька
@@ -79,7 +87,8 @@ async def add_expense(
         HTTPException: Если кошелек не найден или недостаточно средств
     """
     existing_operation = await operations_repository.get_by_transaction_id(
-        db, operation.transaction_id,
+        db,
+        operation.transaction_id,
     )
     if existing_operation:
         return (OperationResponse.model_validate(existing_operation), 200)
@@ -91,11 +100,15 @@ async def add_expense(
 
     if wallet.balance < operation.amount:
         raise HTTPException(
-            status_code=400, detail=f"Insufficient funds. Available: {wallet.balance}",
+            status_code=400,
+            detail=f"Insufficient funds. Available: {wallet.balance}",
         )
 
     wallet = await wallets_repository.add_expense(
-        db, current_user.id, operation.wallet_name, operation.amount,
+        db,
+        current_user.id,
+        operation.wallet_name,
+        operation.amount,
     )
     new_operation = await operations_repository.create_operation(
         db=db,
@@ -140,7 +153,10 @@ async def get_operations_list(
         wallets_ids = [w.id for w in wallets]
 
     operations = await operations_repository.get_operations_list(
-        db, wallets_ids, date_from, date_to,
+        db,
+        wallets_ids,
+        date_from,
+        date_to,
     )
     result = []
     for operation in operations:
@@ -208,7 +224,9 @@ async def transfer_between_wallets(
 
 
 async def transfer_between_wallets_v2(
-    db: AsyncSession, transfer: TransferCreateSchemaV2, user_id: int,
+    db: AsyncSession,
+    transfer: TransferCreateSchemaV2,
+    user_id: int,
 ) -> tuple[TransferResponseSchema, int]:
     """
     Переводит деньги между кошельками пользователя
@@ -225,7 +243,8 @@ async def transfer_between_wallets_v2(
                        Если недостаточно средств для перевода
     """
     existing_operation = await operations_repository.get_by_transaction_id(
-        db, transfer.transaction_id,
+        db,
+        transfer.transaction_id,
     )
     from_wallet = await wallets_repository.get_wallet_by_id(db, user_id, transfer.from_wallet_id)
     to_wallet = await wallets_repository.get_wallet_by_id(db, user_id, transfer.to_wallet_id)
@@ -294,7 +313,9 @@ async def transfer_between_wallets_v2(
 
 
 async def create_bulk_operations(
-    db: AsyncSession, user: User, bulk_request: BulkOperationsCreateSchema,
+    db: AsyncSession,
+    user: User,
+    bulk_request: BulkOperationsCreateSchema,
 ) -> list[OperationResponse]:
     """
     Создает несколько операций за один раз с поддержкой транзакций
@@ -363,7 +384,8 @@ async def create_bulk_operations(
             wallet.balance = projected_balances[wallet_id]
 
         created_operations = await operations_repository.create_operations_bulk(
-            db, operations_payload,
+            db,
+            operations_payload,
         )
         await db.commit()
 
@@ -381,7 +403,11 @@ async def create_bulk_operations(
 
 
 async def generate_csv_report(
-    db: AsyncSession, user: User, date_from: str, date_to: str, currency: str,
+    db: AsyncSession,
+    user: User,
+    date_from: str,
+    date_to: str,
+    currency: str,
 ) -> str:
     """
     Генерирует CSV отчёт с операциями пользователя за указанный период с конвертацией валют
@@ -395,14 +421,24 @@ async def generate_csv_report(
         CSV строка с заголовками и данными операций
     """
     date_from_dt = datetime.strptime(date_from, "%Y-%m-%d").replace(
-        hour=0, minute=0, second=0, microsecond=0,
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0,
     )
     date_to_dt = datetime.strptime(date_to, "%Y-%m-%d").replace(
-        hour=23, minute=59, second=59, microsecond=999999,
+        hour=23,
+        minute=59,
+        second=59,
+        microsecond=999999,
     )
 
     operations = await get_operations_list(
-        db, user, wallet_id=None, date_from=date_from_dt, date_to=date_to_dt,
+        db,
+        user,
+        wallet_id=None,
+        date_from=date_from_dt,
+        date_to=date_to_dt,
     )
 
     target_currency = CurrencyEnum(currency.lower())

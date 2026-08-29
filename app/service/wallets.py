@@ -38,7 +38,8 @@ async def get_total_user_balance(db: AsyncSession, current_user: User) -> TotalB
             total_balance += wallet.balance - credit_limit
         else:
             exchange_rate = await exchange_service.get_exchange_rate(
-                wallet.currency, CurrencyEnum.RUB,
+                wallet.currency,
+                CurrencyEnum.RUB,
             )
             total_balance += exchange_rate * (wallet.balance - credit_limit)
 
@@ -46,7 +47,9 @@ async def get_total_user_balance(db: AsyncSession, current_user: User) -> TotalB
 
 
 async def create_wallet(
-    db: AsyncSession, current_user: User, wallet: WalletCreateSchema,
+    db: AsyncSession,
+    current_user: User,
+    wallet: WalletCreateSchema,
 ) -> WalletResponseSchema:
     """
     Создает новый кошелек для пользователя с проверкой на дубликаты
@@ -60,7 +63,10 @@ async def create_wallet(
         HTTPException: Если кошелек с таким названием уже существует
     """
     if await wallets_repository.is_wallet_exist(db, current_user.id, wallet.name):
-        raise HTTPException(status_code=400, detail=f"Wallet '{wallet.name}' already exists")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Кошелек с названием '{wallet.name}' уже существует",
+        )
 
     credit_limit = wallet.credit_limit
 
@@ -71,7 +77,8 @@ async def create_wallet(
             raise HTTPException(400, "Кредитный лимит должен быть положительным")
         if wallet.initial_balance > wallet.credit_limit:
             raise HTTPException(
-                400, "Баланс кредитного кошелька не может быть больше кредитного лимита",
+                400,
+                "Баланс кредитного кошелька не может быть больше кредитного лимита",
             )
 
     elif wallet.type == WalletType.DEBIT:
@@ -105,7 +112,9 @@ async def get_user_wallets(db: AsyncSession, current_user: User) -> list[WalletR
 
 
 async def get_wallet_by_name(
-    db: AsyncSession, current_user: User, wallet_name: str,
+    db: AsyncSession,
+    current_user: User,
+    wallet_name: str,
 ) -> WalletResponseSchema:
     """
     Получает кошелек пользователя по названию

@@ -19,7 +19,8 @@ def test_request_logged(client, caplog):
 def test_post_request_logged(client, caplog):
     with caplog.at_level(logging.INFO):
         response = client.post(
-            "/api/v1/users", json={"login": "testuser123", "password": "password123"},
+            "/api/v1/users",
+            json={"login": "testuser123", "password": "password123"},
         )
         assert response.status_code in [201, 400, 422]
 

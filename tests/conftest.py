@@ -123,6 +123,27 @@ def db(db_session):
 
 
 @pytest.fixture
+async def wallet_factory(db_session, test_user):
+    """Фабрика для создания кошельков."""
+
+    async def _create_wallet(wallet_type: str):
+        wallet = Wallet(
+            name=f"Test {wallet_type}",
+            balance=Decimal("0"),
+            user_id=test_user.id,
+            currency=CurrencyEnum.RUB,
+            type=WalletType.DEBIT if wallet_type == "debit" else WalletType.CREDIT,
+            credit_limit=Decimal("100") if wallet_type == "credit" else None,
+        )
+        db_session.add(wallet)
+        await db_session.commit()
+        await db_session.refresh(wallet)
+        return wallet
+
+    return _create_wallet
+
+
+@pytest.fixture
 def mock_currency_api():
     with aioresponses() as m:
         m.get(

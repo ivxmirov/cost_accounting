@@ -17,7 +17,9 @@ async def create_transfer_v2(
     db: AsyncSession = Depends(get_db),
 ):
     result, status_code = await operations_service.transfer_between_wallets_v2(
-        db, transfer_data, user.id,
+        db,
+        transfer_data,
+        user.id,
     )
     response.status_code = status_code
     return result

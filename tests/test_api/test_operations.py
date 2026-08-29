@@ -9,7 +9,10 @@ from app.models import Wallet
 
 async def test_add_income_success(db_session: AsyncSession, client, test_user, auth_headers):
     wallet = Wallet(
-        name="card", balance=Decimal("50"), user_id=test_user.id, currency=CurrencyEnum.USD,
+        name="card",
+        balance=Decimal("50"),
+        user_id=test_user.id,
+        currency=CurrencyEnum.USD,
     )
     db_session.add(wallet)
     await db_session.commit()
@@ -97,7 +100,10 @@ async def test_add_expense_success(db_session: AsyncSession, client, test_user, 
 
 
 async def test_add_expense_negative_amount(
-    db_session: AsyncSession, client, test_user, auth_headers,
+    db_session: AsyncSession,
+    client,
+    test_user,
+    auth_headers,
 ):
     wallet = Wallet(name="card", balance=200, user_id=test_user.id, currency=CurrencyEnum.USD)
     db_session.add(wallet)
@@ -169,7 +175,10 @@ def test_add_expense_unauthorized(client):
 
 
 async def test_add_expense_not_enough_money(
-    db_session: AsyncSession, client, test_user, auth_headers,
+    db_session: AsyncSession,
+    client,
+    test_user,
+    auth_headers,
 ):
     wallet = Wallet(name="card", balance=200, user_id=test_user.id, currency=CurrencyEnum.USD)
     db_session.add(wallet)

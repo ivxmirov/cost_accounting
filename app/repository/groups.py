@@ -1,8 +1,8 @@
-from sqlalchemy import select
+from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.models import Group, User, Wallet, group_wallets
+from app.models import Group, User, Wallet, group_members, group_wallets
 
 
 async def is_group_exist(db: AsyncSession, user_id: int, group_name: str) -> bool:
@@ -14,7 +14,10 @@ async def is_group_exist(db: AsyncSession, user_id: int, group_name: str) -> boo
 
 
 async def create_group(
-    db: AsyncSession, creator_id: int, group_name: str, members: list[User],
+    db: AsyncSession,
+    creator_id: int,
+    group_name: str,
+    members: list[User],
 ) -> Group:
     """
     Создаёт группу и добавляет создателя как участника.
@@ -76,7 +79,9 @@ async def get_group_by_id(db: AsyncSession, group_id: int) -> Group | None:
 
 
 async def attach_wallet_to_group(
-    db: AsyncSession, group_id: int, wallet_id: int,
+    db: AsyncSession,
+    group_id: int,
+    wallet_id: int,
 ) -> None:
     """
     Прикрепляет кошелек к группе.
@@ -96,7 +101,9 @@ async def attach_wallet_to_group(
 
 
 async def detach_wallet_from_group(
-    db: AsyncSession, group_id: int, wallet_id: int,
+    db: AsyncSession,
+    group_id: int,
+    wallet_id: int,
 ) -> None:
     """
     Открепляет кошелек от группы.
@@ -110,7 +117,8 @@ async def detach_wallet_from_group(
 
 
 async def get_group_wallets(
-    db: AsyncSession, group_id: int,
+    db: AsyncSession,
+    group_id: int,
 ) -> list[Wallet]:
     """
     Получает все кошельки, прикрепленные к группе.
@@ -123,8 +131,32 @@ async def get_group_wallets(
         Список кошельков группы
     """
     result = await db.execute(
-        select(Wallet)
-        .join(group_wallets)
-        .where(group_wallets.c.group_id == group_id),
+        select(Wallet).join(group_wallets).where(group_wallets.c.group_id == group_id),
     )
     return list(result.scalars().all())
+
+
+async def is_user_in_group(
+    db: AsyncSession,
+    user_id: int,
+    group_id: int,
+) -> bool:
+    """
+    Проверяет, состоит ли пользователь в группе.
+
+    Args:
+        db: Сессия БД
+        user_id: ID пользователя
+        group_id: ID группы
+
+    Returns:
+        True, если пользователь состоит в группе, иначе False
+    """
+    stmt = select(
+        exists().where(
+            group_members.c.group_id == group_id,
+            group_members.c.user_id == user_id,
+        ),
+    )
+    result = await db.execute(stmt)
+    return result.scalar() is not None
