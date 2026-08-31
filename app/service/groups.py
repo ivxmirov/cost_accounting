@@ -9,7 +9,7 @@ from app.enum import CurrencyEnum
 from app.models import Group, User
 from app.repository import groups as groups_repository
 from app.repository.groups import is_user_in_group
-from app.schemas import GroupCreateSchema, GroupResponseSchema
+from app.schemas import GroupCreateSchema, GroupResponseSchema, MemberBalanceSchema
 from app.service import exchange_service
 
 logger = logging.getLogger(__name__)
@@ -124,6 +124,7 @@ async def get_user_group_by_id(
 
     group = await groups_repository.get_group_by_id(db, group_id)
 
+    # Проверяем, существует ли группа
     if not group:
         raise HTTPException(status_code=404, detail="Такой группы не существует")
 
@@ -132,11 +133,81 @@ async def get_user_group_by_id(
         raise HTTPException(status_code=403, detail="Вы не состоите в этой группе")
 
     total_balance: Decimal = await calculate_group_balance(db, group_id)
+    member_balances = await calculate_member_balances(db, group_id)
 
+    # Сортируем участников по алфавиту
+    group.members.sort(key=lambda member: member.login.lower())
+    member_balances.sort(key=lambda x: x.login.lower())
     group_schema = GroupResponseSchema.model_validate(group)
     group_schema.total_balance = total_balance
+    group_schema.member_balances = member_balances
 
     return group_schema
+
+
+async def calculate_wallet_effective_balance(wallet):
+    """
+    Рассчитывает эффективный баланс кошелька.
+
+    Для дебетовых кошельков: эффективный баланс = текущий баланс.
+    Для кредитных кошельков: эффективный баланс = текущий баланс - кредитный лимит.
+    """
+    # Это условие выполнится только у дебетовых кошельков
+    if wallet.credit_limit is None:
+        credit_limit = Decimal("0")
+    else:
+        # Это условие выполнится только у кредитных кошельков
+        credit_limit: Decimal = wallet.credit_limit
+
+    if wallet.currency == CurrencyEnum.RUB:
+        return wallet.balance - credit_limit
+    else:
+        exchange_rate = await exchange_service.get_exchange_rate(
+            wallet.currency,
+            CurrencyEnum.RUB,
+        )
+        return exchange_rate * (wallet.balance - credit_limit)
+
+
+async def calculate_member_balances(
+    db: AsyncSession, group_id: int,
+) -> list[MemberBalanceSchema]:
+    """
+    Рассчитывает эффективный баланс каждого участника группы.
+
+    Бизнес-логика:
+        Учитываются только те кошельки, которые участники прикрепили к группе.
+        Каждый участник группы сам решает, какие из своих кошельков прикреплять.
+        Участник группы может не прикреплять ни одного кошелька.
+        При расчете баланса группы учитываются эффективные балансы кошельков.
+
+    Args:
+        db: Сессия БД
+        group_id: ID группы
+
+    Returns:
+        Список балансов участников, отсортированный по алфавиту
+    """
+    wallets = await groups_repository.get_group_wallets(db, group_id)
+
+    # Словарь для хранения балансов участников
+    member_balances_dict = {}
+
+    for wallet in wallets:
+        effective_balance: Decimal = await calculate_wallet_effective_balance(wallet)
+
+        # Добавляем к балансу участника
+        user_login = wallet.user.login
+        if user_login not in member_balances_dict:
+            member_balances_dict[user_login] = Decimal("0")
+        member_balances_dict[user_login] += effective_balance
+
+    # Создаем список и сортируем по алфавиту
+    member_balances: list[MemberBalanceSchema] = [
+        MemberBalanceSchema(login=login, effective_balance=balance)
+        for login, balance in member_balances_dict.items()
+    ]
+    return member_balances
 
 
 async def calculate_group_balance(db: AsyncSession, group_id: int) -> Decimal:
@@ -147,10 +218,7 @@ async def calculate_group_balance(db: AsyncSession, group_id: int) -> Decimal:
         Учитываются только те кошельки, которые участники прикрепили к группе.
         Каждый участник группы сам решает, какие из своих кошельков прикреплять.
         Участник группы может не прикреплять ни одного кошелька.
-
-        При расчете баланса группы учитывается эффективный баланс кошелька.
-        Для дебетовых кошельков: эффективный баланс = текущий баланс.
-        Для кредитных кошельков: эффективный баланс = текущий баланс - кредитный лимит.
+        При расчете баланса группы учитываются эффективные балансы кошельков.
 
     Args:
         db: Сессия базы данных
@@ -162,21 +230,7 @@ async def calculate_group_balance(db: AsyncSession, group_id: int) -> Decimal:
     total_balance = Decimal("0")
 
     for wallet in wallets:
-        # Это условие выполнится только у дебетовых кошельков
-        if wallet.credit_limit is None:
-            credit_limit = Decimal("0")
-        else:
-            # Это условие выполнится только у кредитных кошельков
-            credit_limit: Decimal = wallet.credit_limit
-
-        if wallet.currency == CurrencyEnum.RUB:
-            total_balance += wallet.balance - credit_limit
-        else:
-            exchange_rate = await exchange_service.get_exchange_rate(
-                wallet.currency,
-                CurrencyEnum.RUB,
-            )
-            total_balance += exchange_rate * (wallet.balance - credit_limit)
+        total_balance += await calculate_wallet_effective_balance(wallet)
 
     return total_balance
 

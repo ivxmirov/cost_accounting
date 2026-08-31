@@ -421,7 +421,6 @@ function renderWalletsTable() {
         const currency = String(w.currency || '').toLowerCase();
         const symbol = currencySymbols[currency] || currency.toUpperCase();
         
-        // ИСПРАВЛЕНО: используем w.type, а не w.wallet_type
         const walletType = w.type || w.wallet_type || 'debit';
         const isCredit = walletType === 'credit';
         
@@ -440,10 +439,10 @@ function renderWalletsTable() {
                 </td>
                 <td class="text-end">
                     ${isCredit 
-                        ? `<strong>${creditLimit.toFixed(2)} ${symbol}</strong>` 
+                        ? `<strong>${formatCurrency(creditLimit)}</strong>` 
                         : '<span class="text-muted">—</span>'}
                 </td>
-                <td class="text-end"><strong>${balance.toFixed(2)} ${symbol}</strong></td>
+                <td class="text-end"><strong>${formatCurrency(balance)}</strong></td>
             </tr>
         `;
     }).join('');
@@ -497,7 +496,7 @@ function renderOperationsTable() {
                 <td>${typeIcon} <span class="${typeClass}">${typeLabel}</span></td>
                 <td>${walletName}</td>
                 <td>${t.category || t.description || '-'}</td>
-                <td class="text-end ${typeClass}"><strong>${amount.toFixed(2)} ${currency}</strong></td>
+                <td class="text-end ${typeClass}"><strong>${formatCurrency(amount)}</strong></td>
             </tr>
         `;
     }).join('');
@@ -520,7 +519,7 @@ async function updateTotalBalance() {
             const data = await response.json();
             const total = typeof data.total_balance === 'number' ? data.total_balance : (parseFloat(data.total_balance) || 0);
             document.getElementById('totalBalance').innerHTML = `
-                ${total.toFixed(2)} ₽
+                ${formatCurrency(total)}
                 <div class="fs-6 text-muted mt-2">Общий баланс по всем кошелькам</div>
             `;
         } else {
@@ -563,7 +562,7 @@ function updateWalletSelects() {
                 const balance = typeof w.balance === 'number' ? w.balance : (parseFloat(w.balance) || 0);
                 const currency = String(w.currency || '').toLowerCase();
                 const symbol = currencySymbols[currency] || currency.toUpperCase();
-                return `<option value="${w.id}">${w.name} - ${balance.toFixed(2)} ${symbol}</option>`;
+                return `<option value="${w.id}">${w.name} - ${formatCurrency(balance)}</option>`;
             }).join('');
         }
     });
@@ -989,7 +988,7 @@ async function loadReport() {
                             <td>${typeIcon} <span class="${typeClass}">${typeLabel}</span></td>
                             <td>${walletName}</td>
                             <td>${t.category || t.description || '-'}</td>
-                            <td class="text-end ${typeClass}"><strong>${amount.toFixed(2)} ${symbol}</strong></td>
+                            <td class="text-end ${typeClass}"><strong>${formatCurrency(amount)}</strong></td>
                         </tr>
                     `;
                 }).join('');
@@ -1165,14 +1164,13 @@ async function openGroup(groupId) {
 
 // Отображение деталей группы с балансом
 function displayGroupDetails(groupData) {
+    console.log('[GROUP] Данные группы:', groupData);
+    console.log('[GROUP] member_balances:', groupData.member_balances);
     
-    // Обновляем заголовок модального окна
+    // Обновляем заголовок
     const modalTitle = document.getElementById('groupModalTitle');
     if (modalTitle) {
         modalTitle.textContent = groupData.name || 'Информация о группе';
-        console.log('[GROUP] Заголовок обновлен на:', groupData.name);
-    } else {
-        console.error('[GROUP] Элемент groupModalTitle не найден');
     }
     
     // Определяем создателя
@@ -1184,65 +1182,80 @@ function displayGroupDetails(groupData) {
     const creatorEl = document.getElementById('groupCreator');
     if (creatorEl) {
         creatorEl.textContent = creatorDisplay;
-    } else {
-        console.error('[GROUP] Элемент groupCreator не найден');
     }
     
     // Отображаем общий баланс
     const balanceElement = document.getElementById('groupTotalBalance');
     if (balanceElement) {
-        if (groupData.total_balance !== undefined && groupData.total_balance !== null) {
-            const balance = parseFloat(groupData.total_balance) || 0;
-            balanceElement.textContent = formatCurrency(balance);
-            balanceElement.className = 'card-title ' + (balance >= 0 ? 'text-success' : 'text-danger');
-        } else {
-            balanceElement.textContent = '0,00 ₽';
-            balanceElement.className = 'card-title text-muted';
-        }
-    } else {
-        console.error('[GROUP] Элемент groupTotalBalance не найден');
+        const balance = parseFloat(groupData.total_balance) || 0;
+        balanceElement.textContent = formatCurrency(balance, 'RUB');
     }
     
     // Обновляем количество участников
     const membersCountEl = document.getElementById('groupMembersCount');
-    if (membersCountEl) {
-        if (groupData.members && Array.isArray(groupData.members)) {
-            membersCountEl.textContent = groupData.members.length;
-            console.log('[GROUP] Количество участников:', groupData.members.length);
-        } else {
-            membersCountEl.textContent = '0';
-            console.log('[GROUP] members не массив');
-        }
-    } else {
-        console.error('[GROUP] Элемент groupMembersCount не найден');
+    if (membersCountEl && groupData.members) {
+        membersCountEl.textContent = groupData.members.length;
     }
     
-    // Отображаем участников
+    // Отображаем участников с балансами
     const membersList = document.getElementById('groupMembersList');
     if (membersList) {
+        // Создаем карту балансов
+        const balanceMap = {};
+        if (groupData.member_balances && Array.isArray(groupData.member_balances)) {
+            groupData.member_balances.forEach(mb => {
+                balanceMap[mb.login] = parseFloat(mb.effective_balance) || 0;
+            });
+        }
+        
         if (groupData.members && Array.isArray(groupData.members) && groupData.members.length > 0) {
             membersList.innerHTML = groupData.members.map(member => {
-                const isCurrentUser = member.id === currentUserId || member === currentUser;
-                const memberName = member.login || member;
-                return `<li class="list-group-item">
-                    ${memberName} ${isCurrentUser ? '⭐' : ''}
+                const isCurrentUser = member === currentUser;
+                const memberBalance = balanceMap[member] || 0;
+                
+                // Определяем цвет и жирность в зависимости от знака
+                let balanceClass;
+                let fontWeightClass;
+                
+                if (memberBalance > 0) {
+                    balanceClass = 'text-success';  // Зеленый для положительного
+                    fontWeightClass = 'fw-bold';    // Жирный для положительного
+                } else if (memberBalance < 0) {
+                    balanceClass = 'text-danger';   // Красный для отрицательного
+                    fontWeightClass = 'fw-bold';    // Жирный для отрицательного
+                } else {
+                    balanceClass = '';              // Черный для нулевого
+                    fontWeightClass = '';           // Нежирный для нулевого
+                }
+                
+                const formattedBalance = formatCurrency(memberBalance, 'RUB');
+                
+                return `<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>${member} ${isCurrentUser ? '⭐' : ''}</span>
+                    <span class="${balanceClass} ${fontWeightClass}">${formattedBalance}</span>
                 </li>`;
             }).join('');
         } else {
             membersList.innerHTML = '<li class="list-group-item text-muted">Нет участников</li>';
         }
-    } else {
-        console.error('[GROUP] Элемент groupMembersList не найден');
-    }
+}           
 }
 
-// Функция форматирования валюты
-function formatCurrency(amount) {
+// Функция форматирования валюты с параметром
+function formatCurrency(amount, currency = 'RUB') {
+    const currencyMap = {
+        'rub': 'RUB',
+        'usd': 'USD',
+        'eur': 'EUR',
+    };
+    
+    const currencyCode = currencyMap[currency.toLowerCase()] || currency.toUpperCase();
+    
     return new Intl.NumberFormat('ru-RU', {
         style: 'currency',
-        currency: 'RUB',
+        currency: currencyCode,
         minimumFractionDigits: 2,
-        maximumFractionDigits: 2
+        maximumFractionDigits: 2,
     }).format(amount);
 }
 

@@ -28,6 +28,12 @@ class GroupCreateSchema(BaseModel):
         return normalized
 
 
+class MemberBalanceSchema(BaseModel):
+    """Схема баланса участника группы."""
+    login: str
+    effective_balance: Decimal = Decimal("0")
+
+
 class GroupResponseSchema(BaseModel):
     model_config = {"from_attributes": True}
 
@@ -38,6 +44,7 @@ class GroupResponseSchema(BaseModel):
     members: list[str] = []
     created_at: datetime
     total_balance: Decimal = Decimal("0")
+    member_balances: list[MemberBalanceSchema] = []
 
     @field_validator("members", mode="before")
     @classmethod

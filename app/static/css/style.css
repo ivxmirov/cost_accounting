@@ -133,3 +133,7 @@ h1 {
 .group-row:active {
     background-color: #e9ecef !important;
 }
+
+#groupTotalBalance {
+    font-weight: 700;
+}
