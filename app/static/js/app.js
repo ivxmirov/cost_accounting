@@ -1149,7 +1149,7 @@ async function openGroup(groupId) {
         } else if (response.status === 401) {
             showError('Не авторизован');
         } else if (response.status === 403) {
-            showError('Вы не состоите в этой группе');
+            showError('Вы не являетесь участником этой группы');
         } else if (response.status === 404) {
             showError('Группа не найдена');
         } else {

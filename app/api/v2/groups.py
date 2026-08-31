@@ -25,3 +25,37 @@ async def get_group_v2(
     current_user: User = Depends(get_current_user),
 ):
     return await groups_service.get_user_group_by_id(db, current_user, group_id)
+
+
+@router.post(
+    path="/groups/{group_id}/wallets/{wallet_id}",
+    status_code=200,
+)
+async def attach_wallet_to_group_v2(
+    group_id: int,
+    wallet_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Прикрепляет кошелек к группе.
+    """
+    await groups_service.attach_wallet_to_group(db, current_user, group_id, wallet_id)
+    return {"message": "Кошелек прикреплен к группе"}
+
+
+@router.delete(
+    path="/groups/{group_id}/wallets/{wallet_id}",
+    status_code=200,
+)
+async def detach_wallet_from_group_v2(
+    group_id: int,
+    wallet_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Открепляет кошелек от группы.
+    """
+    await groups_service.detach_wallet_from_group(db, current_user, group_id, wallet_id)
+    return {"message": "Кошелек откреплен от группы"}

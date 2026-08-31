@@ -6,11 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import app.repository.users as users_repository
 from app.enum import CurrencyEnum
-from app.models import Group, User
+from app.models import Group, User, Wallet
 from app.repository import groups as groups_repository
 from app.repository.groups import is_user_in_group
 from app.schemas import GroupCreateSchema, GroupResponseSchema, MemberBalanceSchema
 from app.service import exchange_service
+from app.service.wallets import wallets_repository
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +131,7 @@ async def get_user_group_by_id(
 
     # Проверяем, является ли пользователь участником группы
     if not await is_user_in_group(db, current_user.id, group_id):
-        raise HTTPException(status_code=403, detail="Вы не состоите в этой группе")
+        raise HTTPException(status_code=403, detail="Вы не являетесь участником этой группы")
 
     total_balance: Decimal = await calculate_group_balance(db, group_id)
     member_balances = await calculate_member_balances(db, group_id)
@@ -170,7 +171,8 @@ async def calculate_wallet_effective_balance(wallet):
 
 
 async def calculate_member_balances(
-    db: AsyncSession, group_id: int,
+    db: AsyncSession,
+    group_id: int,
 ) -> list[MemberBalanceSchema]:
     """
     Рассчитывает эффективный баланс каждого участника группы.
@@ -226,7 +228,7 @@ async def calculate_group_balance(db: AsyncSession, group_id: int) -> Decimal:
     Returns:
         Общий баланс группы в рублях
     """
-    wallets = await groups_repository.get_group_wallets(db, group_id)
+    wallets: list[Wallet] = await groups_repository.get_group_wallets(db, group_id)
     total_balance = Decimal("0")
 
     for wallet in wallets:
@@ -235,39 +237,81 @@ async def calculate_group_balance(db: AsyncSession, group_id: int) -> Decimal:
     return total_balance
 
 
-# async def attach_wallet_to_group(
-#     db: AsyncSession, group_id: int, wallet_id: int,
-# ) -> None:
-#     """
-#     Прикрепляет кошелек к группе.
+async def attach_wallet_to_group(
+    db: AsyncSession,
+    current_user: User,
+    group_id: int,
+    wallet_id: int,
+) -> None:
+    """
+    Прикрепляет кошелек к группе.
 
-#     Args:
-#         db: Сессия БД
-#         group_id: ID группы
-#         wallet_id: ID кошелька
-#     """
-#     # Проверяем, что кошелек принадлежит участнику группы
-#     result = await db.execute(
-#         select(Group)
-#         .join(group_members)
-#         .join(Wallet)
-#         .where(
-#             Group.id == group_id,
-#             Wallet.id == wallet_id,
-#             Wallet.user_id == group_members.c.user_id,
-#         )
-#     )
+    Args:
+        db: Сессия БД
+        current_user: Текущий пользователь
+        group_id: ID группы
+        wallet_id: ID кошелька
 
-#     if not result.scalar_one_or_none():
-#         raise HTTPException(
-#             status_code=403,
-#             detail="Кошелек должен принадлежать участнику группы",
-#         )
+    Raises:
+        HTTPException: Если группа не найдена, кошелек не найден,
+                       пользователь не участник группы, или кошелек уже прикреплен
+    """
 
-#     # Вставляем связь
-#     await db.execute(
-#         group_wallets.insert().values(
-#             group_id=group_id,
-#             wallet_id=wallet_id,
-#         ),
-#     )
+    # Проверяем, существует ли группа
+    if not await groups_repository.get_group_by_id(db, group_id):
+        raise HTTPException(status_code=404, detail="Такой группы не существует")
+
+    # Проверяем, является ли пользователь участником группы
+    if not await groups_repository.is_user_in_group(db, current_user.id, group_id):
+        raise HTTPException(status_code=403, detail="Вы не являетесь участником этой группы")
+
+    # Проверяем, что кошелек принадлежит пользователю
+    if not await wallets_repository.get_wallet_by_id(db, current_user.id, wallet_id):
+        raise HTTPException(status_code=404, detail="У вас нет такого кошелька")
+
+    # Проверяем, не прикреплен ли уже кошелек к группе
+    if await groups_repository.is_wallet_attached_to_group(db, group_id, wallet_id):
+        raise HTTPException(status_code=400, detail="Кошелек уже прикреплен к этой группе")
+
+    # Если все проверки пройдены, прикрепляем кошелек к группе
+    await groups_repository.attach_wallet_to_group(db, group_id, wallet_id)
+
+
+async def detach_wallet_from_group(
+    db: AsyncSession,
+    current_user: User,
+    group_id: int,
+    wallet_id: int,
+) -> None:
+    """
+    Открепляет кошелек от группы.
+
+    Args:
+        db: Сессия БД
+        current_user: Текущий пользователь
+        group_id: ID группы
+        wallet_id: ID кошелька
+
+    Raises:
+        HTTPException: Если группа не найдена, кошелек не найден,
+                       пользователь не участник группы, или кошелек не прикреплен к группе
+    """
+
+    # Проверяем, существует ли группа
+    if not await groups_repository.get_group_by_id(db, group_id):
+        raise HTTPException(status_code=404, detail="Такой группы не существует")
+
+    # Проверяем, является ли пользователь участником группы
+    if not await groups_repository.is_user_in_group(db, current_user.id, group_id):
+        raise HTTPException(status_code=403, detail="Вы не являетесь участником этой группы")
+
+    # Проверяем, что кошелек принадлежит пользователю
+    if not await wallets_repository.get_wallet_by_id(db, current_user.id, wallet_id):
+        raise HTTPException(status_code=404, detail="У вас нет такого кошелька")
+
+    # Проверяем, прикреплен ли кошелек к этой группе
+    if not await groups_repository.is_wallet_attached_to_group(db, group_id, wallet_id):
+        raise HTTPException(status_code=400, detail="Кошелек не прикреплен к этой группе")
+
+    # Если все проверки пройдены, открепляем кошелек от группы
+    await groups_repository.detach_wallet_from_group(db, group_id, wallet_id)

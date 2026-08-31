@@ -98,6 +98,7 @@ async def attach_wallet_to_group(
             wallet_id=wallet_id,
         ),
     )
+    await db.commit()
 
 
 async def detach_wallet_from_group(
@@ -114,6 +115,7 @@ async def detach_wallet_from_group(
             group_wallets.c.wallet_id == wallet_id,
         ),
     )
+    await db.commit()
 
 
 async def get_group_wallets(
@@ -160,3 +162,29 @@ async def is_user_in_group(
     )
     result = await db.execute(stmt)
     return result.scalar() is not None
+
+
+async def is_wallet_attached_to_group(
+    db: AsyncSession,
+    group_id: int,
+    wallet_id: int,
+) -> bool:
+    """
+    Проверяет, прикреплен ли кошелек к группе.
+
+    Args:
+        db: Сессия БД
+        group_id: ID группы
+        wallet_id: ID кошелька
+
+    Returns:
+        True, если кошелек прикреплен к группе, иначе False
+    """
+    stmt = select(
+        exists().where(
+            group_wallets.c.group_id == group_id,
+            group_wallets.c.wallet_id == wallet_id,
+        ),
+    )
+    result = await db.execute(stmt)
+    return bool(result.scalar())

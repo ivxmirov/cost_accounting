@@ -30,6 +30,7 @@ class GroupCreateSchema(BaseModel):
 
 class MemberBalanceSchema(BaseModel):
     """Схема баланса участника группы."""
+
     login: str
     effective_balance: Decimal = Decimal("0")
 

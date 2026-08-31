@@ -12,7 +12,10 @@ from app.service import operations as operations_service
 
 @pytest.mark.parametrize("wallet_type", ["debit", "credit"])
 async def test_add_income_success(
-    db_session: AsyncSession, current_user, wallet_factory, wallet_type: str,
+    db_session: AsyncSession,
+    current_user,
+    wallet_factory,
+    wallet_type: str,
 ):
     wallet = await wallet_factory(wallet_type)
     wallet.balance = Decimal("50")
@@ -81,7 +84,10 @@ async def test_add_income_other_user(db_session: AsyncSession, wallet_factory, w
 
 @pytest.mark.parametrize("wallet_type", ["debit", "credit"])
 async def test_add_expense_success(
-    db_session: AsyncSession, current_user, wallet_factory, wallet_type,
+    db_session: AsyncSession,
+    current_user,
+    wallet_factory,
+    wallet_type,
 ):
     wallet = await wallet_factory(wallet_type)
     wallet.balance = Decimal("200")
@@ -150,7 +156,10 @@ async def test_add_expense_other_user(db_session: AsyncSession, wallet_factory, 
 
 @pytest.mark.parametrize("wallet_type", ["debit", "credit"])
 async def test_add_expense_insufficient_funds(
-    db_session: AsyncSession, current_user, wallet_factory, wallet_type,
+    db_session: AsyncSession,
+    current_user,
+    wallet_factory,
+    wallet_type,
 ):
     wallet = await wallet_factory(wallet_type)
     wallet.balance = Decimal("30")
