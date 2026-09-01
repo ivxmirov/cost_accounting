@@ -428,9 +428,12 @@ function renderWalletsTable() {
             ? (typeof w.credit_limit === 'number' ? w.credit_limit : (parseFloat(w.credit_limit) || 0))
             : null;
         
+        // Определяем жирность для баланса
+        const balanceFontWeight = balance === 0 ? '' : 'fw-bold';
+        
         return `
             <tr>
-                <td><strong>${w.name}</strong></td>
+                <td>${w.name}</td>
                 <td><span class="badge bg-secondary">${currency.toUpperCase()}</span></td>
                 <td>
                     ${isCredit 
@@ -439,10 +442,10 @@ function renderWalletsTable() {
                 </td>
                 <td class="text-end">
                     ${isCredit 
-                        ? `<strong>${formatCurrency(creditLimit)}</strong>` 
+                        ? `<strong>${creditLimit.toFixed(2)} ${symbol}</strong>` 
                         : '<span class="text-muted">—</span>'}
                 </td>
-                <td class="text-end"><strong>${formatCurrency(balance)}</strong></td>
+                <td class="text-end ${balanceFontWeight}">${balance.toFixed(2)} ${symbol}</td>
             </tr>
         `;
     }).join('');
@@ -1104,7 +1107,7 @@ function renderGroups(groups) {
         return `
             <tr class="group-row" data-group-id="${group.id}" style="cursor: pointer;" title="Открыть группу">
                 <td>
-                    <strong>${group.name}</strong>
+                    ${group.name}
                 </td>
                 <td>${creatorDisplay}</td>
                 <td>${relativeDate}</td>
