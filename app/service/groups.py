@@ -271,7 +271,7 @@ async def attach_wallet_to_group(
 
     # Проверяем, не прикреплен ли уже кошелек к группе
     if await groups_repository.is_wallet_attached_to_group(db, group_id, wallet_id):
-        raise HTTPException(status_code=400, detail="Кошелек уже прикреплен к этой группе")
+        raise HTTPException(status_code=400, detail="Кошелек уже прикреплен к группе")
 
     # Если все проверки пройдены, прикрепляем кошелек к группе
     await groups_repository.attach_wallet_to_group(db, group_id, wallet_id)
@@ -311,7 +311,7 @@ async def detach_wallet_from_group(
 
     # Проверяем, прикреплен ли кошелек к этой группе
     if not await groups_repository.is_wallet_attached_to_group(db, group_id, wallet_id):
-        raise HTTPException(status_code=400, detail="Кошелек не прикреплен к этой группе")
+        raise HTTPException(status_code=400, detail="Кошелек не прикреплен к группе")
 
     # Если все проверки пройдены, открепляем кошелек от группы
     await groups_repository.detach_wallet_from_group(db, group_id, wallet_id)

@@ -137,3 +137,13 @@ h1 {
 #groupTotalBalance {
     font-weight: 700;
 }
+
+.btn-orange {
+    background-color: #FF5722;
+    color: white;
+}
+
+.btn-orange:hover {
+    background-color: #E64A19;
+    color: white;
+}

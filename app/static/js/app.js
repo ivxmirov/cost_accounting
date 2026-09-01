@@ -236,7 +236,7 @@ async function loginAfterRegister(username, password) {
             localStorage.setItem('currentUser', currentUser);
             localStorage.setItem('currentUserId', currentUserId);
             
-            showSuccess('Вход выполнен успешно!');
+            showSuccess('Вход выполнен успешно');
             showMainSection();
         } else {
             const error = await response.json();
@@ -505,7 +505,7 @@ function renderOperationsTable() {
 async function updateTotalBalance() {
     if (wallets.length === 0) {
         document.getElementById('totalBalance').innerHTML = `
-            0.00 ₽
+            0,00 ₽
             <div class="fs-6 text-muted mt-2">Создайте кошелек для начала</div>
         `;
         return;
@@ -660,7 +660,7 @@ async function addWallet() {
         }
         
         if (response.ok) {
-            showSuccess('Кошелек успешно создан!');
+            showSuccess('Кошелек успешно создан');
             closeModal('addWalletModal');
             document.getElementById('walletName').value = '';
             document.getElementById('walletBalance').value = '0';
@@ -1162,8 +1162,15 @@ async function openGroup(groupId) {
     }
 }
 
+// Глобальная переменная для текущей группы
+let currentGroupId = null;
+
 // Отображение деталей группы с балансом
 function displayGroupDetails(groupData) {
+    // Сохраняем ID группы
+    currentGroupId = groupData.id;
+
+    console.log('[GROUP] Данные группы:', groupData);
     console.log('[GROUP] Данные группы:', groupData);
     console.log('[GROUP] member_balances:', groupData.member_balances);
     
@@ -1238,7 +1245,7 @@ function displayGroupDetails(groupData) {
         } else {
             membersList.innerHTML = '<li class="list-group-item text-muted">Нет участников</li>';
         }
-}           
+    }           
 }
 
 // Функция форматирования валюты с параметром
@@ -1350,7 +1357,7 @@ async function createGroup() {
         if (response.ok) {
             console.log('[GROUP] Группа создана:', data);
             
-            showSuccess('Группа успешно создана!');
+            showSuccess('Группа успешно создана');
             
             // Закрываем модалку создания
             const createModal = bootstrap.Modal.getInstance(document.getElementById('createGroupModal'));
@@ -1380,3 +1387,199 @@ async function createGroup() {
         showError('Ошибка подключения: ' + e.message);
     }
 }
+
+// Функция показа модалки прикрепления кошелька
+function showAttachWalletModal() {
+    if (!currentGroupId) {
+        showError('Группа не выбрана');
+        return;
+    }
+    
+    // Заполняем список кошельков
+    const select = document.getElementById('attachWalletSelect');
+    if (!select) {
+        showError('Модалка прикрепления не найдена');
+        return;
+    }
+    
+    if (wallets.length === 0) {
+        select.innerHTML = '<option value="">У вас нет кошельков</option>';
+    } else {
+        select.innerHTML = wallets.map(w => {
+            const balance = parseFloat(w.balance) || 0;
+            const currency = String(w.currency || 'rub').toLowerCase();
+            return `<option value="${w.id}">${w.name} - ${formatCurrency(balance, currency)}</option>`;
+        }).join('');
+    }
+    
+    // Показываем модалку
+    const modal = new bootstrap.Modal(document.getElementById('attachWalletModal'));
+    modal.show();
+}
+
+// Функция прикрепления кошелька к группе
+async function attachWalletToGroup() {
+    if (!currentGroupId) {
+        showError('Группа не выбрана');
+        return;
+    }
+    
+    const walletId = parseInt(document.getElementById('attachWalletSelect').value);
+    
+    if (!walletId) {
+        showError('Выберите кошелек');
+        return;
+    }
+    
+    try {
+        const response = await fetchWithAuth(
+            `${API_BASE_V2}/groups/${currentGroupId}/wallets/${walletId}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        
+        console.log('[ATTACH_WALLET] Статус:', response.status);
+        
+        if (response.ok) {
+            showSuccess('Кошелек прикреплен к группе!');
+            
+            // Закрываем модалку прикрепления
+            const attachModal = bootstrap.Modal.getInstance(document.getElementById('attachWalletModal'));
+            if (attachModal) {
+                attachModal.hide();
+            }
+            
+            // Обновляем информацию о группе
+            await viewGroup(currentGroupId);
+        } else {
+            const data = await response.json();
+            const errorMessage = extractErrorMessage(data, 'Ошибка прикрепления кошелька');
+            showError(errorMessage);
+        }
+    } catch (e) {
+        console.error('[ATTACH_WALLET] Ошибка:', e);
+        showError('Ошибка подключения: ' + e.message);
+    }
+}
+
+// Функция показа модалки открепления кошелька
+function showDetachWalletModal() {
+    if (!currentGroupId) {
+        showError('Группа не выбрана');
+        return;
+    }
+    
+    // Заполняем список кошельков
+    const select = document.getElementById('detachWalletSelect');
+    if (!select) {
+        showError('Модалка открепления не найдена');
+        return;
+    }
+    
+    if (wallets.length === 0) {
+        select.innerHTML = '<option value="">У вас нет кошельков</option>';
+    } else {
+        select.innerHTML = wallets.map(w => {
+            const balance = parseFloat(w.balance) || 0;
+            const currency = String(w.currency || 'rub').toLowerCase();
+            return `<option value="${w.id}">${w.name} - ${formatCurrency(balance, currency)}</option>`;
+        }).join('');
+    }
+    
+    // Показываем модалку
+    const modal = new bootstrap.Modal(document.getElementById('detachWalletModal'));
+    modal.show();
+}
+
+// Функция открепления кошелька от группы
+async function detachWalletFromGroup() {
+    if (!currentGroupId) {
+        showError('Группа не выбрана');
+        return;
+    }
+    
+    const walletId = parseInt(document.getElementById('detachWalletSelect').value);
+    
+    if (!walletId) {
+        showError('Выберите кошелек');
+        return;
+    }
+    
+    try {
+        const response = await fetchWithAuth(
+            `${API_BASE_V2}/groups/${currentGroupId}/wallets/${walletId}`,
+            {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        
+        console.log('[DETACH_WALLET] Статус:', response.status);
+        
+        if (response.ok) {
+            showSuccess('Кошелек откреплен от группы!');
+            
+            // Закрываем модалку открепления
+            const detachModal = bootstrap.Modal.getInstance(document.getElementById('detachWalletModal'));
+            if (detachModal) {
+                detachModal.hide();
+            }
+            
+            // Обновляем информацию о группе
+            await viewGroup(currentGroupId);
+        } else {
+            const data = await response.json();
+            const errorMessage = extractErrorMessage(data, 'Ошибка открепления кошелька');
+            showError(errorMessage);
+        }
+    } catch (e) {
+        console.error('[DETACH_WALLET] Ошибка:', e);
+        showError('Ошибка подключения: ' + e.message);
+    }
+}
+
+// Функция для просмотра группы
+async function viewGroup(groupId) {
+    currentGroupId = groupId;  // Сохраняем ID
+    
+    try {
+        const response = await fetchWithAuth(`${API_BASE_V2}/groups/${groupId}`);
+        
+        if (response.ok) {
+            const groupData = await response.json();
+            displayGroupDetails(groupData);
+            
+            const modal = new bootstrap.Modal(document.getElementById('groupDetailsModal'));
+            modal.show();
+        } else {
+            const errorData = await response.json();
+            showError(extractErrorMessage(errorData, 'Ошибка получения группы'));
+        }
+    } catch (e) {
+        console.error('[GROUP] Ошибка:', e);
+        showError('Ошибка подключения: ' + e.message);
+    }
+}
+
+// Обработчик для всех модалок
+document.addEventListener('hidden.bs.modal', function(event) {
+    // Проверяем, есть ли еще открытые модалки
+    const openModals = document.querySelectorAll('.modal.show');
+    
+    if (openModals.length === 0) {
+        // Если нет открытых модалок, очищаем backdrop
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
+        }
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    }
+});

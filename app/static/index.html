@@ -52,17 +52,17 @@
                 </div>
                 <div class="col-md-2 mb-2">
                     <button class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#addIncomeModal">
-                        ➕ Доход
+                        + Доход
                     </button>
                 </div>
                 <div class="col-md-2 mb-2">
                     <button class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
-                        ➖ Расход
+                        - Расход
                     </button>
                 </div>
                 <div class="col-md-2 mb-2">
                     <button class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#transferModal">
-                        ⇄ Перевод
+                        Перевод
                     </button>
                 </div>
                 <div class="col-md-3 mb-2">
@@ -173,7 +173,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">➕ Добавить доход</h5>
+                    <h5 class="modal-title">Добавить доход</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -203,7 +203,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">➖ Добавить расход</h5>
+                    <h5 class="modal-title">Добавить расход</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -237,7 +237,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">🔄 Перевести деньги</h5>
+                    <h5 class="modal-title">Перевести деньги</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -267,7 +267,7 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">📋 Отчет по операциям</h5>
+                    <h5 class="modal-title">Отчет по операциям</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -380,6 +380,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+
                     
                     <div class="row mb-3">
                         <div class="col">
@@ -391,13 +392,27 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Кнопки прикрепления и открепления кошелька -->
+                    <div class="row mb-3">
+                        <div class="col">
+                            <div class="d-flex justify-content-between">
+                                <button class="btn btn-primary btn-sm" onclick="showAttachWalletModal()">
+                                    Прикрепить кошелек
+                                </button>
+                                <button class="btn btn-orange btn-sm" onclick="showDetachWalletModal()">
+                                    Открепить кошелек
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="row mb-3">
                         <div class="col">
                             <h6 class="d-inline">Создатель:</h6> <span id="groupCreator"></span>
                         </div>
                     </div>
-                    
+                
                     <div class="row">
                         <div class="col">
                             <h6>Участники (<span id="groupMembersCount">0</span>):</h6>
@@ -405,8 +420,57 @@
                         </div>
                     </div>
                 </div>
+                
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка прикрепления кошелька -->
+    <div class="modal fade" id="attachWalletModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Прикрепить кошелек</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Выберите кошелек</label>
+                        <select class="form-select" id="attachWalletSelect">
+                            <option value="">Загрузка кошельков...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary me-auto" onclick="attachWalletToGroup()">Прикрепить</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка открепления кошелька -->
+    <div class="modal fade" id="detachWalletModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Открепить кошелек</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Выберите кошелек</label>
+                        <select class="form-select" id="detachWalletSelect">
+                            <option value="">Загрузка кошельков...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-orange me-auto" onclick="detachWalletFromGroup()">Открепить</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                 </div>
             </div>
         </div>
