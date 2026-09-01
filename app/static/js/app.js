@@ -1107,7 +1107,7 @@ function renderGroups(groups) {
         return `
             <tr class="group-row" data-group-id="${group.id}" style="cursor: pointer;" title="Открыть группу">
                 <td>
-                    ${group.name}
+                    <strong>${group.name}</strong>
                 </td>
                 <td>${creatorDisplay}</td>
                 <td>${relativeDate}</td>
@@ -1170,12 +1170,13 @@ let currentGroupId = null;
 
 // Отображение деталей группы с балансом
 function displayGroupDetails(groupData) {
+    
     // Сохраняем ID группы
     currentGroupId = groupData.id;
-
-    console.log('[GROUP] Данные группы:', groupData);
-    console.log('[GROUP] Данные группы:', groupData);
-    console.log('[GROUP] member_balances:', groupData.member_balances);
+    
+    // Определяем, является ли текущий пользователь создателем
+    // Пробуем разные варианты сравнения
+    const isCreator = groupData.creator_login === currentUser;
     
     // Обновляем заголовок
     const modalTitle = document.getElementById('groupModalTitle');
@@ -1183,8 +1184,7 @@ function displayGroupDetails(groupData) {
         modalTitle.textContent = groupData.name || 'Информация о группе';
     }
     
-    // Определяем создателя
-    const isCreator = groupData.creator_id === currentUserId || groupData.creator === currentUserId;
+    // Отображаем создателя
     const creatorDisplay = isCreator 
         ? `${groupData.creator_login || currentUser} ⭐` 
         : (groupData.creator_login || `Пользователь ${groupData.creator_id || groupData.creator}`);
@@ -1201,6 +1201,18 @@ function displayGroupDetails(groupData) {
         balanceElement.textContent = formatCurrency(balance, 'RUB');
     }
     
+    // Показываем/скрываем кнопки управления участниками (только для создателя)
+    const memberManagementButtons = document.getElementById('memberManagementButtons');
+    if (memberManagementButtons) {
+        memberManagementButtons.style.display = isCreator ? 'block' : 'none';
+    }
+    
+    // Показываем/скрываем кнопку "Удалить группу" (только для создателя)
+    const deleteGroupButton = document.getElementById('deleteGroupButton');
+    if (deleteGroupButton) {
+        deleteGroupButton.style.display = isCreator ? 'inline-block' : 'none';
+    }
+    
     // Обновляем количество участников
     const membersCountEl = document.getElementById('groupMembersCount');
     if (membersCountEl && groupData.members) {
@@ -1210,7 +1222,6 @@ function displayGroupDetails(groupData) {
     // Отображаем участников с балансами
     const membersList = document.getElementById('groupMembersList');
     if (membersList) {
-        // Создаем карту балансов
         const balanceMap = {};
         if (groupData.member_balances && Array.isArray(groupData.member_balances)) {
             groupData.member_balances.forEach(mb => {
@@ -1223,19 +1234,18 @@ function displayGroupDetails(groupData) {
                 const isCurrentUser = member === currentUser;
                 const memberBalance = balanceMap[member] || 0;
                 
-                // Определяем цвет и жирность в зависимости от знака
                 let balanceClass;
                 let fontWeightClass;
                 
                 if (memberBalance > 0) {
-                    balanceClass = 'text-success';  // Зеленый для положительного
-                    fontWeightClass = 'fw-bold';    // Жирный для положительного
+                    balanceClass = 'text-success';
+                    fontWeightClass = 'fw-bold';
                 } else if (memberBalance < 0) {
-                    balanceClass = 'text-danger';   // Красный для отрицательного
-                    fontWeightClass = 'fw-bold';    // Жирный для отрицательного
+                    balanceClass = 'text-danger';
+                    fontWeightClass = 'fw-bold';
                 } else {
-                    balanceClass = '';              // Черный для нулевого
-                    fontWeightClass = '';           // Нежирный для нулевого
+                    balanceClass = '';
+                    fontWeightClass = '';
                 }
                 
                 const formattedBalance = formatCurrency(memberBalance, 'RUB');
@@ -1248,7 +1258,7 @@ function displayGroupDetails(groupData) {
         } else {
             membersList.innerHTML = '<li class="list-group-item text-muted">Нет участников</li>';
         }
-    }           
+    }
 }
 
 // Функция форматирования валюты с параметром
@@ -1586,3 +1596,23 @@ document.addEventListener('hidden.bs.modal', function(event) {
         document.body.style.paddingRight = '';
     }
 });
+
+// Функция показа модалки добавления участника
+function showAddMemberModal() {
+    showError('Функция добавления участника в разработке');
+}
+
+// Функция показа модалки удаления участника
+function showRemoveMemberModal() {
+    showError('Функция удаления участника в разработке');
+}
+
+// Функция выхода из группы
+async function leaveGroup() {
+    showError('Функция выхода из группы в разработке');
+}
+
+// Функция удаления группы
+async function deleteGroup() {
+    showError('Функция удаления группы в разработке');
+}

@@ -59,3 +59,36 @@ async def detach_wallet_from_group_v2(
     """
     await groups_service.detach_wallet_from_group(db, current_user, group_id, wallet_id)
     return {"message": "Кошелек откреплен от группы"}
+
+
+@router.delete(
+    path="/groups/{group_id}/members/me",
+    status_code=200,
+)
+async def leave_group_v2(
+    group_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Выход текущего пользователя из группы.
+    """
+    await groups_service.leave_group(db, current_user, group_id)
+    return {"message": "Вы вышли из группы"}
+
+
+@router.delete(
+    path="/groups/{group_id}/members/{user_id}",
+    status_code=200,
+)
+async def remove_member_from_group_v2(
+    group_id: int,
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Удаление участника из группы.
+    """
+    await groups_service.remove_member_from_group(db, current_user, group_id, user_id)
+    return {"message": "Участник удален из группы"}

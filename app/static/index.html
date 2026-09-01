@@ -363,9 +363,9 @@
                         <div class="form-text">Укажите логины пользователей, которых хотите добавить в группу</div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <div class="modal-footer d-flex justify-content-between">
                     <button type="button" class="btn btn-purple" onclick="createGroup()">Создать</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                 </div>
             </div>
         </div>
@@ -396,12 +396,26 @@
                     <!-- Кнопки прикрепления и открепления кошелька -->
                     <div class="row mb-3">
                         <div class="col">
-                            <div class="d-flex justify-content-between">
-                                <button class="btn btn-primary btn-sm" onclick="showAttachWalletModal()">
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-primary btn-sm flex-fill" onclick="showAttachWalletModal()">
                                     Прикрепить кошелек
                                 </button>
-                                <button class="btn btn-orange btn-sm" onclick="showDetachWalletModal()">
+                                <button class="btn btn-orange btn-sm flex-fill" onclick="showDetachWalletModal()">
                                     Открепить кошелек
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Кнопки управления участниками (только для создателя) -->
+                    <div class="row mb-3" id="memberManagementButtons" style="display: none;">
+                        <div class="col">
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-success btn-sm flex-fill" onclick="showAddMemberModal()">
+                                    Добавить участника
+                                </button>
+                                <button class="btn btn-orange btn-sm flex-fill" onclick="showRemoveMemberModal()">
+                                    Удалить участника
                                 </button>
                             </div>
                         </div>
@@ -421,7 +435,15 @@
                     </div>
                 </div>
                 
-                <div class="modal-footer">
+                <div class="modal-footer d-flex justify-content-between">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-danger btn-sm" id="leaveGroupButton" onclick="leaveGroup()">
+                            Покинуть группу
+                        </button>
+                        <button class="btn btn-dark btn-sm" id="deleteGroupButton" onclick="deleteGroup()" style="display: none;">
+                            Удалить группу
+                        </button>
+                    </div>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
                 </div>
             </div>
@@ -444,8 +466,8 @@
                         </select>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary me-auto" onclick="attachWalletToGroup()">Прикрепить</button>
+                <div class="modal-footer d-flex justify-content-between">
+                    <button type="button" class="btn btn-primary" onclick="attachWalletToGroup()">Прикрепить</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                 </div>
             </div>
@@ -468,8 +490,8 @@
                         </select>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-orange me-auto" onclick="detachWalletFromGroup()">Открепить</button>
+                <div class="modal-footer d-flex justify-content-between">
+                    <button type="button" class="btn btn-orange" onclick="detachWalletFromGroup()">Открепить</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                 </div>
             </div>

@@ -108,6 +108,11 @@ async def detach_wallet_from_group(
 ) -> None:
     """
     Открепляет кошелек от группы.
+
+    Args:
+        db: Сессия БД
+        group_id: ID группы
+        wallet_id: ID кошелька
     """
     await db.execute(
         group_wallets.delete().where(
@@ -187,4 +192,52 @@ async def is_wallet_attached_to_group(
         ),
     )
     result = await db.execute(stmt)
-    return bool(result.scalar())
+    return result.scalar() is not None
+
+
+async def remove_member_from_group(
+    db: AsyncSession,
+    group_id: int,
+    user_id: int,
+) -> None:
+    """
+    Удаляет пользователя из группы.
+
+    Args:
+        db: Сессия БД
+        group_id: ID группы
+        user_id: ID пользователя
+    """
+    await db.execute(
+        group_members.delete().where(
+            group_members.c.group_id == group_id,
+            group_members.c.user_id == user_id,
+        ),
+    )
+    await db.commit()
+
+
+async def is_user_group_creator(
+    db: AsyncSession,
+    user_id: int,
+    group_id: int,
+) -> bool:
+    """
+    Проверяет, является ли пользователь создателем группы.
+
+    Args:
+        db: Сессия БД
+        group_id: ID группы
+        user_id: ID пользователя
+
+    Returns:
+        True, если пользователь является создателем группы, иначе False
+    """
+    stmt = select(
+        exists().where(
+            Group.id == group_id,
+            Group.creator == user_id,
+        ),
+    )
+    result = await db.execute(stmt)
+    return result.scalar() is not None
