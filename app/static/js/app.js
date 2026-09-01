@@ -434,8 +434,8 @@ function renderWalletsTable() {
                 <td><span class="badge bg-secondary">${currency.toUpperCase()}</span></td>
                 <td>
                     ${isCredit 
-                        ? '<span class="badge bg-warning text-dark">💳 Кредитный</span>' 
-                        : '<span class="badge bg-success">💵 Дебетовый</span>'}
+                        ? '<span class="badge bg-warning text-dark">Кредитный</span>' 
+                        : '<span class="badge bg-success">Дебетовый</span>'}
                 </td>
                 <td class="text-end">
                     ${isCredit 
@@ -520,7 +520,7 @@ async function updateTotalBalance() {
             const total = typeof data.total_balance === 'number' ? data.total_balance : (parseFloat(data.total_balance) || 0);
             document.getElementById('totalBalance').innerHTML = `
                 ${formatCurrency(total)}
-                <div class="fs-6 text-muted mt-2">Общий баланс по всем кошелькам</div>
+                <div class="fs-6 text-muted mt-2">Ваш баланс по всем кошелькам</div>
             `;
         } else {
             // Если запрос не удался - показываем 0
