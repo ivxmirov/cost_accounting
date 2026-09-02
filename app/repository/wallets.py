@@ -87,7 +87,6 @@ async def get_wallet_by_id_without_user_check(db: AsyncSession, wallet_id: int) 
     return result.scalar_one_or_none()
 
 
-
 async def delete_wallet_by_id(db: AsyncSession, wallet_id: int) -> None:
     """
     Удаляет кошелек по id.

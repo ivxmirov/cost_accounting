@@ -275,4 +275,3 @@ async def detach_user_wallets_from_group(
         ),
     )
     await db.commit()
-

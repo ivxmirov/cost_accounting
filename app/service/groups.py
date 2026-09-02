@@ -277,7 +277,6 @@ async def attach_wallet_to_group(
     await groups_repository.attach_wallet_to_group(db, group_id, wallet_id)
 
 
-
 async def detach_wallet_from_group(
     db: AsyncSession,
     current_user: User,
