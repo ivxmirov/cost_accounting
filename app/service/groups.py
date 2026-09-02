@@ -62,7 +62,7 @@ async def create_group(
             )
         members.append(user)
 
-    # 3. Убираем создателя из списка участников (безопасно по ID)
+    # 3. Убираем создателя из списка участников (безопасно по Уникальный идентификатор)
     other_members = [m for m in members if m.id != current_user.id]
 
     # 4. Проверяем, что остался хотя бы один участник помимо создателя группы
@@ -185,7 +185,7 @@ async def calculate_member_balances(
 
     Args:
         db: Сессия БД
-        group_id: ID группы
+        group_id: Уникальный идентификатор группы
 
     Returns:
         Список балансов участников, отсортированный по алфавиту
@@ -249,8 +249,8 @@ async def attach_wallet_to_group(
     Args:
         db: Сессия БД
         current_user: Текущий пользователь
-        group_id: ID группы
-        wallet_id: ID кошелька
+        group_id: Уникальный идентификатор группы
+        wallet_id: Уникальный идентификатор кошелька
 
     Raises:
         HTTPException: Если группа не найдена, кошелек не найден,
@@ -263,7 +263,7 @@ async def attach_wallet_to_group(
 
     # Проверяем, является ли пользователь участником группы
     if not await groups_repository.is_user_in_group(db, current_user.id, group_id):
-        raise HTTPException(status_code=403, detail="Вы не являетесь участником этой группы")
+        raise HTTPException(status_code=403, detail="Вы не являетесь участником группы")
 
     # Проверяем, что кошелек принадлежит пользователю
     if not await wallets_repository.get_wallet_by_id(db, current_user.id, wallet_id):
@@ -275,6 +275,7 @@ async def attach_wallet_to_group(
 
     # Если все проверки пройдены, прикрепляем кошелек к группе
     await groups_repository.attach_wallet_to_group(db, group_id, wallet_id)
+
 
 
 async def detach_wallet_from_group(
@@ -289,8 +290,8 @@ async def detach_wallet_from_group(
     Args:
         db: Сессия БД
         current_user: Текущий пользователь
-        group_id: ID группы
-        wallet_id: ID кошелька
+        group_id: Уникальный идентификатор группы
+        wallet_id: Уникальный идентификатор кошелька
 
     Raises:
         HTTPException: Если группа не найдена, кошелек не найден,
@@ -328,7 +329,7 @@ async def leave_group(
     Args:
         db: Сессия БД
         current_user: Текущий пользователь
-        group_id: ID группы
+        group_id: Уникальный идентификатор группы
 
     Raises:
         HTTPException: Если группа не найдена или пользователь не является участником группы
@@ -340,6 +341,9 @@ async def leave_group(
     # Проверяем, является ли пользователь участником группы
     if not await groups_repository.is_user_in_group(db, current_user.id, group_id):
         raise HTTPException(status_code=403, detail="Вы не являетесь участником этой группы")
+
+    # Открепляем кошельки пользователя от группы
+    await groups_repository.detach_user_wallets_from_group(db, group_id, current_user.id)
 
     # Если все проверки пройдены, текущий пользователь удаляется из группы
     await groups_repository.remove_member_from_group(db, group_id, current_user.id)
@@ -357,7 +361,8 @@ async def remove_member_from_group(
     Args:
         db: Сессия БД
         current_user: Текущий пользователь
-        group_id: ID группы
+        group_id: Уникальный идентификатор группы
+        user_id: Уникальный идентификатор удаляемого пользователя
 
     Raises:
         HTTPException: Если группа не найдена
@@ -369,10 +374,6 @@ async def remove_member_from_group(
     if not await groups_repository.get_group_by_id(db, group_id):
         raise HTTPException(status_code=404, detail="Такой группы не существует")
 
-    # Проверяем, является ли удаляемый пользователь участником группы
-    if not await groups_repository.is_user_in_group(db, current_user.id, group_id):
-        raise HTTPException(status_code=404, detail="Пользователь не является участником группы")
-
     # Проверяем, является ли текущий пользователь создателем группы
     if not await groups_repository.is_user_group_creator(db, current_user.id, group_id):
         raise HTTPException(status_code=403, detail="Вы не можете удалять участников группы")
@@ -380,6 +381,13 @@ async def remove_member_from_group(
     # Нельзя удалить самого себя
     if user_id == current_user.id:
         raise HTTPException(status_code=400, detail="Нельзя удалить самого себя")
+
+    # Проверяем, является ли удаляемый пользователь участником группы
+    if not await groups_repository.is_user_in_group(db, user_id, group_id):
+        raise HTTPException(status_code=404, detail="Пользователь не является участником группы")
+
+    # Открепляем кошельки пользователя от группы
+    await groups_repository.detach_user_wallets_from_group(db, group_id, user_id)
 
     # Если все проверки пройдены, пользователь удаляется из группы
     await groups_repository.remove_member_from_group(db, group_id, user_id)

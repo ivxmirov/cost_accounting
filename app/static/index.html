@@ -73,6 +73,11 @@
                 </div>
                 <div class="row mb-4">
                     <div class="col-md-3 mb-2">
+                        <button class="btn btn-orange w-100" data-bs-toggle="modal" data-bs-target="#deleteWalletModal">
+                            Удалить кошелек
+                        </button>
+                    </div>
+                    <div class="col-md-3 mb-2">
                         <button class="btn btn-purple w-100" onclick="loadGroups()">
                             Мои группы
                         </button>
@@ -300,6 +305,33 @@
                             </table>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка удаления кошелька -->
+    <div class="modal fade" id="deleteWalletModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Удалить кошелек</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        Внимание! При удалении кошелька будут удалены все связанные с ним операции!
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Выберите кошелек для удаления</label>
+                        <select class="form-select" id="deleteWalletSelect">
+                            <option value="">Загрузка кошельков...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer d-flex justify-content-between">
+                    <button type="button" class="btn btn-danger" onclick="deleteWallet()">Удалить</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                 </div>
             </div>
         </div>
@@ -560,6 +592,11 @@
             } else {
                 creditLimitField.style.display = 'none';
             }
+        });
+
+        // Обновляем список кошельков при открытии модалки удаления
+        document.getElementById('deleteWalletModal').addEventListener('show.bs.modal', function() {
+            updateDeleteWalletSelect();
         });
     </script>
 </body>

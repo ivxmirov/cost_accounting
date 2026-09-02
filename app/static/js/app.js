@@ -740,7 +740,7 @@ async function addIncome() {
         if (response.ok) {
             const data = await response.json();
             console.log('[INCOME] Успех:', data);
-            showSuccess('Доход добавлен!');
+            showSuccess('Доход добавлен');
             closeModal('addIncomeModal');
             document.getElementById('incomeAmount').value = '';
             document.getElementById('incomeDescription').value = '';
@@ -808,7 +808,7 @@ async function addExpense() {
         if (response.ok) {
             const data = await response.json();
             console.log('[EXPENSE] Успех:', data);
-            showSuccess('Расход добавлен!');
+            showSuccess('Расход добавлен');
             closeModal('addExpenseModal');
             document.getElementById('expenseAmount').value = '';
             document.getElementById('expenseCategory').value = '';
@@ -874,7 +874,7 @@ async function transfer() {
         if (response.ok) {
             const data = await response.json();
             console.log('[TRANSFER] Успех:', data);
-            showSuccess('Перевод выполнен!');
+            showSuccess('Перевод выполнен');
             closeModal('transferModal');
             document.getElementById('transferAmount').value = '';
             await loadAllData();
@@ -998,7 +998,7 @@ async function loadReport() {
             }
 
             document.getElementById('reportContent').style.display = 'block';
-            showSuccess('Отчет сформирован!');
+            showSuccess('Отчет сформирован');
         } else {
             const error = await response.json();
             showError(error.message || error.detail || 'Ошибка загрузки отчета');
@@ -1458,13 +1458,19 @@ async function attachWalletToGroup() {
         console.log('[ATTACH_WALLET] Статус:', response.status);
         
         if (response.ok) {
-            showSuccess('Кошелек прикреплен к группе!');
+            showSuccess('Кошелек прикреплен к группе');
             
             // Закрываем модалку прикрепления
-            const attachModal = bootstrap.Modal.getInstance(document.getElementById('attachWalletModal'));
+            const attachModalElement = document.getElementById('attachWalletModal');
+            const attachModal = bootstrap.Modal.getInstance(attachModalElement);
             if (attachModal) {
                 attachModal.hide();
             }
+            
+            // Небольшая задержка перед обновлением
+            setTimeout(async () => {
+                await viewGroup(currentGroupId);
+            }, 300);
             
             // Обновляем информацию о группе
             await viewGroup(currentGroupId);
@@ -1536,13 +1542,19 @@ async function detachWalletFromGroup() {
         console.log('[DETACH_WALLET] Статус:', response.status);
         
         if (response.ok) {
-            showSuccess('Кошелек откреплен от группы!');
+            showSuccess('Кошелек откреплен от группы');
             
             // Закрываем модалку открепления
-            const detachModal = bootstrap.Modal.getInstance(document.getElementById('detachWalletModal'));
+            const detachModalElement = document.getElementById('detachWalletModal');
+            const detachModal = bootstrap.Modal.getInstance(detachModalElement);
             if (detachModal) {
                 detachModal.hide();
             }
+            
+            // Небольшая задержка перед обновлением
+            setTimeout(async () => {
+                await viewGroup(currentGroupId);
+            }, 300);
             
             // Обновляем информацию о группе
             await viewGroup(currentGroupId);
@@ -1580,39 +1592,534 @@ async function viewGroup(groupId) {
     }
 }
 
-// Обработчик для всех модалок
+// Обработчик для всех модалок при скрытии
 document.addEventListener('hidden.bs.modal', function(event) {
-    // Проверяем, есть ли еще открытые модалки
-    const openModals = document.querySelectorAll('.modal.show');
-    
-    if (openModals.length === 0) {
-        // Если нет открытых модалок, очищаем backdrop
-        const backdrop = document.querySelector('.modal-backdrop');
-        if (backdrop) {
-            backdrop.remove();
+    // Небольшая задержка для плавного закрытия
+    setTimeout(() => {
+        // Проверяем, есть ли еще открытые модалки
+        const openModals = document.querySelectorAll('.modal.show');
+        
+        if (openModals.length === 0) {
+            // Удаляем ВСЕ backdrop'ы
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => backdrop.remove());
+            
+            // Восстанавливаем body
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
         }
-        document.body.classList.remove('modal-open');
-        document.body.style.overflow = '';
-        document.body.style.paddingRight = '';
+    }, 150); // Задержка 150мс для завершения анимации
+});
+
+// Обработчик для модалок при показе
+document.addEventListener('shown.bs.modal', function(event) {
+    // Убеждаемся, что backdrop только один
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    if (backdrops.length > 1) {
+        // Оставляем только последний backdrop
+        for (let i = 0; i < backdrops.length - 1; i++) {
+            backdrops[i].remove();
+        }
     }
 });
 
-// Функция показа модалки добавления участника
-function showAddMemberModal() {
-    showError('Функция добавления участника в разработке');
-}
-
-// Функция показа модалки удаления участника
-function showRemoveMemberModal() {
-    showError('Функция удаления участника в разработке');
-}
-
 // Функция выхода из группы
 async function leaveGroup() {
-    showError('Функция выхода из группы в разработке');
+    if (!currentGroupId) {
+        showError('Группа не выбрана');
+        return;
+    }
+    
+    // Подтверждение действия
+    if (!confirm('Вы уверены, что хотите покинуть группу?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetchWithAuth(
+            `${API_BASE_V2}/groups/${currentGroupId}/members/me`,
+            {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        
+        console.log('[LEAVE_GROUP] Статус:', response.status);
+        
+        if (response.ok) {
+            showSuccess('Вы вышли из группы');
+            
+            // Закрываем модалку группы
+            const groupModalElement = document.getElementById('groupDetailsModal');
+            const groupModal = bootstrap.Modal.getInstance(groupModalElement);
+            if (groupModal) {
+                groupModal.hide();
+            }
+            
+            // Закрываем модалку списка групп, если она открыта
+            const groupsModalElement = document.getElementById('groupsModal');
+            const groupsModal = bootstrap.Modal.getInstance(groupsModalElement);
+            if (groupsModal) {
+                groupsModal.hide();
+            }
+            
+            // Сбрасываем currentGroupId
+            currentGroupId = null;
+            
+            // Перезагружаем список групп
+            await loadGroups();
+        } else {
+            let errorMessage = 'Ошибка выхода из группы';
+            try {
+                const data = await response.json();
+                errorMessage = extractErrorMessage(data, errorMessage);
+            } catch (e) {
+                // Игнорируем ошибку парсинга
+            }
+            showError(errorMessage);
+        }
+    } catch (e) {
+        console.error('[LEAVE_GROUP] Ошибка:', e);
+        showError('Ошибка подключения: ' + e.message);
+    }
 }
 
 // Функция удаления группы
 async function deleteGroup() {
-    showError('Функция удаления группы в разработке');
+    if (!currentGroupId) {
+        showError('Группа не выбрана');
+        return;
+    }
+    
+    // Подтверждение действия
+    if (!confirm('Вы уверены, что хотите удалить группу? Это действие нельзя отменить.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetchWithAuth(
+            `${API_BASE_V2}/groups/${currentGroupId}`,
+            {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        
+        console.log('[DELETE_GROUP] Статус:', response.status);
+        
+        if (response.ok) {
+            showSuccess('Группа удалена');
+            
+            // Закрываем модалку группы
+            const groupModalElement = document.getElementById('groupDetailsModal');
+            const groupModal = bootstrap.Modal.getInstance(groupModalElement);
+            if (groupModal) {
+                groupModal.hide();
+            }
+            
+            // Закрываем модалку списка групп, если она открыта
+            const groupsModalElement = document.getElementById('groupsModal');
+            const groupsModal = bootstrap.Modal.getInstance(groupsModalElement);
+            if (groupsModal) {
+                groupsModal.hide();
+            }
+            
+            // Сбрасываем currentGroupId
+            currentGroupId = null;
+            
+            // Перезагружаем список групп
+            await loadGroups();
+        } else {
+            let errorMessage = 'Ошибка удаления группы';
+            try {
+                const data = await response.json();
+                errorMessage = extractErrorMessage(data, errorMessage);
+            } catch (e) {
+                // Игнорируем ошибку парсинга
+            }
+            showError(errorMessage);
+        }
+    } catch (e) {
+        console.error('[DELETE_GROUP] Ошибка:', e);
+        showError('Ошибка подключения: ' + e.message);
+    }
+}
+
+// Функция показа модалки добавления участника
+function showAddMemberModal() {
+    if (!currentGroupId) {
+        showError('Группа не выбрана');
+        return;
+    }
+    
+    // Создаем модалку динамически
+    const modalHTML = `
+        <div class="modal fade" id="addMemberModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Добавить участника</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Логин участника</label>
+                            <input type="text" class="form-control" id="newMemberLogin" placeholder="Введите логин">
+                        </div>
+                    </div>
+                    <div class="modal-footer d-flex justify-content-between">
+                        <button type="button" class="btn btn-success" onclick="addMemberToGroup()">Добавить</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Удаляем существующую модалку, если есть
+    const existingModal = document.getElementById('addMemberModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Добавляем новую модалку
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Показываем модалку
+    const modal = new bootstrap.Modal(document.getElementById('addMemberModal'));
+    modal.show();
+}
+
+// Функция добавления участника в группу
+async function addMemberToGroup() {
+    if (!currentGroupId) {
+        showError('Группа не выбрана');
+        return;
+    }
+    
+    const login = document.getElementById('newMemberLogin').value.trim();
+    
+    if (!login) {
+        showError('Введите логин участника');
+        return;
+    }
+    
+    try {
+        const response = await fetchWithAuth(
+            `${API_BASE_V2}/groups/${currentGroupId}/members`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ login: login })
+            }
+        );
+        
+        console.log('[ADD_MEMBER] Статус:', response.status);
+        
+        if (response.ok) {
+            showSuccess('Участник добавлен');
+            
+            // Закрываем модалку добавления
+            const addModalElement = document.getElementById('addMemberModal');
+            const addModal = bootstrap.Modal.getInstance(addModalElement);
+            if (addModal) {
+                addModal.hide();
+            }
+            
+            // Удаляем модалку из DOM
+            setTimeout(() => {
+                addModalElement.remove();
+            }, 300);
+            
+            // Обновляем информацию о группе
+            await viewGroup(currentGroupId);
+        } else {
+            let errorMessage = 'Ошибка добавления участника';
+            try {
+                const data = await response.json();
+                errorMessage = extractErrorMessage(data, errorMessage);
+            } catch (e) {
+                // Игнорируем ошибку парсинга
+            }
+            showError(errorMessage);
+        }
+    } catch (e) {
+        console.error('[ADD_MEMBER] Ошибка:', e);
+        showError('Ошибка подключения: ' + e.message);
+    }
+}
+
+// Функция показа модалки удаления участника
+function showRemoveMemberModal() {
+    if (!currentGroupId) {
+        showError('Группа не выбрана');
+        return;
+    }
+    
+    // Получаем список участников из текущей группы
+    const membersList = document.getElementById('groupMembersList');
+    if (!membersList) {
+        showError('Список участников не найден');
+        return;
+    }
+    
+    // Извлекаем логины участников из списка
+    const members = [];
+    const memberItems = membersList.querySelectorAll('li');
+    memberItems.forEach(item => {
+        const span = item.querySelector('span:first-child');
+        if (span) {
+            // Убираем звездочку у текущего пользователя
+            const login = span.textContent.replace('⭐', '').trim();
+            members.push(login);
+        }
+    });
+    
+    // Фильтруем текущего пользователя (нельзя удалить самого себя)
+    const availableMembers = members.filter(login => login !== currentUser);
+    
+    if (availableMembers.length === 0) {
+        showError('Нет участников для удаления');
+        return;
+    }
+    
+    // Создаем модалку динамически
+    const modalHTML = `
+        <div class="modal fade" id="removeMemberModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Удалить участника</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Выберите участника</label>
+                            <select class="form-select" id="removeMemberSelect">
+                                ${availableMembers.map(login => 
+                                    `<option value="${login}">${login}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer d-flex justify-content-between">
+                        <button type="button" class="btn btn-danger" onclick="removeMemberFromGroup()">Удалить</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Удаляем существующую модалку, если есть
+    const existingModal = document.getElementById('removeMemberModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Добавляем новую модалку
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Показываем модалку
+    const modal = new bootstrap.Modal(document.getElementById('removeMemberModal'));
+    modal.show();
+}
+
+// Функция удаления участника из группы
+async function removeMemberFromGroup() {
+    if (!currentGroupId) {
+        showError('Группа не выбрана');
+        return;
+    }
+    
+    const login = document.getElementById('removeMemberSelect').value;
+    
+    if (!login) {
+        showError('Выберите участника');
+        return;
+    }
+    
+    // Подтверждение действия
+    if (!confirm(`Вы уверены, что хотите удалить участника "${login}"?`)) {
+        return;
+    }
+    
+    try {
+        // Сначала получаем информацию о группе, чтобы найти ID пользователя
+        const groupResponse = await fetchWithAuth(`${API_BASE_V2}/groups/${currentGroupId}`);
+        
+        if (!groupResponse.ok) {
+            showError('Не удалось получить информацию о группе');
+            return;
+        }
+        
+        const groupData = await groupResponse.json();
+        
+        // Ищем пользователя по логину
+        // Предполагаем, что API возвращает members с id и login
+        let userId = null;
+        
+        if (groupData.members && Array.isArray(groupData.members)) {
+            // Если members - массив объектов с id и login
+            if (groupData.members[0] && typeof groupData.members[0] === 'object') {
+                const member = groupData.members.find(m => m.login === login);
+                if (member) {
+                    userId = member.id;
+                }
+            } else {
+                // Если members - массив строк (логинов), нужно получить id пользователя
+                // В этом случае можно попробовать другой подход
+                // Например, использовать email или другой идентификатор
+                console.log('[REMOVE_MEMBER] Members - массив строк, нужен id пользователя');
+                showError('Невозможно определить ID пользователя. Обратитесь к администратору.');
+                return;
+            }
+        }
+        
+        if (!userId) {
+            showError('Пользователь не найден');
+            return;
+        }
+        
+        const response = await fetchWithAuth(
+            `${API_BASE_V2}/groups/${currentGroupId}/members/${userId}`,
+            {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        
+        console.log('[REMOVE_MEMBER] Статус:', response.status);
+        
+        if (response.ok) {
+            showSuccess('Участник удален');
+            
+            // Закрываем модалку удаления
+            const removeModalElement = document.getElementById('removeMemberModal');
+            const removeModal = bootstrap.Modal.getInstance(removeModalElement);
+            if (removeModal) {
+                removeModal.hide();
+            }
+            
+            // Удаляем модалку из DOM
+            setTimeout(() => {
+                removeModalElement.remove();
+            }, 300);
+            
+            // Обновляем информацию о группе
+            await viewGroup(currentGroupId);
+        } else {
+            let errorMessage = 'Ошибка удаления участника';
+            try {
+                const data = await response.json();
+                errorMessage = extractErrorMessage(data, errorMessage);
+            } catch (e) {
+                // Игнорируем ошибку парсинга
+            }
+            showError(errorMessage);
+        }
+    } catch (e) {
+        console.error('[REMOVE_MEMBER] Ошибка:', e);
+        showError('Ошибка подключения: ' + e.message);
+    }
+}
+
+// Функция обновления списка кошельков в модалке удаления
+function updateDeleteWalletSelect() {
+    const select = document.getElementById('deleteWalletSelect');
+    if (!select) return;
+    
+    if (wallets.length === 0) {
+        select.innerHTML = '<option value="">У вас нет кошельков</option>';
+        return;
+    }
+    
+    const currencySymbols = {
+        'rub': '₽',
+        'usd': '$',
+        'eur': '€'
+    };
+    
+    select.innerHTML = wallets.map(w => {
+        const balance = parseFloat(w.balance) || 0;
+        const currency = String(w.currency || 'rub').toLowerCase();
+        const symbol = currencySymbols[currency] || currency.toUpperCase();
+        return `<option value="${w.id}">${w.name} - ${balance.toFixed(2)} ${symbol}</option>`;
+    }).join('');
+}
+
+// Функция удаления кошелька
+async function deleteWallet() {
+    if (!accessToken) {
+        showError('Сначала войдите в систему');
+        return;
+    }
+    
+    const walletId = parseInt(document.getElementById('deleteWalletSelect').value);
+    
+    if (!walletId) {
+        showError('Выберите кошелек для удаления');
+        return;
+    }
+    
+    // Находим кошелек для отображения в подтверждении
+    const wallet = wallets.find(w => w.id === walletId);
+    if (!wallet) {
+        showError('Кошелек не найден');
+        return;
+    }
+    
+    // Подтверждение удаления
+    if (!confirm(`Вы уверены, что хотите удалить кошелек "${wallet.name}"?\nВсе операции с этим кошельком будут удалены!`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetchWithAuth(`${API_BASE_V2}/wallets/${walletId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        console.log('[DELETE_WALLET] Статус:', response.status);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('[DELETE_WALLET] Успех:', data);
+            
+            showSuccess(data.message || 'Кошелек успешно удален');
+            
+            // Закрываем модалку
+            const modalElement = document.getElementById('deleteWalletModal');
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
+            
+            // Перезагружаем все данные
+            await loadAllData();
+        } else {
+            let errorMessage = 'Ошибка удаления кошелька';
+            try {
+                const errorData = await response.json();
+                errorMessage = extractErrorMessage(errorData, errorMessage);
+            } catch (e) {
+                // Игнорируем ошибку парсинга
+            }
+            showError(errorMessage);
+        }
+    } catch (e) {
+        console.error('[DELETE_WALLET] Ошибка:', e);
+        showError('Ошибка подключения: ' + e.message);
+    }
 }

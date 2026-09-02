@@ -133,3 +133,35 @@ async def get_wallet_by_name(
     wallet = await wallets_repository.get_wallet_by_name(db, current_user.id, wallet_name)
 
     return WalletResponseSchema.model_validate(wallet)
+
+
+async def delete_wallet_by_id(
+    db: AsyncSession,
+    current_user: User,
+    wallet_id: int,
+) -> dict:
+    """
+    Удаляет кошелек текущего пользователя.
+
+    Args:
+        db: Сессия базы данных
+        current_user: Текущий пользователь
+        wallet_id: Уникальный идентификатор кошелька
+
+    Returns:
+        dict: Сообщение об успешном удалении
+
+    Raises:
+        HTTPException: Если кошелек не найден
+    """
+    # Получаем кошелек по названию
+    wallet = await wallets_repository.get_wallet_by_id(db, current_user.id, wallet_id)
+
+    # Проверяем существование кошелька
+    if wallet is None:
+        raise HTTPException(status_code=404, detail="У вас нет такого кошелька")
+
+    # Удаляем кошелек
+    await wallets_repository.delete_wallet_by_id(db, wallet_id)
+
+    return {"message": "Кошелек удален"}

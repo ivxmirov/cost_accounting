@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.enum import CurrencyEnum, WalletType
@@ -85,3 +85,16 @@ async def get_wallet_by_id_without_user_check(db: AsyncSession, wallet_id: int) 
     """
     result = await db.execute(select(Wallet).where(Wallet.id == wallet_id))
     return result.scalar_one_or_none()
+
+
+
+async def delete_wallet_by_id(db: AsyncSession, wallet_id: int) -> None:
+    """
+    Удаляет кошелек по id.
+
+    Args:
+        db: Сессия БД
+        group_id: Уникальный идентификатор кошелька
+    """
+    await db.execute(delete(Wallet).where(Wallet.id == wallet_id))
+    await db.commit()

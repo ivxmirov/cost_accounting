@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.models import Group, User, Wallet, group_members, group_wallets
+from app.repository.wallets import get_user_wallets
 
 
 async def is_group_exist(db: AsyncSession, user_id: int, group_name: str) -> bool:
@@ -24,7 +25,7 @@ async def create_group(
 
     Args:
         db: Асинхронная сессия БД
-        creator_id: ID пользователя-админа
+        creator_id: Уникальный идентификатор пользователя-админа
         group_name: Название группы
 
     Returns:
@@ -71,7 +72,7 @@ async def get_user_groups(db: AsyncSession, user_id: int) -> list[Group]:
 
 
 async def get_group_by_id(db: AsyncSession, group_id: int) -> Group | None:
-    """Получает группу по ID без проверки прав пользователя"""
+    """Получает группу по Уникальный идентификатор без проверки прав пользователя"""
     result = await db.execute(
         select(Group).where(Group.id == group_id).options(selectinload(Group.members)),
     )
@@ -88,8 +89,8 @@ async def attach_wallet_to_group(
 
     Args:
         db: Сессия БД
-        group_id: ID группы
-        wallet_id: ID кошелька
+        group_id: Уникальный идентификатор группы
+        wallet_id: Уникальный идентификатор кошелька
     """
 
     await db.execute(
@@ -111,8 +112,8 @@ async def detach_wallet_from_group(
 
     Args:
         db: Сессия БД
-        group_id: ID группы
-        wallet_id: ID кошелька
+        group_id: Уникальный идентификатор группы
+        wallet_id: Уникальный идентификатор кошелька
     """
     await db.execute(
         group_wallets.delete().where(
@@ -132,7 +133,7 @@ async def get_group_wallets(
 
     Args:
         db: Сессия БД
-        group_id: ID группы
+        group_id: Уникальный идентификатор группы
 
     Returns:
         Список кошельков группы
@@ -153,8 +154,8 @@ async def is_user_in_group(
 
     Args:
         db: Сессия БД
-        user_id: ID пользователя
-        group_id: ID группы
+        user_id: Уникальный идентификатор пользователя
+        group_id: Уникальный идентификатор группы
 
     Returns:
         True, если пользователь состоит в группе, иначе False
@@ -166,55 +167,7 @@ async def is_user_in_group(
         ),
     )
     result = await db.execute(stmt)
-    return result.scalar() is not None
-
-
-async def is_wallet_attached_to_group(
-    db: AsyncSession,
-    group_id: int,
-    wallet_id: int,
-) -> bool:
-    """
-    Проверяет, прикреплен ли кошелек к группе.
-
-    Args:
-        db: Сессия БД
-        group_id: ID группы
-        wallet_id: ID кошелька
-
-    Returns:
-        True, если кошелек прикреплен к группе, иначе False
-    """
-    stmt = select(
-        exists().where(
-            group_wallets.c.group_id == group_id,
-            group_wallets.c.wallet_id == wallet_id,
-        ),
-    )
-    result = await db.execute(stmt)
-    return result.scalar() is not None
-
-
-async def remove_member_from_group(
-    db: AsyncSession,
-    group_id: int,
-    user_id: int,
-) -> None:
-    """
-    Удаляет пользователя из группы.
-
-    Args:
-        db: Сессия БД
-        group_id: ID группы
-        user_id: ID пользователя
-    """
-    await db.execute(
-        group_members.delete().where(
-            group_members.c.group_id == group_id,
-            group_members.c.user_id == user_id,
-        ),
-    )
-    await db.commit()
+    return bool(result.scalar())
 
 
 async def is_user_group_creator(
@@ -227,8 +180,8 @@ async def is_user_group_creator(
 
     Args:
         db: Сессия БД
-        group_id: ID группы
-        user_id: ID пользователя
+        group_id: Уникальный идентификатор группы
+        user_id: Уникальный идентификатор пользователя
 
     Returns:
         True, если пользователь является создателем группы, иначе False
@@ -240,4 +193,86 @@ async def is_user_group_creator(
         ),
     )
     result = await db.execute(stmt)
-    return result.scalar() is not None
+    return bool(result.scalar())
+
+
+async def is_wallet_attached_to_group(
+    db: AsyncSession,
+    group_id: int,
+    wallet_id: int,
+) -> bool:
+    """
+    Проверяет, прикреплен ли кошелек к группе.
+
+    Args:
+        db: Сессия БД
+        group_id: Уникальный идентификатор группы
+        wallet_id: Уникальный идентификатор кошелька
+
+    Returns:
+        True, если кошелек прикреплен к группе, иначе False
+    """
+    stmt = select(
+        exists().where(
+            group_wallets.c.group_id == group_id,
+            group_wallets.c.wallet_id == wallet_id,
+        ),
+    )
+    result = await db.execute(stmt)
+    return bool(result.scalar())
+
+
+async def remove_member_from_group(
+    db: AsyncSession,
+    group_id: int,
+    user_id: int,
+) -> None:
+    """
+    Удаляет пользователя из группы.
+
+    Args:
+        db: Сессия БД
+        group_id: Уникальный идентификатор группы
+        user_id: Уникальный идентификатор пользователя
+    """
+    await db.execute(
+        group_members.delete().where(
+            group_members.c.group_id == group_id,
+            group_members.c.user_id == user_id,
+        ),
+    )
+    await db.commit()
+
+
+async def detach_user_wallets_from_group(
+    db: AsyncSession,
+    group_id: int,
+    user_id: int,
+) -> None:
+    """
+    Открепляет все кошельки пользователя от группы.
+
+    Args:
+        db: Сессия БД
+        group_id: Уникальный идентификатор группы
+        user_id: Уникальный идентификатор пользователя
+    """
+    # Получаем все кошельки пользователя
+    user_wallets = await get_user_wallets(db, user_id)
+
+    # Если у пользователя нет кошельков, ничего не делаем
+    if not user_wallets:
+        return
+
+    # Получаем ID всех кошельков пользователя
+    wallet_ids = [wallet.id for wallet in user_wallets]
+
+    # Удаляем все связи кошельков пользователя с группой
+    await db.execute(
+        group_wallets.delete().where(
+            group_wallets.c.group_id == group_id,
+            group_wallets.c.wallet_id.in_(wallet_ids),
+        ),
+    )
+    await db.commit()
+
