@@ -4,6 +4,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import User
 
 
+async def get_all_users(db: AsyncSession) -> list[User]:
+    """
+    Получение списка всех пользователей.
+
+    Args:
+        db: Сессия БД
+
+    Returns:
+        list[User]: Список пользователей
+    """
+    result = await db.execute(select(User).order_by(User.login))
+    return list(result.scalars().all())
+
+
 async def get_user_by_login(db: AsyncSession, login: str) -> User | None:
     result = await db.execute(select(User).where(User.login == login))
     return result.scalar_one_or_none()

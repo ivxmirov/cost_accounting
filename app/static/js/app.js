@@ -1740,14 +1740,44 @@ async function deleteGroup() {
     }
 }
 
-// Функция показа модалки добавления участника
-function showAddMemberModal() {
+// Глобальная переменная для хранения всех пользователей
+let allUsers = [];
+
+// Функция загрузки всех пользователей
+async function loadAllUsers() {
+    try {
+        const response = await fetchWithAuth(`${API_BASE_V2}/users`);
+        
+        if (response.ok) {
+            allUsers = await response.json();
+            return allUsers;
+        }
+        return [];
+    } catch (e) {
+        console.error('[LOAD_USERS] Ошибка:', e);
+        return [];
+    }
+}
+
+// Функция показа модалки добавления участника с поиском
+async function showAddMemberModal() {
     if (!currentGroupId) {
         showError('Группа не выбрана');
         return;
     }
     
-    // Создаем модалку динамически
+    // Загружаем всех пользователей
+    const users = await loadAllUsers();
+    
+    // Фильтруем текущего пользователя
+    const availableUsers = users.filter(user => user.login !== currentUser);
+    
+    if (availableUsers.length === 0) {
+        showError('Нет доступных пользователей');
+        return;
+    }
+    
+    // Создаем модалку с поиском
     const modalHTML = `
         <div class="modal fade" id="addMemberModal" tabindex="-1">
             <div class="modal-dialog">
@@ -1758,13 +1788,31 @@ function showAddMemberModal() {
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label">Логин участника</label>
-                            <input type="text" class="form-control" id="newMemberLogin" placeholder="Введите логин">
+                            <label class="form-label">Поиск пользователя</label>
+                            <input type="text" class="form-control" id="userSearchInput" 
+                                   placeholder="Начните вводить логин..." 
+                                   autocomplete="off">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Выберите участника</label>
+                            <select class="form-select" id="newMemberSelect">
+                                <option value="">Выберите пользователя...</option>
+                                ${availableUsers.map(user => 
+                                    `<option value="${user.id}">${user.login}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div id="selectedUserInfo" class="alert alert-info" style="display: none;">
+                            Выбран: <strong id="selectedUserLogin"></strong>
                         </div>
                     </div>
                     <div class="modal-footer d-flex justify-content-between">
-                        <button type="button" class="btn btn-success" onclick="addMemberToGroup()">Добавить</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="button" class="btn btn-success" onclick="addMemberToGroup()" id="addMemberButton">
+                            Добавить
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Отмена
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1780,9 +1828,66 @@ function showAddMemberModal() {
     // Добавляем новую модалку
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     
+    // Получаем элементы
+    const searchInput = document.getElementById('userSearchInput');
+    const select = document.getElementById('newMemberSelect');
+    const addButton = document.getElementById('addMemberButton');
+    const selectedUserInfo = document.getElementById('selectedUserInfo');
+    const selectedUserLogin = document.getElementById('selectedUserLogin');
+    
+    // Обработчик поиска
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        
+        if (searchTerm === '') {
+            // Показываем всех пользователей
+            select.innerHTML = '<option value="">Выберите пользователя...</option>' + 
+                availableUsers.map(user => 
+                    `<option value="${user.id}">${user.login}</option>`
+                ).join('');
+        } else {
+            // Фильтруем пользователей
+            const filteredUsers = availableUsers.filter(user => 
+                user.login.toLowerCase().includes(searchTerm)
+            );
+            
+            if (filteredUsers.length === 0) {
+                select.innerHTML = '<option value="">Пользователи не найдены</option>';
+            } else {
+                select.innerHTML = '<option value="">Выберите пользователя...</option>' + 
+                    filteredUsers.map(user => 
+                        `<option value="${user.id}">${user.login}</option>`
+                    ).join('');
+            }
+        }
+        
+        // Сбрасываем выбор
+        selectedUserInfo.style.display = 'none';
+    });
+    
+    // Обработчик выбора пользователя
+    select.addEventListener('change', function() {
+        const selectedUserId = this.value;
+        
+        if (selectedUserId) {
+            const selectedUser = availableUsers.find(user => user.id == selectedUserId);
+            if (selectedUser) {
+                selectedUserLogin.textContent = selectedUser.login;
+                selectedUserInfo.style.display = 'block';
+            }
+        } else {
+            selectedUserInfo.style.display = 'none';
+        }
+    });
+    
     // Показываем модалку
     const modal = new bootstrap.Modal(document.getElementById('addMemberModal'));
     modal.show();
+    
+    // Фокусируемся на поиске
+    setTimeout(() => {
+        searchInput.focus();
+    }, 300);
 }
 
 // Функция добавления участника в группу
@@ -1792,49 +1897,61 @@ async function addMemberToGroup() {
         return;
     }
     
-    const login = document.getElementById('newMemberLogin').value.trim();
+    const select = document.getElementById('newMemberSelect');
+    const userId = parseInt(select.value);
     
-    if (!login) {
-        showError('Введите логин участника');
+    if (!userId) {
+        showError('Выберите участника из списка');
         return;
     }
     
+    // Находим логин для отображения
+    const user = allUsers.find(u => u.id === userId);
+    const login = user ? user.login : `ID:${userId}`;
+    
     try {
+        console.log('[ADD_MEMBER] Добавляем пользователя:', userId, login);
+        
         const response = await fetchWithAuth(
-            `${API_BASE_V2}/groups/${currentGroupId}/members`,
+            `${API_BASE_V2}/groups/${currentGroupId}/members/${userId}`,
             {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ login: login })
+                }
             }
         );
         
         console.log('[ADD_MEMBER] Статус:', response.status);
         
         if (response.ok) {
-            showSuccess('Участник добавлен');
+            const data = await response.json();
+            console.log('[ADD_MEMBER] Успех:', data);
             
-            // Закрываем модалку добавления
+            showSuccess(data.message || `Пользователь "${login}" добавлен в группу`);
+            
+            // Закрываем модалку
             const addModalElement = document.getElementById('addMemberModal');
             const addModal = bootstrap.Modal.getInstance(addModalElement);
             if (addModal) {
                 addModal.hide();
-        }
-    
+            }
+            
             // Удаляем модалку из DOM
-    setTimeout(() => {
-                addModalElement.remove();
-    }, 300);
+            setTimeout(() => {
+                if (addModalElement) {
+                    addModalElement.remove();
+                }
+            }, 300);
             
             // Обновляем информацию о группе
             await viewGroup(currentGroupId);
+            
         } else {
             let errorMessage = 'Ошибка добавления участника';
             try {
-                const data = await response.json();
-                errorMessage = extractErrorMessage(data, errorMessage);
+                const errorData = await response.json();
+                errorMessage = extractErrorMessage(errorData, errorMessage);
             } catch (e) {
                 // Игнорируем ошибку парсинга
             }
@@ -1843,6 +1960,24 @@ async function addMemberToGroup() {
     } catch (e) {
         console.error('[ADD_MEMBER] Ошибка:', e);
         showError('Ошибка подключения: ' + e.message);
+    }
+}
+
+// Функция поиска пользователя по логину
+async function searchUserByLogin(login) {
+    try {
+        const response = await fetchWithAuth(
+            `${API_BASE_V2}/users/search?login=${encodeURIComponent(login)}`
+        );
+        
+        if (response.ok) {
+            const user = await response.json();
+            return user ? user : null;
+        }
+        return null;
+    } catch (e) {
+        console.error('[SEARCH_USER] Ошибка:', e);
+        return null;
     }
 }
 
@@ -1942,44 +2077,17 @@ async function removeMemberFromGroup() {
     }
     
     try {
-        // Сначала получаем информацию о группе, чтобы найти ID пользователя
-        const groupResponse = await fetchWithAuth(`${API_BASE_V2}/groups/${currentGroupId}`);
+        // Шаг 1: Ищем пользователя по логину (так же, как при добавлении)
+        const user = await searchUserByLogin(login);
         
-        if (!groupResponse.ok) {
-            showError('Не удалось получить информацию о группе');
+        if (!user) {
+            showError(`Пользователь "${login}" не найден`);
             return;
         }
         
-        const groupData = await groupResponse.json();
-        
-        // Ищем пользователя по логину
-        // Предполагаем, что API возвращает members с id и login
-        let userId = null;
-        
-        if (groupData.members && Array.isArray(groupData.members)) {
-            // Если members - массив объектов с id и login
-            if (groupData.members[0] && typeof groupData.members[0] === 'object') {
-                const member = groupData.members.find(m => m.login === login);
-                if (member) {
-                    userId = member.id;
-                }
-            } else {
-                // Если members - массив строк (логинов), нужно получить id пользователя
-                // В этом случае можно попробовать другой подход
-                // Например, использовать email или другой идентификатор
-                console.log('[REMOVE_MEMBER] Members - массив строк, нужен id пользователя');
-                showError('Невозможно определить ID пользователя. Обратитесь к администратору.');
-                return;
-            }
-        }
-        
-        if (!userId) {
-            showError('Пользователь не найден');
-            return;
-        }
-        
+        // Шаг 2: Удаляем пользователя по ID
         const response = await fetchWithAuth(
-            `${API_BASE_V2}/groups/${currentGroupId}/members/${userId}`,
+            `${API_BASE_V2}/groups/${currentGroupId}/members/${user.id}`,
             {
                 method: 'DELETE',
                 headers: {
@@ -1991,7 +2099,8 @@ async function removeMemberFromGroup() {
         console.log('[REMOVE_MEMBER] Статус:', response.status);
         
         if (response.ok) {
-            showSuccess('Участник удален');
+            const data = await response.json();
+            showSuccess(data.message || `Пользователь "${login}" удален из группы`);
             
             // Закрываем модалку удаления
             const removeModalElement = document.getElementById('removeMemberModal');
@@ -2002,11 +2111,14 @@ async function removeMemberFromGroup() {
             
             // Удаляем модалку из DOM
             setTimeout(() => {
+                if (removeModalElement) {
                     removeModalElement.remove();
+                }
             }, 300);
             
             // Обновляем информацию о группе
             await viewGroup(currentGroupId);
+            
         } else {
             let errorMessage = 'Ошибка удаления участника';
             try {

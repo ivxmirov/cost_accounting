@@ -345,10 +345,10 @@ async def leave_group(
     await groups_repository.detach_user_wallets_from_group(db, group_id, current_user.id)
 
     # Если все проверки пройдены, текущий пользователь удаляется из группы
-    await groups_repository.remove_member_from_group(db, group_id, current_user.id)
+    await groups_repository.remove_user_from_group(db, group_id, current_user.id)
 
 
-async def add_member_to_group(
+async def add_user_to_group(
     db: AsyncSession,
     current_user: User,
     group_id: int,
@@ -374,7 +374,7 @@ async def add_member_to_group(
         raise HTTPException(status_code=404, detail="Такой группы не существует")
 
     # Проверяем, является ли текущий пользователь создателем группы
-    if not await groups_repository.is_user_group_creator(db, current_user.id, group_id):
+    if not await groups_repository.is_user_group_creator(db, group_id, current_user.id):
         raise HTTPException(status_code=403, detail="Вы не можете добавлять участников группы")
 
     # Проверяем, существует ли добавляемый пользователь
@@ -391,12 +391,12 @@ async def add_member_to_group(
         raise HTTPException(status_code=400, detail="Пользователь уже является участником группы")
 
     # Если все проверки пройдены, пользователь добавляется в группу
-    await groups_repository.add_member_to_group(db, group_id, user_id)
+    await groups_repository.add_user_to_group(db, group_id, user_id)
 
     return {"message": "Пользователь успешно добавлен в группу"}
 
 
-async def remove_member_from_group(
+async def remove_user_from_group(
     db: AsyncSession,
     current_user: User,
     group_id: int,
@@ -422,7 +422,7 @@ async def remove_member_from_group(
         raise HTTPException(status_code=404, detail="Такой группы не существует")
 
     # Проверяем, является ли текущий пользователь создателем группы
-    if not await groups_repository.is_user_group_creator(db, current_user.id, group_id):
+    if not await groups_repository.is_user_group_creator(db, group_id, current_user.id):
         raise HTTPException(status_code=403, detail="Вы не можете удалять участников группы")
 
     # Нельзя удалить самого себя
@@ -437,7 +437,7 @@ async def remove_member_from_group(
     await groups_repository.detach_user_wallets_from_group(db, group_id, user_id)
 
     # Если все проверки пройдены, пользователь удаляется из группы
-    await groups_repository.remove_member_from_group(db, group_id, user_id)
+    await groups_repository.remove_user_from_group(db, group_id, user_id)
 
     return {"message": "Пользователь успешно удален из группы"}
 
