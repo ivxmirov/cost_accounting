@@ -54,7 +54,7 @@ async def create_group(
     unique_logins = set(group_data.members_logins)
     members = []
     for login in unique_logins:
-        user = await users_repository.get_user(db, login)
+        user = await users_repository.get_user_by_login(db, login)
         if not user:
             raise HTTPException(
                 status_code=400,
@@ -348,12 +348,60 @@ async def leave_group(
     await groups_repository.remove_member_from_group(db, group_id, current_user.id)
 
 
+async def add_member_to_group(
+    db: AsyncSession,
+    current_user: User,
+    group_id: int,
+    user_id: int,
+) -> dict:
+    """
+    Добавляет пользователя в группу.
+
+    Args:
+        db: Сессия БД
+        current_user: Текущий пользователь
+        group_id: Уникальный идентификатор группы
+        user_id: Уникальный идентификатор добавляемого пользователя
+
+    Raises:
+        HTTPException: Если группа не найдена
+                       или добавляемый пользователь не найден,
+                       или текущий пользователь не является создателем группы
+    """
+
+    # Проверяем, существует ли группа
+    if not await groups_repository.get_group_by_id(db, group_id):
+        raise HTTPException(status_code=404, detail="Такой группы не существует")
+
+    # Проверяем, является ли текущий пользователь создателем группы
+    if not await groups_repository.is_user_group_creator(db, current_user.id, group_id):
+        raise HTTPException(status_code=403, detail="Вы не можете добавлять участников группы")
+
+    # Проверяем, существует ли добавляемый пользователь
+    user = await users_repository.get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    # Нельзя добавить самого себя
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Нельзя добавить самого себя")
+
+    # Проверяем, является ли добавляемый пользователь участником группы
+    if await groups_repository.is_user_in_group(db, user_id, group_id):
+        raise HTTPException(status_code=400, detail="Пользователь уже является участником группы")
+
+    # Если все проверки пройдены, пользователь добавляется в группу
+    await groups_repository.add_member_to_group(db, group_id, user_id)
+
+    return {"message": "Пользователь успешно добавлен в группу"}
+
+
 async def remove_member_from_group(
     db: AsyncSession,
     current_user: User,
     group_id: int,
     user_id: int,
-) -> None:
+) -> dict:
     """
     Удаление пользователя из группы создателем группы.
 
@@ -390,3 +438,38 @@ async def remove_member_from_group(
 
     # Если все проверки пройдены, пользователь удаляется из группы
     await groups_repository.remove_member_from_group(db, group_id, user_id)
+
+    return {"message": "Пользователь успешно удален из группы"}
+
+
+async def delete_group(
+    db: AsyncSession,
+    current_user: User,
+    group_id: int,
+) -> dict:
+    """
+    Удаляет группу.
+
+    Args:
+        db: Сессия базы данных
+        current_user: Текущий пользователь
+        group_id: Уникальный идентификатор группы
+
+    Returns:
+        dict: Сообщение об успешном удалении
+
+    Raises:
+        HTTPException: Если группа не найдена
+                       или текущий пользователь не является создателем группы
+    """
+    group = await groups_repository.get_group_by_id(db, group_id)
+
+    if group is None:
+        raise HTTPException(status_code=404, detail="Такой группы не существует")
+
+    if not await groups_repository.is_user_group_creator(db, group_id, current_user.id):
+        raise HTTPException(status_code=403, detail="Только создатель группы может удалить ее")
+
+    await groups_repository.delete_group(db, group_id)
+
+    return {"message": "Группа удалена"}

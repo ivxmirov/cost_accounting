@@ -39,7 +39,7 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail=str(e))
 
     # Ищем пользователя по логину из токена
-    user = await users_repository.get_user(db, login)
+    user = await users_repository.get_user_by_login(db, login)
 
     if not user:
         raise HTTPException(status_code=401, detail="User not found")

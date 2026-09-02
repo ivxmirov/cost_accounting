@@ -18,7 +18,7 @@ async def login(db: AsyncSession, request: LoginRequest) -> TokenResponse:
     Raises:
         HTTPException: Если логин или пароль неверны (401)
     """
-    user = await users_repository.get_user(db, request.login)
+    user = await users_repository.get_user_by_login(db, request.login)
     if (
         not user
         or not user.password_hash
@@ -55,7 +55,7 @@ async def refresh_token(db: AsyncSession, request: RefreshRequest) -> TokenRespo
             raise HTTPException(status_code=401, detail="Invalid token")
     except ValueError:
         raise HTTPException(status_code=401, detail="Invalid token")
-    user = await users_repository.get_user(db, login)
+    user = await users_repository.get_user_by_login(db, login)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid token")
     token_data = {"sub": user.login}

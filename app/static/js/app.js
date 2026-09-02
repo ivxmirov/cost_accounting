@@ -1466,12 +1466,7 @@ async function attachWalletToGroup() {
             if (attachModal) {
                 attachModal.hide();
             }
-            
-            // Небольшая задержка перед обновлением
-            setTimeout(async () => {
-                await viewGroup(currentGroupId);
-            }, 300);
-            
+                      
             // Обновляем информацию о группе
             await viewGroup(currentGroupId);
         } else {
@@ -1550,12 +1545,7 @@ async function detachWalletFromGroup() {
             if (detachModal) {
                 detachModal.hide();
             }
-            
-            // Небольшая задержка перед обновлением
-            setTimeout(async () => {
-                await viewGroup(currentGroupId);
-            }, 300);
-            
+                       
             // Обновляем информацию о группе
             await viewGroup(currentGroupId);
         } else {
@@ -1727,7 +1717,7 @@ async function deleteGroup() {
             const groupsModal = bootstrap.Modal.getInstance(groupsModalElement);
             if (groupsModal) {
                 groupsModal.hide();
-            }
+                }
             
             // Сбрасываем currentGroupId
             currentGroupId = null;
@@ -1831,12 +1821,12 @@ async function addMemberToGroup() {
             const addModal = bootstrap.Modal.getInstance(addModalElement);
             if (addModal) {
                 addModal.hide();
-            }
-            
+        }
+    
             // Удаляем модалку из DOM
-            setTimeout(() => {
+    setTimeout(() => {
                 addModalElement.remove();
-            }, 300);
+    }, 300);
             
             // Обновляем информацию о группе
             await viewGroup(currentGroupId);
@@ -2012,7 +2002,7 @@ async function removeMemberFromGroup() {
             
             // Удаляем модалку из DOM
             setTimeout(() => {
-                removeModalElement.remove();
+                    removeModalElement.remove();
             }, 300);
             
             // Обновляем информацию о группе
@@ -2120,6 +2110,73 @@ async function deleteWallet() {
         }
     } catch (e) {
         console.error('[DELETE_WALLET] Ошибка:', e);
+        showError('Ошибка подключения: ' + e.message);
+    }
+}
+
+// Функция удаления группы
+async function deleteGroup() {
+    if (!currentGroupId) {
+        showError('Группа не выбрана');
+        return;
+    }
+    
+    // Подтверждение удаления
+    if (!confirm('Вы уверены, что хотите удалить группу?\n\nВнимание!\n- Все участники будут исключены из группы\n- Все прикрепленные кошельки будут откреплены\n- Это действие нельзя отменить!')) {
+        return;
+    }
+    
+    try {
+        const response = await fetchWithAuth(
+            `${API_BASE_V2}/groups/${currentGroupId}`,
+            {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        
+        console.log('[DELETE_GROUP] Статус:', response.status);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('[DELETE_GROUP] Успех:', data);
+            
+            showSuccess(data.message || 'Группа успешно удалена');
+            
+            // Закрываем модалку группы
+            const groupModalElement = document.getElementById('groupDetailsModal');
+            const groupModal = bootstrap.Modal.getInstance(groupModalElement);
+            if (groupModal) {
+                groupModal.hide();
+            }
+            
+            // Закрываем модалку списка групп, если она открыта
+            const groupsModalElement = document.getElementById('groupsModal');
+            const groupsModal = bootstrap.Modal.getInstance(groupsModalElement);
+            if (groupsModal) {
+                groupsModal.hide();
+            }
+            
+            // Сбрасываем currentGroupId
+            currentGroupId = null;
+            
+            // Перезагружаем список групп
+            await loadGroups();
+            
+        } else {
+            let errorMessage = 'Ошибка удаления группы';
+            try {
+                const errorData = await response.json();
+                errorMessage = extractErrorMessage(errorData, errorMessage);
+            } catch (e) {
+                // Игнорируем ошибку парсинга
+            }
+            showError(errorMessage);
+        }
+    } catch (e) {
+        console.error('[DELETE_GROUP] Ошибка:', e);
         showError('Ошибка подключения: ' + e.message);
     }
 }

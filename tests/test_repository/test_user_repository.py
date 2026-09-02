@@ -15,7 +15,7 @@ async def test_create_user_success(db_session: AsyncSession):
 
 
 async def test_get_user_success(db_session: AsyncSession, current_user):
-    expected_user = await users_repository.get_user(db_session, current_user.login)
+    expected_user = await users_repository.get_user_by_login(db_session, current_user.login)
 
     assert expected_user is not None
     assert current_user.login == expected_user.login

@@ -92,3 +92,19 @@ async def remove_member_from_group_v2(
     """
     await groups_service.remove_member_from_group(db, current_user, group_id, user_id)
     return {"message": "Участник удален из группы"}
+
+
+@router.delete(
+    path="/groups/{group_id}",
+    status_code=200,
+)
+async def delete_group_v2(
+    group_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Удаление группы.
+    """
+    result = await groups_service.delete_group(db, current_user, group_id)
+    return result

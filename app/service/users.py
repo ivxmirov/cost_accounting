@@ -18,7 +18,7 @@ async def create_user(db: AsyncSession, login: str, password: str) -> UserRespon
     Raises:
         HTTPException: Если пользователь с таким логином уже существует
     """
-    if await users_repository.get_user(db, login):
+    if await users_repository.get_user_by_login(db, login):
         raise HTTPException(status_code=400, detail="Пользователь с таким логином уже существует")
     password_hash = hash_password(password)
     user = await users_repository.create_user(db, login, password_hash)

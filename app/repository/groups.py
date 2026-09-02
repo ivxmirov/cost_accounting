@@ -1,4 +1,4 @@
-from sqlalchemy import exists, select
+from sqlalchemy import delete, exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -72,7 +72,7 @@ async def get_user_groups(db: AsyncSession, user_id: int) -> list[Group]:
 
 
 async def get_group_by_id(db: AsyncSession, group_id: int) -> Group | None:
-    """Получает группу по Уникальный идентификатор без проверки прав пользователя"""
+    """Получает группу по id без проверки прав пользователя"""
     result = await db.execute(
         select(Group).where(Group.id == group_id).options(selectinload(Group.members)),
     )
@@ -172,8 +172,8 @@ async def is_user_in_group(
 
 async def is_user_group_creator(
     db: AsyncSession,
-    user_id: int,
     group_id: int,
+    user_id: int,
 ) -> bool:
     """
     Проверяет, является ли пользователь создателем группы.
@@ -274,4 +274,16 @@ async def detach_user_wallets_from_group(
             group_wallets.c.wallet_id.in_(wallet_ids),
         ),
     )
+    await db.commit()
+
+
+async def delete_group(db: AsyncSession, group_id: int) -> None:
+    """
+    Удаляет группу.
+
+    Args:
+        db: Сессия БД
+        group_id: Уникальный идентификатор группы
+    """
+    await db.execute(delete(Group).where(Group.id == group_id))
     await db.commit()
