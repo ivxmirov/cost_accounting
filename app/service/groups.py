@@ -242,7 +242,7 @@ async def attach_wallet_to_group(
     current_user: User,
     group_id: int,
     wallet_id: int,
-) -> None:
+) -> Group | None:
     """
     Прикрепляет кошелек к группе.
 
@@ -276,13 +276,17 @@ async def attach_wallet_to_group(
     # Если все проверки пройдены, прикрепляем кошелек к группе
     await groups_repository.attach_wallet_to_group(db, group_id, wallet_id)
 
+    # Возвращаем обновленную группу
+    updated_group = await groups_repository.get_group_by_id(db, group_id)
+    return updated_group
+
 
 async def detach_wallet_from_group(
     db: AsyncSession,
     current_user: User,
     group_id: int,
     wallet_id: int,
-) -> None:
+) -> Group | None:
     """
     Открепляет кошелек от группы.
 
@@ -315,6 +319,10 @@ async def detach_wallet_from_group(
 
     # Если все проверки пройдены, открепляем кошелек от группы
     await groups_repository.detach_wallet_from_group(db, group_id, wallet_id)
+
+    # Возвращаем обновленную группу
+    updated_group = await groups_repository.get_group_by_id(db, group_id)
+    return updated_group
 
 
 async def leave_group(

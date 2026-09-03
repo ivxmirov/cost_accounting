@@ -61,7 +61,7 @@ async def detach_wallet_from_group_v2(
     """
     Открепляет кошелек от группы.
     """
-    updated_group = await groups_service.attach_wallet_to_group(
+    updated_group = await groups_service.detach_wallet_from_group(
         db, current_user, group_id, wallet_id
     )
     return updated_group
