@@ -35,29 +35,6 @@ class MemberBalanceSchema(BaseModel):
     effective_balance: Decimal = Decimal("0")
 
 
-class GroupResponseSchema(BaseModel):
-    model_config = {"from_attributes": True}
-
-    id: int
-    name: str
-    creator: int | None = None
-    creator_login: str | None = None
-    members: list[str] = []
-    created_at: datetime
-    total_balance: Decimal = Decimal("0")
-    member_balances: list[MemberBalanceSchema] = []
-
-    @field_validator("members", mode="before")
-    @classmethod
-    def extract_member_logins(cls, v):
-        """Извлекает логины из объектов User"""
-        if not v:
-            return []
-        if isinstance(v, list) and v and hasattr(v[0], "login"):
-            return [member.login for member in v]
-        return v
-
-
 class OperationRequest(BaseModel):
     wallet_name: str = Field(..., max_length=127)
     amount: Decimal
@@ -141,6 +118,31 @@ class WalletResponseSchema(BaseModel):
     currency: CurrencyEnum
     type: WalletType
     credit_limit: Decimal | None
+    user_id: int
+
+
+class GroupResponseSchema(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    name: str
+    creator: int | None = None
+    creator_login: str | None = None
+    members: list[str] = []
+    created_at: datetime
+    total_balance: Decimal = Decimal("0")
+    member_balances: list[MemberBalanceSchema] = []
+    wallets: list[WalletResponseSchema] = []
+
+    @field_validator("members", mode="before")
+    @classmethod
+    def extract_member_logins(cls, v):
+        """Извлекает логины из объектов User"""
+        if not v:
+            return []
+        if isinstance(v, list) and v and hasattr(v[0], "login"):
+            return [member.login for member in v]
+        return v
 
 
 class OperationResponse(BaseModel):

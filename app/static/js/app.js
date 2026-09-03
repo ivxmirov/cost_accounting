@@ -1345,6 +1345,8 @@ function displayGroupDetails(groupData) {
         membersCountEl.textContent = groupData.members.length;
     }
    
+    displayMyGroupWallets(groupData);
+
     // Отображаем участников с балансами
     const membersList = document.getElementById('groupDetailsMembersList');
     if (membersList) {
@@ -2443,4 +2445,74 @@ async function deleteGroup() {
         console.error('[DELETE_GROUP] Ошибка:', e);
         showError('Ошибка подключения: ' + e.message);
     }
+}
+
+// Функция отображения кошельков пользователя в группе
+function displayMyGroupWallets(groupData) {
+    const container = document.getElementById('myGroupWallets');
+    if (!container) {
+        console.error('[MY_WALLETS] Элемент myGroupWallets не найден');
+        return;
+    }
+    
+    if (groupData.wallets && Array.isArray(groupData.wallets)) {
+        console.log('[MY_WALLETS] Количество кошельков:', groupData.wallets.length);
+        groupData.wallets.forEach((wallet, index) => {
+            console.log(`[MY_WALLETS] Кошелек ${index}:`, wallet);
+            console.log(`[MY_WALLETS] Поля:`, Object.keys(wallet));
+        });
+    }
+    
+    // Получаем кошельки группы
+    const groupWallets = groupData.wallets || [];
+    
+    // Фильтруем кошельки текущего пользователя
+    const myWallets = groupWallets.filter(wallet => {
+        return wallet.user_id === currentUserId || 
+               wallet.owner_id === currentUserId || 
+               wallet.creator_id === currentUserId;
+    });
+    
+    if (myWallets.length === 0) {
+        container.innerHTML = '<div class="text-muted p-3">Вы пока не прикрепили ни одного кошелька</div>';
+        return;
+    }
+    
+    // Таблица с кошельками
+    const currencySymbols = {
+        'rub': '₽',
+        'usd': '$',
+        'eur': '€'
+    };
+    
+    container.innerHTML = `
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Валюта</th>
+                    <th>Тип</th>
+                    <th class="text-end">Баланс</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${myWallets.map(wallet => {
+                    const balance = parseFloat(wallet.balance) || 0;
+                    const currency = String(wallet.currency || 'rub').toLowerCase();
+                    const symbol = currencySymbols[currency] || currency.toUpperCase();
+                    const walletType = wallet.type || wallet.wallet_type || 'debit';
+                    const isCredit = walletType === 'credit';
+                    
+                    return `
+                        <tr>
+                            <td>${wallet.name || 'Кошелек'}</td>
+                            <td><span class="badge bg-secondary">${currency.toUpperCase()}</span></td>
+                            <td>${isCredit ? 'Кредитный' : 'Дебетовый'}</td>
+                            <td class="text-end">${balance.toFixed(2)} ${symbol}</td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
 }
