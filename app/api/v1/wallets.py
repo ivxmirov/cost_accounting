@@ -32,3 +32,19 @@ async def get_user_wallets(
     current_user: User = Depends(get_current_user),
 ):
     return await wallets_service.get_user_wallets(db, current_user)
+
+
+@router.delete(
+    path="/wallets/{wallet_id}",
+    status_code=200,
+)
+async def delete_wallet(
+    wallet_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Удаляет кошелек текущего пользователя по ID.
+    """
+    result = await wallets_service.delete_wallet_by_id(db, current_user, wallet_id)
+    return result

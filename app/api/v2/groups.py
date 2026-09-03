@@ -30,6 +30,7 @@ async def get_group_v2(
 @router.post(
     path="/groups/{group_id}/wallets/{wallet_id}",
     status_code=200,
+    response_model=GroupResponseSchema,
 )
 async def attach_wallet_to_group_v2(
     group_id: int,
@@ -40,13 +41,16 @@ async def attach_wallet_to_group_v2(
     """
     Прикрепляет кошелек к группе.
     """
-    await groups_service.attach_wallet_to_group(db, current_user, group_id, wallet_id)
-    return {"message": "Кошелек прикреплен к группе"}
+    updated_group = await groups_service.attach_wallet_to_group(
+        db, current_user, group_id, wallet_id
+    )
+    return updated_group
 
 
 @router.delete(
     path="/groups/{group_id}/wallets/{wallet_id}",
     status_code=200,
+    response_model=GroupResponseSchema,
 )
 async def detach_wallet_from_group_v2(
     group_id: int,
@@ -57,8 +61,10 @@ async def detach_wallet_from_group_v2(
     """
     Открепляет кошелек от группы.
     """
-    await groups_service.detach_wallet_from_group(db, current_user, group_id, wallet_id)
-    return {"message": "Кошелек откреплен от группы"}
+    updated_group = await groups_service.attach_wallet_to_group(
+        db, current_user, group_id, wallet_id
+    )
+    return updated_group
 
 
 @router.delete(

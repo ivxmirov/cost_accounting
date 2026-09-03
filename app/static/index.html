@@ -78,7 +78,7 @@
                         </button>
                     </div>
                     <div class="col-md-3 mb-2">
-                        <button class="btn btn-purple w-100" onclick="loadGroups()">
+                        <button class="btn btn-purple w-100" onclick="openGroupsModal()">
                             Мои группы
                         </button>
                     </div>
@@ -389,10 +389,27 @@
                         <label for="groupName" class="form-label">Название группы</label>
                         <input type="text" class="form-control" id="groupName" placeholder="Например: Семейный бюджет">
                     </div>
+                    
                     <div class="mb-3">
-                        <label for="groupMembers" class="form-label">Участники (логины через запятую)</label>
-                        <input type="text" class="form-control" id="groupMembers" placeholder="Например: user1, user2, user3">
-                        <div class="form-text">Укажите логины пользователей, которых хотите добавить в группу</div>
+                        <label class="form-label">Поиск участников</label>
+                        <input type="text" class="form-control" id="groupMembersSearch" 
+                            placeholder="Начните вводить логин..." 
+                            autocomplete="off">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Выберите участников</label>
+                        <div id="groupMembersList" class="list-group" style="max-height: 250px; overflow-y: auto;">
+                            <div class="text-muted p-2">Загрузка пользователей...</div>
+                        </div>
+                        <div class="form-text">Выберите одного или нескольких участников</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Выбранные участники:</label>
+                        <div id="selectedMembersContainer" class="d-flex flex-wrap gap-2">
+                            <span class="text-muted">Никто не выбран</span>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer d-flex justify-content-between">
@@ -446,7 +463,7 @@
                                 <button class="btn btn-success btn-sm flex-fill" onclick="showAddMemberModal()">
                                     Добавить участника
                                 </button>
-                                <button class="btn btn-orange btn-sm flex-fill" onclick="showRemoveMemberModal()">
+                                <button class="btn btn-danger btn-sm flex-fill" onclick="showRemoveMemberModal()">
                                     Удалить участника
                                 </button>
                             </div>
@@ -462,7 +479,7 @@
                     <div class="row">
                         <div class="col">
                             <h6>Участники (<span id="groupMembersCount">0</span>):</h6>
-                            <ul id="groupMembersList" class="list-group"></ul>
+                            <ul id="groupDetailsMembersList" class="list-group"></ul>
                         </div>
                     </div>
                 </div>

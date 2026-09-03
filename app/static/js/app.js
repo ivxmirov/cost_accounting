@@ -65,8 +65,6 @@ async function refreshAccessToken() {
 
 // Функция для выполнения запроса с автоматическим обновлением токена
 async function fetchWithAuth(url, options = {}) {
-    console.log(`[AUTH] Запрос: ${options.method || 'GET'} ${url}`);
-    console.log(`[AUTH] Токен есть: ${!!accessToken}, Refresh: ${!!refreshToken}`);
     
     // Добавляем заголовки авторизации
     options.headers = {
@@ -75,7 +73,6 @@ async function fetchWithAuth(url, options = {}) {
     };
 
     let response = await fetch(url, options);
-    console.log(`[AUTH] Статус ответа: ${response.status}`);
 
     // Если 401 и есть refresh токен - пробуем обновить
     if (response.status === 401 && refreshToken) {
@@ -298,6 +295,8 @@ async function loadAllData() {
         // Обновляем селекты
         updateWalletSelects();
         console.log('[LOAD] Селекты обновлены');
+        
+        // НЕ загружаем группы автоматически, они загружаются при открытии модалки
         
     } catch (e) {
         console.error('[LOAD] Ошибка загрузки данных:', e);
@@ -1017,24 +1016,54 @@ async function loadGroups() {
     }
 
     try {
-        // Делаем запрос к API
+        console.log('[LOAD_GROUPS] Загружаем группы...');
+        console.log('[LOAD_GROUPS] URL:', `${API_BASE_V2}/users/me/groups`);
+        
         const response = await fetchWithAuth(`${API_BASE_V2}/users/me/groups`);
+        console.log('[LOAD_GROUPS] Статус:', response.status);
         
         if (response.ok) {
-            const groups = await response.json();
+            const data = await response.json();
+            console.log('[LOAD_GROUPS] Ответ бэкенда:', data);
+            console.log('[LOAD_GROUPS] Тип данных:', typeof data);
+            console.log('[LOAD_GROUPS] Это массив?', Array.isArray(data));
+            
+            // Проверяем структуру данных
+            let groups = data;
+            if (!Array.isArray(data)) {
+                if (data.groups && Array.isArray(data.groups)) {
+                    groups = data.groups;
+                } else if (data.items && Array.isArray(data.items)) {
+                    groups = data.items;
+                } else if (data.data && Array.isArray(data.data)) {
+                    groups = data.data;
+                } else {
+                    console.error('[LOAD_GROUPS] Неизвестный формат данных:', data);
+                    showError('Неизвестный формат данных от сервера');
+                    return;
+                }
+            }
+            
             renderGroups(groups);
             
             // Показываем модалку
-            const modal = new bootstrap.Modal(document.getElementById('groupsModal'));
-            modal.show();
+            const modalElement = document.getElementById('groupsModal');
+            if (modalElement) {
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            } else {
+                console.error('[LOAD_GROUPS] Модалка groupsModal не найдена');
+            }
+            
         } else if (response.status === 401) {
             showError('Не авторизован');
         } else {
             const error = await response.json();
+            console.error('[LOAD_GROUPS] Ошибка:', error);
             showError(error.detail || 'Ошибка загрузки групп');
         }
     } catch (e) {
-        console.error('Ошибка загрузки групп:', e);
+        console.error('[LOAD_GROUPS] Ошибка загрузки групп:', e);
         showError('Не удалось загрузить группы');
     }
 }
@@ -1074,9 +1103,28 @@ function formatRelativeDate(dateString) {
 
 // Функция отображения групп в таблице
 function renderGroups(groups) {
-    const tbody = document.getElementById('groupsTable');
+    console.log('[RENDER_GROUPS] Начинаем рендеринг групп:', groups);
     
-    if (!groups || groups.length === 0) {
+    // Проверяем, что элемент существует
+    const tbody = document.getElementById('groupsTable');
+    if (!tbody) {
+        console.error('[RENDER_GROUPS] Элемент groupsTable не найден');
+        
+        // Пробуем найти groupsList как запасной вариант
+        const groupsList = document.getElementById('groupsList');
+        if (groupsList) {
+            console.log('[RENDER_GROUPS] Найден groupsList вместо groupsTable');
+            renderGroupsAsList(groups);
+            return;
+        }
+        return;
+    }
+    
+    // Проверяем, что groups - массив
+    const groupsArray = Array.isArray(groups) ? groups : (groups.groups || []);
+    console.log('[RENDER_GROUPS] Количество групп:', groupsArray.length);
+    
+    if (groupsArray.length === 0) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="4" class="text-center text-muted">
@@ -1087,15 +1135,21 @@ function renderGroups(groups) {
         return;
     }
 
-    tbody.innerHTML = groups.map(group => {
+    tbody.innerHTML = groupsArray.map(group => {
+        console.log('[RENDER_GROUPS] Обрабатываем группу:', group);
+        
         // Форматируем относительную дату
-        const relativeDate = formatRelativeDate(group.created_at);
+        const relativeDate = group.created_at ? formatRelativeDate(group.created_at) : 'неизвестно';
         
         // Определяем, является ли текущий пользователь создателем
-        const isCreator = group.creator === currentUserId;
+        // Проверяем разные варианты
+        const isCreator = 
+            group.creator_login === currentUser || 
+            group.creator === currentUserId ||
+            group.creator_id === currentUserId;
         
         // Определяем, что показывать в столбце "Создатель"
-        const creatorDisplay = isCreator ? 'Вы ⭐' : 'Другой пользователь';
+        const creatorDisplay = isCreator ? 'Вы ⭐' : (group.creator_login || 'Другой пользователь');
         
         // Количество участников
         const membersCount = group.members ? group.members.length : 0;
@@ -1107,7 +1161,7 @@ function renderGroups(groups) {
         return `
             <tr class="group-row" data-group-id="${group.id}" style="cursor: pointer;" title="Открыть группу">
                 <td>
-                    <strong>${group.name}</strong>
+                    <strong>${group.name || 'Без названия'}</strong>
                 </td>
                 <td>${creatorDisplay}</td>
                 <td>${relativeDate}</td>
@@ -1123,32 +1177,92 @@ function renderGroups(groups) {
     document.querySelectorAll('.group-row').forEach(row => {
         row.addEventListener('click', function() {
             const groupId = this.getAttribute('data-group-id');
-            openGroup(groupId);
+            console.log('[RENDER_GROUPS] Клик по группе:', groupId);
+            openGroup(parseInt(groupId));
         });
     });
+    
+    console.log('[RENDER_GROUPS] Группы отображены');
+}
+
+// Запасная функция для отображения в виде списка
+function renderGroupsAsList(groups) {
+    const groupsList = document.getElementById('groupsList');
+    if (!groupsList) {
+        console.error('[RENDER_GROUPS] Элементы groupsTable и groupsList не найдены');
+        return;
+    }
+    
+    const groupsArray = Array.isArray(groups) ? groups : (groups.groups || []);
+    
+    if (groupsArray.length === 0) {
+        groupsList.innerHTML = `
+            <div class="text-center p-3 text-muted">
+                Вы пока не состоите ни в одной группе
+            </div>
+        `;
+        return;
+    }
+    
+    groupsList.innerHTML = groupsArray.map(group => {
+        const isCreator = 
+            group.creator_login === currentUser || 
+            group.creator === currentUserId ||
+            group.creator_id === currentUserId;
+        
+        const membersCount = group.members ? group.members.length : 0;
+        const relativeDate = group.created_at ? formatRelativeDate(group.created_at) : '';
+        
+        return `
+            <div class="list-group-item" 
+                 onclick="openGroup(${group.id})"
+                 style="cursor: pointer;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">
+                            ${group.name || 'Без названия'}
+                            ${isCreator ? '⭐' : ''}
+                        </h6>
+                        <small class="text-muted">
+                            Участников: ${membersCount}
+                            ${relativeDate ? ' • ' + relativeDate : ''}
+                        </small>
+                    </div>
+                    <span class="badge bg-primary">${membersCount}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 // Функция открытия группы
 async function openGroup(groupId) {
+    console.log('[OPEN_GROUP] Открываем группу:', groupId);
+    
     if (!accessToken) {
         showError('Сначала войдите в систему');
         return;
     }
 
     try {
-        // Делаем запрос к API для получения информации о группе
         const response = await fetchWithAuth(`${API_BASE_V2}/groups/${groupId}`);
+        console.log('[OPEN_GROUP] Статус:', response.status);
         
         if (response.ok) {
             const group = await response.json();
-            console.log('[GROUP] Информация о группе:', group);
+            console.log('[OPEN_GROUP] Данные группы:', group);
             
             // Показываем информацию о группе
             displayGroupDetails(group);
             
             // Показываем модалку
-            const modal = new bootstrap.Modal(document.getElementById('groupDetailsModal'));
-            modal.show();
+            const modalElement = document.getElementById('groupDetailsModal');
+            if (modalElement) {
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            } else {
+                console.error('[OPEN_GROUP] Модалка groupDetailsModal не найдена');
+            }
         } else if (response.status === 401) {
             showError('Не авторизован');
         } else if (response.status === 403) {
@@ -1160,9 +1274,19 @@ async function openGroup(groupId) {
             showError(extractErrorMessage(error, 'Ошибка загрузки группы'));
         }
     } catch (e) {
-        console.error('Ошибка загрузки группы:', e);
+        console.error('[OPEN_GROUP] Ошибка:', e);
         showError('Не удалось загрузить группу');
     }
+}
+
+// Функция открытия модалки групп
+async function openGroupsModal() {
+    if (!accessToken) {
+        showError('Сначала войдите в систему');
+        return;
+    }
+    
+    await loadGroups();
 }
 
 // Глобальная переменная для текущей группы
@@ -1170,13 +1294,16 @@ let currentGroupId = null;
 
 // Отображение деталей группы с балансом
 function displayGroupDetails(groupData) {
+    console.log('[GROUP_DETAILS] Данные группы:', groupData);
     
     // Сохраняем ID группы
     currentGroupId = groupData.id;
     
     // Определяем, является ли текущий пользователь создателем
-    // Пробуем разные варианты сравнения
-    const isCreator = groupData.creator_login === currentUser;
+    const isCreator = 
+        groupData.creator_login === currentUser || 
+        groupData.creator === currentUserId ||
+        groupData.creator_id === currentUserId;
     
     // Обновляем заголовок
     const modalTitle = document.getElementById('groupModalTitle');
@@ -1201,13 +1328,12 @@ function displayGroupDetails(groupData) {
         balanceElement.textContent = formatCurrency(balance, 'RUB');
     }
     
-    // Показываем/скрываем кнопки управления участниками (только для создателя)
+    // Показываем/скрываем кнопки управления (только для создателя)
     const memberManagementButtons = document.getElementById('memberManagementButtons');
     if (memberManagementButtons) {
         memberManagementButtons.style.display = isCreator ? 'block' : 'none';
     }
     
-    // Показываем/скрываем кнопку "Удалить группу" (только для создателя)
     const deleteGroupButton = document.getElementById('deleteGroupButton');
     if (deleteGroupButton) {
         deleteGroupButton.style.display = isCreator ? 'inline-block' : 'none';
@@ -1218,9 +1344,9 @@ function displayGroupDetails(groupData) {
     if (membersCountEl && groupData.members) {
         membersCountEl.textContent = groupData.members.length;
     }
-    
+   
     // Отображаем участников с балансами
-    const membersList = document.getElementById('groupMembersList');
+    const membersList = document.getElementById('groupDetailsMembersList');
     if (membersList) {
         const balanceMap = {};
         if (groupData.member_balances && Array.isArray(groupData.member_balances)) {
@@ -1234,8 +1360,8 @@ function displayGroupDetails(groupData) {
                 const isCurrentUser = member === currentUser;
                 const memberBalance = balanceMap[member] || 0;
                 
-                let balanceClass;
-                let fontWeightClass;
+                let balanceClass = '';
+                let fontWeightClass = '';
                 
                 if (memberBalance > 0) {
                     balanceClass = 'text-success';
@@ -1243,9 +1369,6 @@ function displayGroupDetails(groupData) {
                 } else if (memberBalance < 0) {
                     balanceClass = 'text-danger';
                     fontWeightClass = 'fw-bold';
-                } else {
-                    balanceClass = '';
-                    fontWeightClass = '';
                 }
                 
                 const formattedBalance = formatCurrency(memberBalance, 'RUB');
@@ -1261,70 +1384,144 @@ function displayGroupDetails(groupData) {
     }
 }
 
+
 // Функция форматирования валюты с параметром
 function formatCurrency(amount, currency = 'RUB') {
+    // Проверяем, что amount - число
+    const numAmount = typeof amount === 'number' ? amount : (parseFloat(amount) || 0);
+    
     const currencyMap = {
         'rub': 'RUB',
         'usd': 'USD',
         'eur': 'EUR',
     };
     
-    const currencyCode = currencyMap[currency.toLowerCase()] || currency.toUpperCase();
+    // Проверяем, что currency - строка
+    const currencyStr = String(currency || 'RUB').toLowerCase();
+    const currencyCode = currencyMap[currencyStr] || currencyStr.toUpperCase();
     
-    return new Intl.NumberFormat('ru-RU', {
-        style: 'currency',
-        currency: currencyCode,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    }).format(amount);
+    try {
+        return new Intl.NumberFormat('ru-RU', {
+            style: 'currency',
+            currency: currencyCode,
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }).format(numAmount);
+    } catch (e) {
+        // Если валюта не поддерживается, просто форматируем число
+        return `${numAmount.toFixed(2)} ${currencyCode}`;
+    }
 }
 
-// Функция показа модального окна создания группы
-function showCreateGroupModal() {
+// Глобальная переменная для хранения выбранных участников
+let selectedMembers = new Set();
+
+// Функция показа модалки создания группы
+async function showCreateGroupModal() {
     // Закрываем модалку групп
     const groupsModal = bootstrap.Modal.getInstance(document.getElementById('groupsModal'));
     if (groupsModal) {
         groupsModal.hide();
     }
     
+    // Очищаем выбранных участников
+    selectedMembers.clear();
+    
+    // Загружаем всех пользователей
+    const users = await loadAllUsers();
+    
+    // Фильтруем текущего пользователя
+    const availableUsers = users.filter(user => user.login !== currentUser);
+    
     // Показываем модалку создания группы
     const createModal = new bootstrap.Modal(document.getElementById('createGroupModal'));
     createModal.show();
+    
+    // Заполняем список пользователей
+    renderGroupMembersList(availableUsers);
+    
+    // Обновляем отображение выбранных участников
+    updateSelectedMembersDisplay();
+    
+    // Добавляем обработчик поиска
+    const searchInput = document.getElementById('groupMembersSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            const filteredUsers = availableUsers.filter(user => 
+                user.login.toLowerCase().includes(searchTerm)
+            );
+            renderGroupMembersList(filteredUsers);
+        });
+    }
 }
 
-// Вспомогательная функция для извлечения сообщения об ошибке
-function extractErrorMessage(data, defaultMessage = 'Произошла ошибка') {
-    if (!data) return defaultMessage;
+// Функция отображения списка пользователей в модалке создания группы
+function renderGroupMembersList(users) {
+    const listContainer = document.getElementById('groupMembersList');
+    if (!listContainer) return;
     
-    // Если есть detail
-    if (data.detail) {
-        if (typeof data.detail === 'string') {
-            return data.detail;
-        }
-        
-        // Для FastAPI HTTPException
-        if (Array.isArray(data.detail)) {
-            return data.detail.map(err => {
-                if (err.msg) return err.msg;
-                if (err.message) return err.message;
-                return JSON.stringify(err);
-            }).join(', ');
-        }
-        
-        // Для объектов с полем message
-        if (typeof data.detail === 'object' && data.detail.message) {
-            return data.detail.message;
-        }
+    if (users.length === 0) {
+        listContainer.innerHTML = '<div class="text-muted p-2">Пользователи не найдены</div>';
+        return;
     }
     
-    // Проверяем другие поля
-    if (data.message) return data.message;
-    if (data.error) return data.error;
+    listContainer.innerHTML = users.map(user => {
+        const isChecked = selectedMembers.has(user.id);
+        return `
+            <label class="list-group-item d-flex align-items-center" style="cursor: pointer;">
+                <input type="checkbox" 
+                       class="form-check-input me-2 member-checkbox" 
+                       value="${user.id}" 
+                       data-login="${user.login}"
+                       ${isChecked ? 'checked' : ''}>
+                <span>${user.login}</span>
+            </label>
+        `;
+    }).join('');
     
-    return defaultMessage;
+    // Добавляем обработчики для чекбоксов
+    document.querySelectorAll('.member-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const userId = parseInt(this.value);
+            const login = this.getAttribute('data-login');
+            
+            if (this.checked) {
+                selectedMembers.add(userId);
+            } else {
+                selectedMembers.delete(userId);
+            }
+            
+            updateSelectedMembersDisplay();
+        });
+    });
 }
 
-// Функция создания группы
+// Функция обновления отображения выбранных участников
+function updateSelectedMembersDisplay() {
+    const container = document.getElementById('selectedMembersContainer');
+    if (!container) return;
+    
+    if (selectedMembers.size === 0) {
+        container.innerHTML = '<span class="text-muted">Никто не выбран</span>';
+        return;
+    }
+    
+    // Получаем логины выбранных пользователей
+    const selectedLogins = [];
+    const checkboxes = document.querySelectorAll('.member-checkbox');
+    checkboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+            selectedLogins.push(checkbox.getAttribute('data-login'));
+        }
+    });
+    
+    container.innerHTML = selectedLogins.map(login => 
+        `<span class="badge bg-primary">${login} ✕</span>`
+    ).join('');
+}
+
+// Обновленная функция создания группы
 async function createGroup() {
     if (!accessToken) {
         showError('Сначала войдите в систему');
@@ -1332,26 +1529,43 @@ async function createGroup() {
     }
 
     const name = document.getElementById('groupName').value.trim();
-    const membersInput = document.getElementById('groupMembers').value.trim();
-
-    // Минимальные проверки на пустоту
+    
+    // Проверяем название группы
     if (!name) {
         showError('Введите название группы');
         return;
     }
-
-    if (!membersInput) {
-        showError('Добавьте хотя бы одного участника');
+    
+    // Получаем выбранных участников из чекбоксов
+    const membersLogins = [];
+    const checkboxes = document.querySelectorAll('.member-checkbox:checked');
+    checkboxes.forEach(checkbox => {
+        membersLogins.push(checkbox.getAttribute('data-login'));
+    });
+    
+    // Если чекбоксы не найдены, пробуем текстовое поле
+    if (membersLogins.length === 0) {
+        const membersInput = document.getElementById('groupMembers');
+        if (membersInput && membersInput.value.trim()) {
+            membersLogins.push(...membersInput.value
+                .split(',')
+                .map(login => login.trim())
+                .filter(login => login.length > 0)
+            );
+        }
+    }
+    
+    if (membersLogins.length === 0) {
+        showError('Выберите хотя бы одного участника');
         return;
     }
 
-    // Отправляем на бэкенд как есть (даже если один участник)
-    const membersLogins = membersInput
-        .split(',')
-        .map(login => login.trim())
-        .filter(login => login.length > 0);
-
     try {
+        console.log('[GROUP] Создание группы:', {
+            name: name,
+            members_logins: membersLogins
+        });
+        
         const response = await fetchWithAuth(`${API_BASE_V2}/groups`, {
             method: 'POST',
             headers: {
@@ -1379,18 +1593,19 @@ async function createGroup() {
             }
             
             // Очищаем поля
-            document.getElementById('groupName').value = '';
-            document.getElementById('groupMembers').value = '';
+            const nameInput = document.getElementById('groupName');
+            if (nameInput) nameInput.value = '';
+            
+            const searchInput = document.getElementById('groupMembersSearch');
+            if (searchInput) searchInput.value = '';
+            
+            selectedMembers.clear();
+            updateSelectedMembersDisplay();
             
             // Перезагружаем список групп
             await loadGroups();
             
-            // Показываем модалку групп снова
-            const groupsModal = new bootstrap.Modal(document.getElementById('groupsModal'));
-            groupsModal.show();
-            
         } else {
-            // Показываем ошибку от бэкенда
             const errorMessage = extractErrorMessage(data, 'Ошибка создания группы');
             console.error('[GROUP] Ошибка от сервера:', data);
             showError(errorMessage);
@@ -1677,69 +1892,6 @@ async function leaveGroup() {
     }
 }
 
-// Функция удаления группы
-async function deleteGroup() {
-    if (!currentGroupId) {
-        showError('Группа не выбрана');
-        return;
-    }
-    
-    // Подтверждение действия
-    if (!confirm('Вы уверены, что хотите удалить группу? Это действие нельзя отменить.')) {
-        return;
-    }
-    
-    try {
-        const response = await fetchWithAuth(
-            `${API_BASE_V2}/groups/${currentGroupId}`,
-            {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }
-        );
-        
-        console.log('[DELETE_GROUP] Статус:', response.status);
-        
-        if (response.ok) {
-            showSuccess('Группа удалена');
-            
-            // Закрываем модалку группы
-            const groupModalElement = document.getElementById('groupDetailsModal');
-            const groupModal = bootstrap.Modal.getInstance(groupModalElement);
-            if (groupModal) {
-                groupModal.hide();
-            }
-            
-            // Закрываем модалку списка групп, если она открыта
-            const groupsModalElement = document.getElementById('groupsModal');
-            const groupsModal = bootstrap.Modal.getInstance(groupsModalElement);
-            if (groupsModal) {
-                groupsModal.hide();
-                }
-            
-            // Сбрасываем currentGroupId
-            currentGroupId = null;
-            
-            // Перезагружаем список групп
-            await loadGroups();
-        } else {
-            let errorMessage = 'Ошибка удаления группы';
-            try {
-                const data = await response.json();
-                errorMessage = extractErrorMessage(data, errorMessage);
-            } catch (e) {
-                // Игнорируем ошибку парсинга
-            }
-            showError(errorMessage);
-        }
-    } catch (e) {
-        console.error('[DELETE_GROUP] Ошибка:', e);
-        showError('Ошибка подключения: ' + e.message);
-    }
-}
-
 // Глобальная переменная для хранения всех пользователей
 let allUsers = [];
 
@@ -1989,7 +2141,7 @@ function showRemoveMemberModal() {
     }
     
     // Получаем список участников из текущей группы
-    const membersList = document.getElementById('groupMembersList');
+    const membersList = document.getElementById('groupDetailsMembersList');
     if (!membersList) {
         showError('Список участников не найден');
         return;
@@ -2186,7 +2338,7 @@ async function deleteWallet() {
     }
     
     try {
-        const response = await fetchWithAuth(`${API_BASE_V2}/wallets/${walletId}`, {
+        const response = await fetchWithAuth(`${API_BASE_V1}/wallets/${walletId}`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json'
