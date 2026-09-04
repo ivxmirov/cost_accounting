@@ -596,7 +596,10 @@ async function loadWallets() {
 
         if (response.ok) {
             const rawWallets = await response.json();
+            console.log('[WALLETS] Получены кошельки:', rawWallets); // Для отладки
+            
             wallets = rawWallets.map(w => {
+                // Обычный баланс
                 let balance = 0;
                 if (typeof w.balance === 'number') {
                     balance = w.balance;
@@ -606,38 +609,50 @@ async function loadWallets() {
                     balance = Number(w.balance) || 0;
                 }
                 
-                let creditLimit = null;
-                if (w.credit_limit != null) {
-                    if (typeof w.credit_limit === 'number') {
-                        creditLimit = w.credit_limit;
-                    } else if (typeof w.credit_limit === 'string') {
-                        creditLimit = parseFloat(w.credit_limit) || 0;
+                // Эффективный баланс
+                let effectiveBalance = balance;
+                if (w.effective_balance !== undefined && w.effective_balance !== null) {
+                    if (typeof w.effective_balance === 'number') {
+                        effectiveBalance = w.effective_balance;
+                    } else if (typeof w.effective_balance === 'string') {
+                        effectiveBalance = parseFloat(w.effective_balance) || balance;
                     } else {
-                        creditLimit = Number(w.credit_limit) || 0;
+                        effectiveBalance = Number(w.effective_balance) || balance;
                     }
                 }
                 
+                console.log(`[WALLETS] Кошелек ${w.id}: balance=${balance}, effective_balance=${effectiveBalance}`);
+                
                 return {
                     ...w,
+                    id: Number(w.id),
+                    name: w.name,
                     currency: String(w.currency || '').toLowerCase(),
                     balance: balance,
-                    wallet_type: w.wallet_type || 'debit',
-                    credit_limit: creditLimit
+                    effective_balance: effectiveBalance,
+                    wallet_type: w.type || w.wallet_type || 'debit',
+                    type: w.type || w.wallet_type || 'debit',
+                    credit_limit: w.credit_limit || null
                 };
             });
+            
+            console.log('[WALLETS] Нормализованные кошельки:', wallets);
+            
             renderWalletsTable();
             updateWalletSelects();
         } else if (response.status === 401) {
+            console.log('[WALLETS] Не авторизован');
             wallets = [];
             renderWalletsTable();
             updateWalletSelects();
         } else {
+            console.error('[WALLETS] Ошибка загрузки:', response.status);
             wallets = [];
             renderWalletsTable();
             updateWalletSelects();
         }
     } catch (e) {
-        console.error('Ошибка загрузки кошельков:', e);
+        console.error('[WALLETS] Ошибка загрузки кошельков:', e);
         wallets = [];
         renderWalletsTable();
         updateWalletSelects();
@@ -694,10 +709,12 @@ function updateWalletSelects() {
             select.innerHTML = '<option value="">Сначала создайте кошелек</option>';
         } else {
             select.innerHTML = wallets.map(w => {
-                // Гарантируем что баланс - число
-                const balance = typeof w.balance === 'number' ? w.balance : (parseFloat(w.balance) || 0);
+                // Используем обычный баланс для селектов операций (доход, расход, перевод)
+                const balance = typeof w.balance === 'number' 
+                    ? w.balance 
+                    : (parseFloat(w.balance) || 0);
                 const currency = String(w.currency || '').toLowerCase();
-                return `<option value="${w.id}">${w.name} - ${formatAmount(balance, currency)}</option>`;
+                return `<option value="${w.id}">${w.name} ( ${formatAmount(balance, currency)} )</option>`;
             }).join('');
         }
     });
@@ -1628,7 +1645,6 @@ function showAttachWalletModal() {
         return;
     }
     
-    // Заполняем список кошельков
     const select = document.getElementById('attachWalletSelect');
     if (!select) {
         showError('Модалка прикрепления не найдена');
@@ -1639,13 +1655,15 @@ function showAttachWalletModal() {
         select.innerHTML = '<option value="">У вас нет кошельков</option>';
     } else {
         select.innerHTML = wallets.map(w => {
-            const balance = parseFloat(w.balance) || 0;
-            const currency = String(w.currency || 'rub').toLowerCase();
-            return `<option value="${w.id}">${w.name} - ${formatAmount(balance, currency)}</option>`;
+            // Используем эффективный баланс
+            const effectiveBalance = typeof w.effective_balance === 'number' 
+                ? w.effective_balance 
+                : (parseFloat(w.effective_balance) || 0);
+            const currency = String(w.currency || '').toLowerCase();
+            return `<option value="${w.id}">${w.name} ( ${formatAmount(effectiveBalance, currency)} )</option>`;
         }).join('');
     }
     
-    // Показываем модалку
     const modal = new bootstrap.Modal(document.getElementById('attachWalletModal'));
     modal.show();
 }
@@ -1707,7 +1725,6 @@ function showDetachWalletModal() {
         return;
     }
     
-    // Заполняем список кошельков
     const select = document.getElementById('detachWalletSelect');
     if (!select) {
         showError('Модалка открепления не найдена');
@@ -1718,13 +1735,15 @@ function showDetachWalletModal() {
         select.innerHTML = '<option value="">У вас нет кошельков</option>';
     } else {
         select.innerHTML = wallets.map(w => {
-            const balance = parseFloat(w.balance) || 0;
-            const currency = String(w.currency || 'rub').toLowerCase();
-            return `<option value="${w.id}">${w.name} - ${formatAmount(balance, currency)}</option>`;
+            // Используем эффективный баланс
+            const effectiveBalance = typeof w.effective_balance === 'number' 
+                ? w.effective_balance 
+                : (parseFloat(w.effective_balance) || 0);
+            const currency = String(w.currency || '').toLowerCase();
+            return `<option value="${w.id}">${w.name} ( ${formatAmount(effectiveBalance, currency)} )</option>`;
         }).join('');
     }
     
-    // Показываем модалку
     const modal = new bootstrap.Modal(document.getElementById('detachWalletModal'));
     modal.show();
 }
@@ -2287,9 +2306,12 @@ function updateDeleteWalletSelect() {
     }
     
     select.innerHTML = wallets.map(w => {
-        const balance = parseFloat(w.balance) || 0;
-        const currency = String(w.currency || 'rub').toLowerCase();
-        return `<option value="${w.id}">${w.name} - ${formatAmount(balance, currency)}</option>`;
+        // Используем эффективный баланс для селекта удаления
+        const effectiveBalance = typeof w.effective_balance === 'number' 
+            ? w.effective_balance 
+            : (parseFloat(w.effective_balance) || 0);
+        const currency = String(w.currency || '').toLowerCase();
+        return `<option value="${w.id}">${w.name} ( ${formatAmount(effectiveBalance, currency)} )</option>`;
     }).join('');
 }
 

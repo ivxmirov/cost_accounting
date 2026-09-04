@@ -128,6 +128,7 @@ class WalletTableSchema(BaseModel):
     name: str
     currency: CurrencyEnum
     type: WalletType
+    balance: Decimal
     effective_balance: Decimal
 
 
