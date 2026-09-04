@@ -11,32 +11,16 @@ let refreshToken = null;
 let wallets = [];
 let operations = [];
 
+// Валюты
+const CURRENCY_SYMBOLS = {
+    'rub': '₽',
+    'usd': '$',
+    'eur': '€'
+};
+
 // Функция форматирования валюты с параметром
 function formatCurrency(amount, currency = 'RUB') {
-    // Проверяем, что amount - число
-    const numAmount = typeof amount === 'number' ? amount : (parseFloat(amount) || 0);
-    
-    const currencyMap = {
-        'rub': 'RUB',
-        'usd': 'USD',
-        'eur': 'EUR',
-    };
-    
-    // Проверяем, что currency - строка
-    const currencyStr = String(currency || 'RUB').toLowerCase();
-    const currencyCode = currencyMap[currencyStr] || currencyStr.toUpperCase();
-    
-    try {
-        return new Intl.NumberFormat('ru-RU', {
-            style: 'currency',
-            currency: currencyCode,
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        }).format(numAmount);
-    } catch (e) {
-        // Если валюта не поддерживается, просто форматируем число
-        return `${numAmount.toFixed(2)} ${currencyCode}`;
-    }
+    return formatAmount(amount, currency);
 }
 
 // Функция для форматирования чисел в русском стиле
@@ -44,6 +28,15 @@ function formatNumber(num) {
     return num.toFixed(2)
         .replace('.', ',') // Заменяем точку на запятую
         .replace(/\B(?=(\d{3})+(?!\d))/g, ' '); // Добавляем пробелы между тысячами
+}
+
+// Универсальная функция форматирования суммы
+function formatAmount(amount, currency = 'rub') {
+    const numAmount = typeof amount === 'number' ? amount : (parseFloat(amount) || 0);
+    const currencyStr = String(currency || 'rub').toLowerCase();
+    const symbol = CURRENCY_SYMBOLS[currencyStr] || currencyStr.toUpperCase();
+    
+    return `${formatNumber(numAmount)} ${symbol}`;
 }
 
 // Функция для форматирования относительной даты (сокращенно)
@@ -477,16 +470,9 @@ function renderWalletsTable() {
         return;
     }
 
-    const currencySymbols = {
-        'rub': '₽',
-        'usd': '$',
-        'eur': '€'
-    };
-
     tbody.innerHTML = wallets.map(w => {
         const balance = typeof w.balance === 'number' ? w.balance : (parseFloat(w.balance) || 0);
         const currency = String(w.currency || '').toLowerCase();
-        const symbol = currencySymbols[currency] || currency.toUpperCase();
         
         const walletType = w.type || w.wallet_type || 'debit';
         const isCredit = walletType === 'credit';
@@ -509,10 +495,10 @@ function renderWalletsTable() {
                 </td>
                 <td class="text-end">
                     ${isCredit 
-                        ? `<strong>${formatNumber(creditLimit)} ${symbol}</strong>` 
+                        ? `<strong>${formatAmount(creditLimit, currency)}</strong>` 
                         : '<span class="text-muted">—</span>'}
                 </td>
-                <td class="text-end ${balanceFontWeight}">${formatNumber(balance)} ${symbol}</td>
+                <td class="text-end ${balanceFontWeight}">${formatAmount(balance, currency)}</td>
             </tr>
         `;
     }).join('');
@@ -566,7 +552,7 @@ function renderOperationsTable() {
                 <td>${typeIcon} <span class="${typeClass}">${typeLabel}</span></td>
                 <td>${walletName}</td>
                 <td>${t.category || t.description || '-'}</td>
-                <td class="text-end ${typeClass}"><strong>${formatCurrency(amount)}</strong></td>
+                <td class="text-end ${typeClass}"><strong>${formatAmount(amount, currency)}</strong></td>
             </tr>
         `;
     }).join('');
@@ -575,7 +561,7 @@ function renderOperationsTable() {
 async function updateTotalBalance() {
     if (wallets.length === 0) {
         document.getElementById('totalBalance').innerHTML = `
-            0,00 ₽
+            ${formatAmount(0, 'rub')}
             <div class="fs-6 text-muted mt-2">Создайте кошелек для начала</div>
         `;
         return;
@@ -589,13 +575,13 @@ async function updateTotalBalance() {
             const data = await response.json();
             const total = typeof data.total_balance === 'number' ? data.total_balance : (parseFloat(data.total_balance) || 0);
             document.getElementById('totalBalance').innerHTML = `
-                ${formatCurrency(total)}
+                ${formatAmount(total, 'rub')}
                 <div class="fs-6 text-muted mt-2">Ваш баланс по всем кошелькам</div>
             `;
         } else {
             // Если запрос не удался - показываем 0
             document.getElementById('totalBalance').innerHTML = `
-                0.00 ₽
+                ${formatAmount(0, 'rub')}
                 <div class="fs-6 text-muted mt-2">Ошибка загрузки баланса</div>
             `;
         }
@@ -603,7 +589,7 @@ async function updateTotalBalance() {
         console.error('Ошибка загрузки общего баланса:', e);
         // При ошибке показываем 0
         document.getElementById('totalBalance').innerHTML = `
-            0.00 ₽
+            ${formatAmount(0, 'rub')}
             <div class="fs-6 text-muted mt-2">Ошибка подключения</div>
         `;
     }
@@ -613,12 +599,6 @@ function updateWalletSelects() {
     const selects = [
         'incomeWallet', 'expenseWallet', 'transferFrom', 'transferTo'
     ];
-
-    const currencySymbols = {
-        'rub': '₽',
-        'usd': '$',
-        'eur': '€'
-    };
 
     selects.forEach(id => {
         const select = document.getElementById(id);
@@ -631,8 +611,7 @@ function updateWalletSelects() {
                 // Гарантируем что баланс - число
                 const balance = typeof w.balance === 'number' ? w.balance : (parseFloat(w.balance) || 0);
                 const currency = String(w.currency || '').toLowerCase();
-                const symbol = currencySymbols[currency] || currency.toUpperCase();
-                return `<option value="${w.id}">${w.name} - ${formatCurrency(balance)}</option>`;
+                return `<option value="${w.id}">${w.name} - ${formatAmount(balance, currency)}</option>`;
             }).join('');
         }
     });
@@ -1042,15 +1021,9 @@ async function loadReport() {
                         minute: '2-digit'
                     });
                     
-                    const currencySymbols = {
-                        'rub': '₽',
-                        'usd': '$',
-                        'eur': '€'
-                    };
                     // Гарантируем что сумма - число
                     const amount = typeof t.amount === 'number' ? t.amount : (parseFloat(t.amount) || 0);
                     const currency = String(t.currency || '').toLowerCase();
-                    const symbol = currencySymbols[currency] || currency.toUpperCase();
                     
                     return `
                         <tr>
@@ -1058,7 +1031,7 @@ async function loadReport() {
                             <td>${typeIcon} <span class="${typeClass}">${typeLabel}</span></td>
                             <td>${walletName}</td>
                             <td>${t.category || t.description || '-'}</td>
-                            <td class="text-end ${typeClass}"><strong>${formatCurrency(amount)}</strong></td>
+                            <td class="text-end ${typeClass}"><strong>${formatAmount(amount, currency)}</strong></td>
                         </tr>
                     `;
                 }).join('');
@@ -1360,7 +1333,7 @@ function displayGroupDetails(groupData) {
     const balanceElement = document.getElementById('groupTotalBalance');
     if (balanceElement) {
         const balance = parseFloat(groupData.total_balance) || 0;
-        balanceElement.textContent = formatCurrency(balance, 'RUB');
+        balanceElement.textContent = formatAmount(balance, 'rub');
     }
     
     // Показываем/скрываем кнопки управления (только для создателя)
@@ -1645,7 +1618,7 @@ function showAttachWalletModal() {
         select.innerHTML = wallets.map(w => {
             const balance = parseFloat(w.balance) || 0;
             const currency = String(w.currency || 'rub').toLowerCase();
-            return `<option value="${w.id}">${w.name} - ${formatCurrency(balance, currency)}</option>`;
+            return `<option value="${w.id}">${w.name} - ${formatAmount(balance, currency)}</option>`;
         }).join('');
     }
     
@@ -1724,7 +1697,7 @@ function showDetachWalletModal() {
         select.innerHTML = wallets.map(w => {
             const balance = parseFloat(w.balance) || 0;
             const currency = String(w.currency || 'rub').toLowerCase();
-            return `<option value="${w.id}">${w.name} - ${formatCurrency(balance, currency)}</option>`;
+            return `<option value="${w.id}">${w.name} - ${formatAmount(balance, currency)}</option>`;
         }).join('');
     }
     
@@ -2306,17 +2279,10 @@ function updateDeleteWalletSelect() {
         return;
     }
     
-    const currencySymbols = {
-        'rub': '₽',
-        'usd': '$',
-        'eur': '€'
-    };
-    
     select.innerHTML = wallets.map(w => {
         const balance = parseFloat(w.balance) || 0;
         const currency = String(w.currency || 'rub').toLowerCase();
-        const symbol = currencySymbols[currency] || currency.toUpperCase();
-        return `<option value="${w.id}">${w.name} - ${balance.toFixed(2)} ${symbol}</option>`;
+        return `<option value="${w.id}">${w.name} - ${formatAmount(balance, currency)}</option>`;
     }).join('');
 }
 
@@ -2462,14 +2428,6 @@ function displayMyGroupWallets(groupData) {
         return;
     }
     
-    if (groupData.wallets && Array.isArray(groupData.wallets)) {
-        console.log('[MY_WALLETS] Количество кошельков:', groupData.wallets.length);
-        groupData.wallets.forEach((wallet, index) => {
-            console.log(`[MY_WALLETS] Кошелек ${index}:`, wallet);
-            console.log(`[MY_WALLETS] Поля:`, Object.keys(wallet));
-        });
-    }
-    
     // Получаем кошельки группы
     const groupWallets = groupData.wallets || [];
     
@@ -2485,13 +2443,6 @@ function displayMyGroupWallets(groupData) {
         return;
     }
     
-    // Таблица с кошельками
-    const currencySymbols = {
-        'rub': '₽',
-        'usd': '$',
-        'eur': '€'
-    };
-    
     container.innerHTML = `
         <table class="table table-sm">
             <thead>
@@ -2506,7 +2457,6 @@ function displayMyGroupWallets(groupData) {
                 ${myWallets.map(wallet => {
                     const balance = parseFloat(wallet.balance) || 0;
                     const currency = String(wallet.currency || 'rub').toLowerCase();
-                    const symbol = currencySymbols[currency] || currency.toUpperCase();
                     const walletType = wallet.type || wallet.wallet_type || 'debit';
                     const isCredit = walletType === 'credit';
                     
@@ -2515,7 +2465,7 @@ function displayMyGroupWallets(groupData) {
                             <td>${wallet.name || 'Кошелек'}</td>
                             <td><span class="badge bg-secondary">${currency.toUpperCase()}</span></td>
                             <td>${isCredit ? 'Кредитный' : 'Дебетовый'}</td>
-                            <td class="text-end">${balance.toFixed(2)} ${symbol}</td>
+                            <td class="text-end">${formatAmount(balance, currency)}</td>
                         </tr>
                     `;
                 }).join('')}
