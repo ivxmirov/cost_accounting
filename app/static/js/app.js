@@ -751,7 +751,7 @@ async function addIncome() {
     const description = document.getElementById('incomeDescription').value.trim();
 
     if (!amount || parseFloat(amount) <= 0) {
-        showError('Введите корректную сумму');
+        showError('Число должно быть положительным');
         return;
     }
 
@@ -819,7 +819,7 @@ async function addExpense() {
     const description = document.getElementById('expenseDescription').value.trim();
 
     if (!amount || parseFloat(amount) <= 0) {
-        showError('Введите корректную сумму');
+        showError('Число должно быть положительным');
         return;
     }
 
@@ -897,7 +897,7 @@ async function transfer() {
     }
 
     if (!amount || parseFloat(amount) <= 0) {
-        showError('Введите корректную сумму');
+        showError('Число должно быть положительным');
         return;
     }
 
