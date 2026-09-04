@@ -11,6 +11,74 @@ let refreshToken = null;
 let wallets = [];
 let operations = [];
 
+// Функция форматирования валюты с параметром
+function formatCurrency(amount, currency = 'RUB') {
+    // Проверяем, что amount - число
+    const numAmount = typeof amount === 'number' ? amount : (parseFloat(amount) || 0);
+    
+    const currencyMap = {
+        'rub': 'RUB',
+        'usd': 'USD',
+        'eur': 'EUR',
+    };
+    
+    // Проверяем, что currency - строка
+    const currencyStr = String(currency || 'RUB').toLowerCase();
+    const currencyCode = currencyMap[currencyStr] || currencyStr.toUpperCase();
+    
+    try {
+        return new Intl.NumberFormat('ru-RU', {
+            style: 'currency',
+            currency: currencyCode,
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }).format(numAmount);
+    } catch (e) {
+        // Если валюта не поддерживается, просто форматируем число
+        return `${numAmount.toFixed(2)} ${currencyCode}`;
+    }
+}
+
+// Функция для форматирования чисел в русском стиле
+function formatNumber(num) {
+    return num.toFixed(2)
+        .replace('.', ',') // Заменяем точку на запятую
+        .replace(/\B(?=(\d{3})+(?!\d))/g, ' '); // Добавляем пробелы между тысячами
+}
+
+// Функция для форматирования относительной даты (сокращенно)
+function formatRelativeDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    
+    // Сбрасываем время для сравнения календарных дней
+    const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    // Разница в календарных днях
+    const diffTime = nowOnly - dateOnly;
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+    const diffYears = Math.floor(diffDays / 365);
+    
+    if (diffDays === 0) {
+        return 'сегодня';
+    } else if (diffDays === 1) {
+        return 'вчера';
+    } else if (diffDays >= 2 && diffDays < 7) {
+        return `${diffDays} дн.`;
+    } else if (diffDays >= 7 && diffDays < 30) {
+        return `${diffWeeks} нед.`;
+    } else if (diffDays >= 30 && diffDays < 365) {
+        return `${diffMonths} мес.`;
+    } else if (diffDays >= 365 && diffDays < 1825) {
+        return `${diffYears} г.`;
+    } else {
+        return 'давно';
+    }
+}
+
 // Функция для генерации UUID для идемпотентности операций
 function generateUUID() {
     return crypto.randomUUID();
@@ -233,7 +301,7 @@ async function loginAfterRegister(username, password) {
             localStorage.setItem('currentUser', currentUser);
             localStorage.setItem('currentUserId', currentUserId);
             
-            showSuccess('Вход выполнен успешно');
+            showSuccess('Вход выполнен');
             showMainSection();
         } else {
             const error = await response.json();
@@ -441,10 +509,10 @@ function renderWalletsTable() {
                 </td>
                 <td class="text-end">
                     ${isCredit 
-                        ? `<strong>${creditLimit.toFixed(2)} ${symbol}</strong>` 
+                        ? `<strong>${formatNumber(creditLimit)} ${symbol}</strong>` 
                         : '<span class="text-muted">—</span>'}
                 </td>
-                <td class="text-end ${balanceFontWeight}">${balance.toFixed(2)} ${symbol}</td>
+                <td class="text-end ${balanceFontWeight}">${formatNumber(balance)} ${symbol}</td>
             </tr>
         `;
     }).join('');
@@ -1068,39 +1136,6 @@ async function loadGroups() {
     }
 }
 
-// Функция для форматирования относительной даты (сокращенно)
-function formatRelativeDate(dateString) {
-    const date = new Date(dateString);
-    const now = new Date();
-    
-    // Сбрасываем время для сравнения календарных дней
-    const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    // Разница в календарных днях
-    const diffTime = nowOnly - dateOnly;
-    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-    const diffWeeks = Math.floor(diffDays / 7);
-    const diffMonths = Math.floor(diffDays / 30);
-    const diffYears = Math.floor(diffDays / 365);
-    
-    if (diffDays === 0) {
-        return 'сегодня';
-    } else if (diffDays === 1) {
-        return 'вчера';
-    } else if (diffDays >= 2 && diffDays < 7) {
-        return `${diffDays} дн.`;
-    } else if (diffDays >= 7 && diffDays < 30) {
-        return `${diffWeeks} нед.`;
-    } else if (diffDays >= 30 && diffDays < 365) {
-        return `${diffMonths} мес.`;
-    } else if (diffDays >= 365 && diffDays < 1825) {
-        return `${diffYears} г.`;
-    } else {
-        return 'давно';
-    }
-}
-
 // Функция отображения групп в таблице
 function renderGroups(groups) {
     console.log('[RENDER_GROUPS] Начинаем рендеринг групп:', groups);
@@ -1386,34 +1421,6 @@ function displayGroupDetails(groupData) {
     }
 }
 
-
-// Функция форматирования валюты с параметром
-function formatCurrency(amount, currency = 'RUB') {
-    // Проверяем, что amount - число
-    const numAmount = typeof amount === 'number' ? amount : (parseFloat(amount) || 0);
-    
-    const currencyMap = {
-        'rub': 'RUB',
-        'usd': 'USD',
-        'eur': 'EUR',
-    };
-    
-    // Проверяем, что currency - строка
-    const currencyStr = String(currency || 'RUB').toLowerCase();
-    const currencyCode = currencyMap[currencyStr] || currencyStr.toUpperCase();
-    
-    try {
-        return new Intl.NumberFormat('ru-RU', {
-            style: 'currency',
-            currency: currencyCode,
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        }).format(numAmount);
-    } catch (e) {
-        // Если валюта не поддерживается, просто форматируем число
-        return `${numAmount.toFixed(2)} ${currencyCode}`;
-    }
-}
 
 // Глобальная переменная для хранения выбранных участников
 let selectedMembers = new Set();
