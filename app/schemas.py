@@ -121,6 +121,16 @@ class WalletResponseSchema(BaseModel):
     user_id: int
 
 
+class WalletTableSchema(BaseModel):
+    """Упрощенная схема кошелька для таблицы"""
+    model_config = {"from_attributes": True}
+    id: int
+    name: str
+    currency: CurrencyEnum
+    type: WalletType
+    effective_balance: Decimal
+
+
 class GroupResponseSchema(BaseModel):
     model_config = {"from_attributes": True}
 

@@ -381,6 +381,22 @@ async function loadAllData() {
     }
 }
 
+// Функция загрузки всех пользователей
+async function loadAllUsers() {
+    try {
+        const response = await fetchWithAuth(`${API_BASE_V2}/users`);
+        
+        if (response.ok) {
+            allUsers = await response.json();
+            return allUsers;
+        }
+        return [];
+    } catch (e) {
+        console.error('[LOAD_USERS] Ошибка:', e);
+        return [];
+    }
+}
+
 // Функция загрузки групп пользователя
 async function loadGroups() {
     if (!accessToken) {
@@ -626,105 +642,6 @@ async function loadWallets() {
         renderWalletsTable();
         updateWalletSelects();
     }
-}
-
-function renderWalletsTable() {
-    const tbody = document.getElementById('walletsTable');
-    
-    if (wallets.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">У вас пока нет кошельков</td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = wallets.map(w => {
-        const balance = typeof w.balance === 'number' ? w.balance : (parseFloat(w.balance) || 0);
-        const currency = String(w.currency || '').toLowerCase();
-        
-        const walletType = w.type || w.wallet_type || 'debit';
-        const isCredit = walletType === 'credit';
-        
-        const creditLimit = isCredit 
-            ? (typeof w.credit_limit === 'number' ? w.credit_limit : (parseFloat(w.credit_limit) || 0))
-            : null;
-        
-        // Определяем жирность для баланса
-        const balanceFontWeight = balance === 0 ? '' : 'fw-bold';
-        
-        return `
-            <tr>
-                <td>${w.name}</td>
-                <td><span class="badge bg-secondary">${currency.toUpperCase()}</span></td>
-                <td>
-                    ${isCredit 
-                        ? '<span class="badge bg-warning text-dark">Кредитный</span>' 
-                        : '<span class="badge bg-success">Дебетовый</span>'}
-                </td>
-                <td class="text-end">
-                    ${isCredit 
-                        ? `<strong>${formatAmount(creditLimit, currency)}</strong>` 
-                        : '<span class="text-muted">—</span>'}
-                </td>
-                <td class="text-end ${balanceFontWeight}">${formatAmount(balance, currency)}</td>
-            </tr>
-        `;
-    }).join('');
-}
-
-function renderOperationsTable() {
-    const tbody = document.getElementById('transactionsTable');
-    
-    if (operations.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет операций</td></tr>';
-        return;
-    }
-
-    const last10 = operations.slice(-10).reverse();
-    
-    tbody.innerHTML = last10.map(t => {
-        const wallet = wallets.find(w => w.id === t.wallet_id);
-        const walletName = wallet ? wallet.name : 'Неизвестно';
-        let typeClass, typeIcon, typeLabel;
-        if (t.type === 'income') {
-            typeClass = 'text-success';
-            typeIcon = '';
-            typeLabel = 'Доход';
-        } else if (t.type === 'expense') {
-            typeClass = 'text-danger';
-            typeIcon = '';
-            typeLabel = 'Расход';
-        } else if (t.type === 'transfer') {
-            typeClass = 'text-info';
-            typeIcon = '';
-            typeLabel = 'Перевод';
-        } else {
-            typeClass = 'text-secondary';
-            typeIcon = '';
-            typeLabel = 'Неизвестно';
-        }
-        const date = new Date(t.created_at).toLocaleString('ru-RU', {
-            day: '2-digit',
-            month: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-        
-        // Гарантируем что сумма - число
-        const amount = typeof t.amount === 'number' ? t.amount : (parseFloat(t.amount) || 0);
-        const currency = String(t.currency || '').toLowerCase();
-        
-        // Добавляем минус для расходов
-        const displayAmount = t.type === 'expense' ? -Math.abs(amount) : amount;
-        
-        return `
-            <tr>
-                <td>${date}</td>
-                <td>${typeIcon} <span class="${typeClass}">${typeLabel}</span></td>
-                <td>${walletName}</td>
-                <td>${t.category || t.description || '-'}</td>
-                <td class="text-end ${typeClass}"><strong>${formatAmount(displayAmount, currency)}</strong></td>
-            </tr>
-        `;
-    }).join('');
 }
 
 async function updateTotalBalance() {
@@ -1114,147 +1031,6 @@ function initReportDates() {
     document.getElementById('reportDateTo').valueAsDate = tomorrow;
 }
 
-// Функция отображения групп в таблице
-function renderGroups(groups) {
-    console.log('[RENDER_GROUPS] Начинаем рендеринг групп:', groups);
-    
-    const tbody = document.getElementById('groupsTable');
-    if (!tbody) {
-        console.error('[RENDER_GROUPS] Элемент groupsTable не найден');
-        return;
-    }
-    
-    const groupsArray = Array.isArray(groups) ? groups : (groups.groups || []);
-    console.log('[RENDER_GROUPS] Количество групп:', groupsArray.length);
-    
-    if (groupsArray.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="5" class="text-center text-muted">
-                    Вы пока не состоите ни в одной группе
-                </td>
-            </tr>
-        `;
-        return;
-    }
-
-    tbody.innerHTML = groupsArray.map(group => {
-        console.log('[RENDER_GROUPS] Обрабатываем группу:', group);
-        
-        const relativeDate = group.created_at ? formatRelativeDate(group.created_at) : 'неизвестно';
-        
-        // Определяем, является ли текущий пользователь создателем
-        const isCreator = 
-            group.creator_login === currentUser || 
-            group.creator === currentUserId ||
-            group.creator_id === currentUserId;
-        
-        // Отображаем "Вы ⭐" для создателя, иначе "Другой пользователь"
-        const creatorDisplay = isCreator ? 'Вы ⭐' : 'Другой пользователь';
-        
-        const membersCount = group.members ? group.members.length : 0;
-        
-        // Генерируем точки для участников (не более 15)
-        const dotsCount = Math.min(membersCount, 15);
-        const dots = '•'.repeat(dotsCount);
-        
-        // Получаем баланс группы
-        const groupBalance = typeof group.total_balance === 'number' 
-            ? group.total_balance 
-            : (parseFloat(group.total_balance) || 0);
-        
-        // Определяем класс для баланса
-        let balanceClass = '';
-        let balanceFontWeight = '';
-        
-        if (groupBalance > 0) {
-            balanceClass = 'text-success';
-            balanceFontWeight = 'fw-bold';
-        } else if (groupBalance < 0) {
-            balanceClass = 'text-danger';
-            balanceFontWeight = 'fw-bold';
-        }
-        
-        return `
-            <tr class="group-row" data-group-id="${group.id}" style="cursor: pointer;" title="Открыть группу">
-                <td>${group.name || 'Без названия'}</td>
-                <td>${creatorDisplay}</td>
-                <td>${relativeDate}</td>
-                <td>
-                    <div class="d-flex align-items-center">
-                        <span class="badge bg-primary me-2" style="min-width: 30px; display: inline-block; text-align: center;">${membersCount}</span>
-                        <span title="Участники: ${membersCount}">${dots}</span>
-                    </div>
-                </td>
-                <td class="text-end ${balanceClass} ${balanceFontWeight}">
-                    ${formatAmount(groupBalance, 'rub')}
-                </td>
-            </tr>
-        `;
-    }).join('');
-    
-    // Добавляем обработчики кликов на строки
-    document.querySelectorAll('.group-row').forEach(row => {
-        row.addEventListener('click', function() {
-            const groupId = this.getAttribute('data-group-id');
-            console.log('[RENDER_GROUPS] Клик по группе:', groupId);
-            openGroup(parseInt(groupId));
-        });
-    });
-    
-    console.log('[RENDER_GROUPS] Группы отображены');
-}
-
-// Запасная функция для отображения в виде списка
-function renderGroupsAsList(groups) {
-    const groupsList = document.getElementById('groupsList');
-    if (!groupsList) {
-        console.error('[RENDER_GROUPS] Элементы groupsTable и groupsList не найдены');
-        return;
-    }
-    
-    const groupsArray = Array.isArray(groups) ? groups : (groups.groups || []);
-    
-    if (groupsArray.length === 0) {
-        groupsList.innerHTML = `
-            <div class="text-center p-3 text-muted">
-                Вы пока не состоите ни в одной группе
-            </div>
-        `;
-        return;
-    }
-    
-    groupsList.innerHTML = groupsArray.map(group => {
-        const isCreator = 
-            group.creator_login === currentUser || 
-            group.creator === currentUserId ||
-            group.creator_id === currentUserId;
-        
-        const membersCount = group.members ? group.members.length : 0;
-        const relativeDate = group.created_at ? formatRelativeDate(group.created_at) : '';
-        
-        return `
-            <div class="list-group-item" 
-                 onclick="openGroup(${group.id})"
-                 style="cursor: pointer;">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="mb-1">
-                            ${group.name || 'Без названия'}
-                            ${isCreator ? '⭐' : ''}
-                        </h6>
-                        <small class="text-muted">
-                            Участников: ${membersCount}
-                            ${relativeDate ? ' • ' + relativeDate : ''}
-                        </small>
-                    </div>
-                    <span class="badge bg-primary">${membersCount}</span>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
 // Функция открытия группы
 async function openGroup(groupId) {
     console.log('[OPEN_GROUP] Открываем группу:', groupId);
@@ -1440,6 +1216,147 @@ async function showCreateGroupModal() {
     }
 }
 
+// Функция отображения групп в таблице
+function renderGroups(groups) {
+    console.log('[RENDER_GROUPS] Начинаем рендеринг групп:', groups);
+    
+    const tbody = document.getElementById('groupsTable');
+    if (!tbody) {
+        console.error('[RENDER_GROUPS] Элемент groupsTable не найден');
+        return;
+    }
+    
+    const groupsArray = Array.isArray(groups) ? groups : (groups.groups || []);
+    console.log('[RENDER_GROUPS] Количество групп:', groupsArray.length);
+    
+    if (groupsArray.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center text-muted">
+                    Вы пока не состоите ни в одной группе
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = groupsArray.map(group => {
+        console.log('[RENDER_GROUPS] Обрабатываем группу:', group);
+        
+        const relativeDate = group.created_at ? formatRelativeDate(group.created_at) : 'неизвестно';
+        
+        // Определяем, является ли текущий пользователь создателем
+        const isCreator = 
+            group.creator_login === currentUser || 
+            group.creator === currentUserId ||
+            group.creator_id === currentUserId;
+        
+        // Отображаем "Вы ⭐" для создателя, иначе "Другой пользователь"
+        const creatorDisplay = isCreator ? 'Вы ⭐' : 'Другой пользователь';
+        
+        const membersCount = group.members ? group.members.length : 0;
+        
+        // Генерируем точки для участников (не более 15)
+        const dotsCount = Math.min(membersCount, 15);
+        const dots = '•'.repeat(dotsCount);
+        
+        // Получаем баланс группы
+        const groupBalance = typeof group.total_balance === 'number' 
+            ? group.total_balance 
+            : (parseFloat(group.total_balance) || 0);
+        
+        // Определяем класс для баланса
+        let balanceClass = '';
+        let balanceFontWeight = '';
+        
+        if (groupBalance > 0) {
+            balanceClass = 'text-success';
+            balanceFontWeight = 'fw-bold';
+        } else if (groupBalance < 0) {
+            balanceClass = 'text-danger';
+            balanceFontWeight = 'fw-bold';
+        }
+        
+        return `
+            <tr class="group-row" data-group-id="${group.id}" style="cursor: pointer;" title="Открыть группу">
+                <td>${group.name || 'Без названия'}</td>
+                <td>${creatorDisplay}</td>
+                <td>${relativeDate}</td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-primary me-2" style="min-width: 30px; display: inline-block; text-align: center;">${membersCount}</span>
+                        <span title="Участники: ${membersCount}">${dots}</span>
+                    </div>
+                </td>
+                <td class="text-end ${balanceClass} ${balanceFontWeight}">
+                    ${formatAmount(groupBalance, 'rub')}
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    // Добавляем обработчики кликов на строки
+    document.querySelectorAll('.group-row').forEach(row => {
+        row.addEventListener('click', function() {
+            const groupId = this.getAttribute('data-group-id');
+            console.log('[RENDER_GROUPS] Клик по группе:', groupId);
+            openGroup(parseInt(groupId));
+        });
+    });
+    
+    console.log('[RENDER_GROUPS] Группы отображены');
+}
+
+// Запасная функция для отображения в виде списка
+function renderGroupsAsList(groups) {
+    const groupsList = document.getElementById('groupsList');
+    if (!groupsList) {
+        console.error('[RENDER_GROUPS] Элементы groupsTable и groupsList не найдены');
+        return;
+    }
+    
+    const groupsArray = Array.isArray(groups) ? groups : (groups.groups || []);
+    
+    if (groupsArray.length === 0) {
+        groupsList.innerHTML = `
+            <div class="text-center p-3 text-muted">
+                Вы пока не состоите ни в одной группе
+            </div>
+        `;
+        return;
+    }
+    
+    groupsList.innerHTML = groupsArray.map(group => {
+        const isCreator = 
+            group.creator_login === currentUser || 
+            group.creator === currentUserId ||
+            group.creator_id === currentUserId;
+        
+        const membersCount = group.members ? group.members.length : 0;
+        const relativeDate = group.created_at ? formatRelativeDate(group.created_at) : '';
+        
+        return `
+            <div class="list-group-item" 
+                 onclick="openGroup(${group.id})"
+                 style="cursor: pointer;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">
+                            ${group.name || 'Без названия'}
+                            ${isCreator ? '⭐' : ''}
+                        </h6>
+                        <small class="text-muted">
+                            Участников: ${membersCount}
+                            ${relativeDate ? ' • ' + relativeDate : ''}
+                        </small>
+                    </div>
+                    <span class="badge bg-primary">${membersCount}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
 // Функция отображения списка пользователей в модалке создания группы
 function renderGroupMembersList(users) {
     const listContainer = document.getElementById('groupMembersList');
@@ -1479,6 +1396,110 @@ function renderGroupMembersList(users) {
             updateSelectedMembersDisplay();
         });
     });
+}
+
+function renderWalletsTable() {
+    const tbody = document.getElementById('walletsTable');
+    
+    if (wallets.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">У вас пока нет кошельков</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = wallets.map(w => {
+        // Используем effective_balance, если он есть, иначе вычисляем
+        const effectiveBalance = typeof w.effective_balance === 'number' 
+            ? w.effective_balance 
+            : (parseFloat(w.effective_balance) || 0);
+        
+        const currency = String(w.currency || '').toLowerCase();
+        const walletType = w.type || w.wallet_type || 'debit';
+        const isCredit = walletType === 'credit';
+        
+        // Определяем класс для эффективного баланса
+        let balanceClass = '';
+        let balanceFontWeight = '';
+        
+        if (effectiveBalance > 0) {
+            balanceClass = 'text-success';
+            balanceFontWeight = 'fw-bold';
+        } else if (effectiveBalance < 0) {
+            balanceClass = 'text-danger';
+            balanceFontWeight = 'fw-bold';
+        }
+        
+        return `
+            <tr>
+                <td>${w.name}</td>
+                <td><span class="badge bg-secondary">${currency.toUpperCase()}</span></td>
+                <td>
+                    ${isCredit 
+                        ? '<span class="badge bg-warning text-dark">Кредитный</span>' 
+                        : '<span class="badge bg-success">Дебетовый</span>'}
+                </td>
+                <td class="text-end ${balanceClass} ${balanceFontWeight}">
+                    ${formatAmount(effectiveBalance, currency)}
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function renderOperationsTable() {
+    const tbody = document.getElementById('transactionsTable');
+    
+    if (operations.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет операций</td></tr>';
+        return;
+    }
+
+    const last10 = operations.slice(-10).reverse();
+    
+    tbody.innerHTML = last10.map(t => {
+        const wallet = wallets.find(w => w.id === t.wallet_id);
+        const walletName = wallet ? wallet.name : 'Неизвестно';
+        let typeClass, typeIcon, typeLabel;
+        if (t.type === 'income') {
+            typeClass = 'text-success';
+            typeIcon = '';
+            typeLabel = 'Доход';
+        } else if (t.type === 'expense') {
+            typeClass = 'text-danger';
+            typeIcon = '';
+            typeLabel = 'Расход';
+        } else if (t.type === 'transfer') {
+            typeClass = 'text-info';
+            typeIcon = '';
+            typeLabel = 'Перевод';
+        } else {
+            typeClass = 'text-secondary';
+            typeIcon = '';
+            typeLabel = 'Неизвестно';
+        }
+        const date = new Date(t.created_at).toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        // Гарантируем что сумма - число
+        const amount = typeof t.amount === 'number' ? t.amount : (parseFloat(t.amount) || 0);
+        const currency = String(t.currency || '').toLowerCase();
+        
+        // Добавляем минус для расходов
+        const displayAmount = t.type === 'expense' ? -Math.abs(amount) : amount;
+        
+        return `
+            <tr>
+                <td>${date}</td>
+                <td>${typeIcon} <span class="${typeClass}">${typeLabel}</span></td>
+                <td>${walletName}</td>
+                <td>${t.category || t.description || '-'}</td>
+                <td class="text-end ${typeClass}"><strong>${formatAmount(displayAmount, currency)}</strong></td>
+            </tr>
+        `;
+    }).join('');
 }
 
 // Функция обновления отображения выбранных участников
@@ -1878,22 +1899,6 @@ async function leaveGroup() {
 
 // Глобальная переменная для хранения всех пользователей
 let allUsers = [];
-
-// Функция загрузки всех пользователей
-async function loadAllUsers() {
-    try {
-        const response = await fetchWithAuth(`${API_BASE_V2}/users`);
-        
-        if (response.ok) {
-            allUsers = await response.json();
-            return allUsers;
-        }
-        return [];
-    } catch (e) {
-        console.error('[LOAD_USERS] Ошибка:', e);
-        return [];
-    }
-}
 
 // Функция показа модалки добавления участника с поиском
 async function showAddMemberModal() {
