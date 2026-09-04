@@ -1109,7 +1109,6 @@ function initReportDates() {
 }
 
 // Функция отображения групп в таблице
-// Функция отображения групп в таблице
 function renderGroups(groups) {
     console.log('[RENDER_GROUPS] Начинаем рендеринг групп:', groups);
     
@@ -1177,7 +1176,7 @@ function renderGroups(groups) {
                 <td>${relativeDate}</td>
                 <td>
                     <div class="d-flex align-items-center">
-                        <span class="badge bg-primary me-2">${membersCount}</span>
+                        <span class="badge bg-primary me-2" style="min-width: 30px; display: inline-block; text-align: center;">${membersCount}</span>
                         <span title="Участники: ${membersCount}">${dots}</span>
                     </div>
                 </td>
@@ -2436,7 +2435,7 @@ function displayMyGroupWallets(groupData) {
     });
     
     if (myWallets.length === 0) {
-        container.innerHTML = '<div class="text-muted p-3">Вы пока не прикрепили ни одного кошелька</div>';
+        container.innerHTML = '<div class="text-muted p-3">Вы не прикрепили ни одного кошелька</div>';
         return;
     }
     
