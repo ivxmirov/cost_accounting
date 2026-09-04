@@ -36,31 +36,30 @@
             </div>
 
             <!-- Общий баланс -->
-            <div class="card mb-4">
+            <div class="card mb-3">
                 <div class="card-body">
-                    <!-- <h4 class="card-title">Ваш баланс</h4> -->
                     <div id="totalBalance" class="display-4 text-primary">Загрузка...</div>
                 </div>
             </div>
 
             <!-- Кнопки операций -->
-            <div class="row mb-4">
-                <div class="col-md-3 mb-2">
+            <div class="row mt-1 mb-3">
+                <div class="col-md-3">
                     <button class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#addIncomeModal">
                         + Доход
                     </button>
                 </div>
-                <div class="col-md-3 mb-2">
+                <div class="col-md-3">
                     <button class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
                         - Расход
                     </button>
                 </div>
-                <div class="col-md-3 mb-2">
+                <div class="col-md-3">
                     <button class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#transferModal">
                         ⇄ Перевод
                     </button>
                 </div>
-                <div class="col-md-3 mb-2">
+                <div class="col-md-3">
                     <button class="btn btn-warning w-100" data-bs-toggle="modal" data-bs-target="#reportModal">
                         ≡ Отчет
                     </button>
@@ -103,7 +102,7 @@
             </div>
 
             <!-- Таблица групп -->
-            <div class="card mb-4">
+            <div class="card mb-3">
                 <div class="card-body">
                     <h4 class="card-title">Мои группы</h4>
                     <div class="table-responsive">
@@ -119,6 +118,15 @@
                             <tbody id="groupsTable"></tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+
+            <!-- Кнопка создания группы -->
+            <div class="row mt-1 mb-3">
+                <div class="col">
+                    <button class="btn btn-purple w-100" onclick="showCreateGroupModal()">
+                        Создать группу
+                    </button>
                 </div>
             </div>
 
@@ -142,7 +150,6 @@
                     </div>
                 </div>
             </div>
-        </div>
 
     <!-- Модалка добавления кошелька -->
     <div class="modal fade" id="addWalletModal" tabindex="-1">

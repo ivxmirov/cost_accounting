@@ -1154,9 +1154,7 @@ function renderGroups(groups) {
         
         return `
             <tr class="group-row" data-group-id="${group.id}" style="cursor: pointer;" title="Открыть группу">
-                <td>
-                    <strong>${group.name || 'Без названия'}</strong>
-                </td>
+                <td>${group.name || 'Без названия'}</td>
                 <td>${creatorDisplay}</td>
                 <td>${relativeDate}</td>
                 <td>
