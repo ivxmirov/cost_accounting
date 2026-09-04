@@ -1109,6 +1109,7 @@ function initReportDates() {
 }
 
 // Функция отображения групп в таблице
+// Функция отображения групп в таблице
 function renderGroups(groups) {
     console.log('[RENDER_GROUPS] Начинаем рендеринг групп:', groups);
     
@@ -1124,7 +1125,7 @@ function renderGroups(groups) {
     if (groupsArray.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="4" class="text-center text-muted">
+                <td colspan="5" class="text-center text-muted">
                     Вы пока не состоите ни в одной группе
                 </td>
             </tr>
@@ -1152,6 +1153,23 @@ function renderGroups(groups) {
         const dotsCount = Math.min(membersCount, 15);
         const dots = '•'.repeat(dotsCount);
         
+        // Получаем баланс группы
+        const groupBalance = typeof group.total_balance === 'number' 
+            ? group.total_balance 
+            : (parseFloat(group.total_balance) || 0);
+        
+        // Определяем класс для баланса
+        let balanceClass = '';
+        let balanceFontWeight = '';
+        
+        if (groupBalance > 0) {
+            balanceClass = 'text-success';
+            balanceFontWeight = 'fw-bold';
+        } else if (groupBalance < 0) {
+            balanceClass = 'text-danger';
+            balanceFontWeight = 'fw-bold';
+        }
+        
         return `
             <tr class="group-row" data-group-id="${group.id}" style="cursor: pointer;" title="Открыть группу">
                 <td>${group.name || 'Без названия'}</td>
@@ -1162,6 +1180,9 @@ function renderGroups(groups) {
                         <span class="badge bg-primary me-2">${membersCount}</span>
                         <span title="Участники: ${membersCount}">${dots}</span>
                     </div>
+                </td>
+                <td class="text-end ${balanceClass} ${balanceFontWeight}">
+                    ${formatAmount(groupBalance, 'rub')}
                 </td>
             </tr>
         `;

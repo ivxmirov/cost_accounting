@@ -97,7 +97,17 @@ async def get_current_user_groups(
     result = []
 
     for group in groups:
+        # Вычисляем общий баланс группы
+        total_balance = await calculate_group_balance(db, group.id)
+
+        # Вычисляем балансы участников
+        member_balances = await calculate_member_balances(db, group.id)
+
+        # Создаем схему с дополнительными данными
         schema = GroupResponseSchema.model_validate(obj=group)
+        schema.total_balance = total_balance
+        schema.member_balances = member_balances
+
         result.append(schema)
 
     return result
