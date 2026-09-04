@@ -46,21 +46,16 @@
             <!-- Кнопки операций -->
             <div class="row mb-4">
                 <div class="col-md-3 mb-2">
-                    <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#addWalletModal">
-                        Добавить кошелек
-                    </button>
-                </div>
-                <div class="col-md-2 mb-2">
                     <button class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#addIncomeModal">
                         + Доход
                     </button>
                 </div>
-                <div class="col-md-2 mb-2">
+                <div class="col-md-3 mb-2">
                     <button class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
                         - Расход
                     </button>
                 </div>
-                <div class="col-md-2 mb-2">
+                <div class="col-md-3 mb-2">
                     <button class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#transferModal">
                         ⇄ Перевод
                     </button>
@@ -70,22 +65,18 @@
                         ≡ Отчет
                     </button>
                 </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-purple w-100" onclick="openGroupsModal()">
+                        Мои группы
+                    </button>
                 </div>
-                <div class="row mb-4">
-                    <div class="col-md-3 mb-2">
-                        <button class="btn btn-orange w-100" data-bs-toggle="modal" data-bs-target="#deleteWalletModal">
-                            Удалить кошелек
-                        </button>
-                    </div>
-                    <div class="col-md-3 mb-2">
-                        <button class="btn btn-purple w-100" onclick="openGroupsModal()">
-                            Мои группы
-                        </button>
-                    </div>
-                </div>
+            </div>
 
             <!-- Таблица кошельков -->
-            <div class="card mb-4">
+            <div class="card mb-3">
                 <div class="card-body">
                     <h4 class="card-title">Мои кошельки</h4>
                     <div class="table-responsive">
@@ -101,6 +92,20 @@
                             </thead>
                             <tbody id="walletsTable"></tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Кнопки управления кошельками -->
+            <div class="row mt-1 mb-5">
+                <div class="col">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#addWalletModal">
+                            Добавить кошелек
+                        </button>
+                        <button class="btn btn-orange w-100" data-bs-toggle="modal" data-bs-target="#deleteWalletModal">
+                            Удалить кошелек
+                        </button>
                     </div>
                 </div>
             </div>
@@ -126,7 +131,6 @@
                 </div>
             </div>
         </div>
-    </div>
 
     <!-- Модалка добавления кошелька -->
     <div class="modal fade" id="addWalletModal" tabindex="-1">
