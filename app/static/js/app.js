@@ -1137,12 +1137,14 @@ function renderGroups(groups) {
         
         const relativeDate = group.created_at ? formatRelativeDate(group.created_at) : 'неизвестно';
         
+        // Определяем, является ли текущий пользователь создателем
         const isCreator = 
             group.creator_login === currentUser || 
             group.creator === currentUserId ||
             group.creator_id === currentUserId;
         
-        const creatorDisplay = isCreator ? 'Вы ⭐' : (group.creator_login || 'Другой пользователь');
+        // Отображаем "Вы ⭐" для создателя, иначе "Другой пользователь"
+        const creatorDisplay = isCreator ? 'Вы ⭐' : 'Другой пользователь';
         
         const membersCount = group.members ? group.members.length : 0;
         
@@ -1152,7 +1154,9 @@ function renderGroups(groups) {
         
         return `
             <tr class="group-row" data-group-id="${group.id}" style="cursor: pointer;" title="Открыть группу">
-                <td>${group.name || 'Без названия'}</td>
+                <td>
+                    <strong>${group.name || 'Без названия'}</strong>
+                </td>
                 <td>${creatorDisplay}</td>
                 <td>${relativeDate}</td>
                 <td>
