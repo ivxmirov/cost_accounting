@@ -66,14 +66,6 @@
                     </button>
                 </div>
             </div>
-            
-            <div class="row mb-4">
-                <div class="col-md-3 mb-2">
-                    <button class="btn btn-purple w-100" onclick="openGroupsModal()">
-                        Мои группы
-                    </button>
-                </div>
-            </div>
 
             <!-- Таблица кошельков -->
             <div class="card mb-3">
@@ -97,7 +89,7 @@
             </div>
 
             <!-- Кнопки управления кошельками -->
-            <div class="row mt-1 mb-5">
+            <div class="row mt-1 mb-3">
                 <div class="col">
                     <div class="d-flex gap-2">
                         <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#addWalletModal">
@@ -106,6 +98,26 @@
                         <button class="btn btn-orange w-100" data-bs-toggle="modal" data-bs-target="#deleteWalletModal">
                             Удалить кошелек
                         </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Таблица групп -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="card-title">Мои группы</h4>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Название</th>
+                                    <th>Создатель</th>
+                                    <th>Создана</th>
+                                    <th>Участники</th>
+                                </tr>
+                            </thead>
+                            <tbody id="groupsTable"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>

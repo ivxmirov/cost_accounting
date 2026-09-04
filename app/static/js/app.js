@@ -320,6 +320,12 @@ function logout() {
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('currentUser');
     localStorage.removeItem('currentUserId');
+
+    // Очищаем таблицу групп
+    const groupsTable = document.getElementById('groupsTable');
+    if (groupsTable) {
+        groupsTable.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Вы пока не состоите ни в одной группе</td></tr>';
+    }
     
     // Переключаем интерфейс
     document.getElementById('authSection').style.display = 'block';
@@ -349,6 +355,10 @@ async function loadAllData() {
         await loadOperations();
         console.log('[LOAD] Операции загружены');
         
+        // Загружаем группы
+        await loadGroups();
+        console.log('[LOAD] Группы загружены');
+        
         // Обновляем общий баланс
         await updateTotalBalance();
         console.log('[LOAD] Баланс обновлен');
@@ -356,8 +366,6 @@ async function loadAllData() {
         // Обновляем селекты
         updateWalletSelects();
         console.log('[LOAD] Селекты обновлены');
-        
-        // НЕ загружаем группы автоматически, они загружаются при открытии модалки
         
     } catch (e) {
         console.error('[LOAD] Ошибка загрузки данных:', e);
@@ -367,8 +375,199 @@ async function loadAllData() {
         operations = [];
         renderWalletsTable();
         renderOperationsTable();
+        renderGroups([]);
         updateWalletSelects();
         await updateTotalBalance();
+    }
+}
+
+// Функция загрузки групп пользователя
+async function loadGroups() {
+    if (!accessToken) {
+        console.log('[LOAD_GROUPS] Нет токена, группы не загружаются');
+        return;
+    }
+
+    try {
+        console.log('[LOAD_GROUPS] Загружаем группы...');
+        console.log('[LOAD_GROUPS] URL:', `${API_BASE_V2}/users/me/groups`);
+        
+        const response = await fetchWithAuth(`${API_BASE_V2}/users/me/groups`);
+        console.log('[LOAD_GROUPS] Статус:', response.status);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('[LOAD_GROUPS] Ответ бэкенда:', data);
+            
+            // Проверяем структуру данных
+            let groups = data;
+            if (!Array.isArray(data)) {
+                if (data.groups && Array.isArray(data.groups)) {
+                    groups = data.groups;
+                } else if (data.items && Array.isArray(data.items)) {
+                    groups = data.items;
+                } else if (data.data && Array.isArray(data.data)) {
+                    groups = data.data;
+                } else {
+                    console.error('[LOAD_GROUPS] Неизвестный формат данных:', data);
+                    renderGroups([]);
+                    return;
+                }
+            }
+            
+            renderGroups(groups);
+            
+        } else if (response.status === 401) {
+            console.log('[LOAD_GROUPS] Не авторизован');
+            renderGroups([]);
+        } else {
+            const error = await response.json();
+            console.error('[LOAD_GROUPS] Ошибка:', error);
+            renderGroups([]);
+        }
+    } catch (e) {
+        console.error('[LOAD_GROUPS] Ошибка загрузки групп:', e);
+        renderGroups([]);
+    }
+}
+
+// Функция загрузки списка операций
+async function loadOperations() {
+    try {
+        const response = await fetchWithAuth(`${API_BASE_V1}/operations`);
+
+        if (response.ok) {
+            const rawOperations = await response.json();
+            // Нормализуем данные от бэкенда: приводим валюту к нижнему регистру, сумму к числу
+            operations = rawOperations.map(op => {
+                // Преобразуем сумму в число (обрабатываем строки, Decimal и другие типы)
+                let amount = 0;
+                if (typeof op.amount === 'number') {
+                    amount = op.amount;
+                } else if (typeof op.amount === 'string') {
+                    amount = parseFloat(op.amount) || 0;
+                } else if (op.amount != null) {
+                    amount = Number(op.amount) || 0;
+                }
+                
+                return {
+                    ...op,
+                    currency: String(op.currency || '').toLowerCase(),
+                    amount: amount
+                };
+            });
+            renderOperationsTable();
+        } else if (response.status === 401) {
+            console.log('Пользователь не авторизован, операций нет');
+            operations = [];
+            renderOperationsTable();
+        }
+    } catch (e) {
+        console.error('Ошибка загрузки операций', e);
+    }
+}
+
+async function loadReport() {
+    const dateFrom = document.getElementById('reportDateFrom').value;
+    const dateTo = document.getElementById('reportDateTo').value;
+
+    if (!dateFrom || !dateTo) {
+        showError('Выберите период');
+        return;
+    }
+
+    if (dateFrom > dateTo) {
+        showError('Дата начала не может быть позже даты окончания');
+        return;
+    }
+
+    try {
+        const params = new URLSearchParams({
+            date_from: `${dateFrom}T00:00:00`,
+            date_to: `${dateTo}T23:59:59`
+        });
+
+        const response = await fetchWithAuth(`${API_BASE_V1}/operations?${params}`);
+
+        if (response.ok) {
+            const rawReportOperations = await response.json();
+            // Нормализуем данные от бэкенда: приводим валюту к нижнему регистру, сумму к числу
+            const reportOperations = rawReportOperations.map(op => {
+                // Преобразуем сумму в число (обрабатываем строки, Decimal и другие типы)
+                let amount = 0;
+                if (typeof op.amount === 'number') {
+                    amount = op.amount;
+                } else if (typeof op.amount === 'string') {
+                    amount = parseFloat(op.amount) || 0;
+                } else if (op.amount != null) {
+                    amount = Number(op.amount) || 0;
+                }
+                
+                return {
+                    ...op,
+                    currency: String(op.currency || '').toLowerCase(),
+                    amount: amount
+                };
+            });
+            const tbody = document.getElementById('reportTable');
+            
+            if (reportOperations.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет операций за выбранный период</td></tr>';
+            } else {
+                tbody.innerHTML = reportOperations.reverse().map(t => {
+                    const wallet = wallets.find(w => w.id === t.wallet_id);
+                    const walletName = wallet ? wallet.name : 'Неизвестно';
+                    let typeClass, typeIcon, typeLabel;
+                    if (t.type === 'income') {
+                        typeClass = 'text-success';
+                        typeIcon = '';
+                        typeLabel = 'Доход';
+                    } else if (t.type === 'expense') {
+                        typeClass = 'text-danger';
+                        typeIcon = '';
+                        typeLabel = 'Расход';
+                    } else if (t.type === 'transfer') {
+                        typeClass = 'text-info';
+                        typeIcon = '';
+                        typeLabel = 'Перевод';
+                    } else {
+                        typeClass = 'text-secondary';
+                        typeIcon = '';
+                        typeLabel = 'Неизвестно';
+                    }
+                    const date = new Date(t.created_at).toLocaleString('ru-RU', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    // Гарантируем что сумма - число
+                    const amount = typeof t.amount === 'number' ? t.amount : (parseFloat(t.amount) || 0);
+                    const currency = String(t.currency || '').toLowerCase();
+                    
+                    return `
+                        <tr>
+                            <td>${date}</td>
+                            <td>${typeIcon} <span class="${typeClass}">${typeLabel}</span></td>
+                            <td>${walletName}</td>
+                            <td>${t.category || t.description || '-'}</td>
+                            <td class="text-end ${typeClass}"><strong>${formatAmount(amount, currency)}</strong></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('reportContent').style.display = 'block';
+            showSuccess('Отчет сформирован');
+        } else {
+            const error = await response.json();
+            showError(error.message || error.detail || 'Ошибка загрузки отчета');
+        }
+    } catch (e) {
+        console.error('Ошибка загрузки отчета:', e);
+        showError('Ошибка подключения к серверу');
     }
 }
 
@@ -423,42 +622,6 @@ async function loadWallets() {
         wallets = [];
         renderWalletsTable();
         updateWalletSelects();
-    }
-}
-
-// Функция загрузки списка операций
-async function loadOperations() {
-    try {
-        const response = await fetchWithAuth(`${API_BASE_V1}/operations`);
-
-        if (response.ok) {
-            const rawOperations = await response.json();
-            // Нормализуем данные от бэкенда: приводим валюту к нижнему регистру, сумму к числу
-            operations = rawOperations.map(op => {
-                // Преобразуем сумму в число (обрабатываем строки, Decimal и другие типы)
-                let amount = 0;
-                if (typeof op.amount === 'number') {
-                    amount = op.amount;
-                } else if (typeof op.amount === 'string') {
-                    amount = parseFloat(op.amount) || 0;
-                } else if (op.amount != null) {
-                    amount = Number(op.amount) || 0;
-                }
-                
-                return {
-                    ...op,
-                    currency: String(op.currency || '').toLowerCase(),
-                    amount: amount
-                };
-            });
-            renderOperationsTable();
-        } else if (response.status === 401) {
-            console.log('Пользователь не авторизован, операций нет');
-            operations = [];
-            renderOperationsTable();
-        }
-    } catch (e) {
-        console.error('Ошибка загрузки операций', e);
     }
 }
 
@@ -945,190 +1108,16 @@ function initReportDates() {
     document.getElementById('reportDateTo').valueAsDate = tomorrow;
 }
 
-async function loadReport() {
-    const dateFrom = document.getElementById('reportDateFrom').value;
-    const dateTo = document.getElementById('reportDateTo').value;
-
-    if (!dateFrom || !dateTo) {
-        showError('Выберите период');
-        return;
-    }
-
-    if (dateFrom > dateTo) {
-        showError('Дата начала не может быть позже даты окончания');
-        return;
-    }
-
-    try {
-        const params = new URLSearchParams({
-            date_from: `${dateFrom}T00:00:00`,
-            date_to: `${dateTo}T23:59:59`
-        });
-
-        const response = await fetchWithAuth(`${API_BASE_V1}/operations?${params}`);
-
-        if (response.ok) {
-            const rawReportOperations = await response.json();
-            // Нормализуем данные от бэкенда: приводим валюту к нижнему регистру, сумму к числу
-            const reportOperations = rawReportOperations.map(op => {
-                // Преобразуем сумму в число (обрабатываем строки, Decimal и другие типы)
-                let amount = 0;
-                if (typeof op.amount === 'number') {
-                    amount = op.amount;
-                } else if (typeof op.amount === 'string') {
-                    amount = parseFloat(op.amount) || 0;
-                } else if (op.amount != null) {
-                    amount = Number(op.amount) || 0;
-                }
-                
-                return {
-                    ...op,
-                    currency: String(op.currency || '').toLowerCase(),
-                    amount: amount
-                };
-            });
-            const tbody = document.getElementById('reportTable');
-            
-            if (reportOperations.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет операций за выбранный период</td></tr>';
-            } else {
-                tbody.innerHTML = reportOperations.reverse().map(t => {
-                    const wallet = wallets.find(w => w.id === t.wallet_id);
-                    const walletName = wallet ? wallet.name : 'Неизвестно';
-                    let typeClass, typeIcon, typeLabel;
-                    if (t.type === 'income') {
-                        typeClass = 'text-success';
-                        typeIcon = '';
-                        typeLabel = 'Доход';
-                    } else if (t.type === 'expense') {
-                        typeClass = 'text-danger';
-                        typeIcon = '';
-                        typeLabel = 'Расход';
-                    } else if (t.type === 'transfer') {
-                        typeClass = 'text-info';
-                        typeIcon = '';
-                        typeLabel = 'Перевод';
-                    } else {
-                        typeClass = 'text-secondary';
-                        typeIcon = '';
-                        typeLabel = 'Неизвестно';
-                    }
-                    const date = new Date(t.created_at).toLocaleString('ru-RU', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                    
-                    // Гарантируем что сумма - число
-                    const amount = typeof t.amount === 'number' ? t.amount : (parseFloat(t.amount) || 0);
-                    const currency = String(t.currency || '').toLowerCase();
-                    
-                    return `
-                        <tr>
-                            <td>${date}</td>
-                            <td>${typeIcon} <span class="${typeClass}">${typeLabel}</span></td>
-                            <td>${walletName}</td>
-                            <td>${t.category || t.description || '-'}</td>
-                            <td class="text-end ${typeClass}"><strong>${formatAmount(amount, currency)}</strong></td>
-                        </tr>
-                    `;
-                }).join('');
-            }
-
-            document.getElementById('reportContent').style.display = 'block';
-            showSuccess('Отчет сформирован');
-        } else {
-            const error = await response.json();
-            showError(error.message || error.detail || 'Ошибка загрузки отчета');
-        }
-    } catch (e) {
-        console.error('Ошибка загрузки отчета:', e);
-        showError('Ошибка подключения к серверу');
-    }
-}
-
-// Функция загрузки групп пользователя
-async function loadGroups() {
-    if (!accessToken) {
-        showError('Сначала войдите в систему');
-        return;
-    }
-
-    try {
-        console.log('[LOAD_GROUPS] Загружаем группы...');
-        console.log('[LOAD_GROUPS] URL:', `${API_BASE_V2}/users/me/groups`);
-        
-        const response = await fetchWithAuth(`${API_BASE_V2}/users/me/groups`);
-        console.log('[LOAD_GROUPS] Статус:', response.status);
-        
-        if (response.ok) {
-            const data = await response.json();
-            console.log('[LOAD_GROUPS] Ответ бэкенда:', data);
-            console.log('[LOAD_GROUPS] Тип данных:', typeof data);
-            console.log('[LOAD_GROUPS] Это массив?', Array.isArray(data));
-            
-            // Проверяем структуру данных
-            let groups = data;
-            if (!Array.isArray(data)) {
-                if (data.groups && Array.isArray(data.groups)) {
-                    groups = data.groups;
-                } else if (data.items && Array.isArray(data.items)) {
-                    groups = data.items;
-                } else if (data.data && Array.isArray(data.data)) {
-                    groups = data.data;
-                } else {
-                    console.error('[LOAD_GROUPS] Неизвестный формат данных:', data);
-                    showError('Неизвестный формат данных от сервера');
-                    return;
-                }
-            }
-            
-            renderGroups(groups);
-            
-            // Показываем модалку
-            const modalElement = document.getElementById('groupsModal');
-            if (modalElement) {
-                const modal = new bootstrap.Modal(modalElement);
-                modal.show();
-            } else {
-                console.error('[LOAD_GROUPS] Модалка groupsModal не найдена');
-            }
-            
-        } else if (response.status === 401) {
-            showError('Не авторизован');
-        } else {
-            const error = await response.json();
-            console.error('[LOAD_GROUPS] Ошибка:', error);
-            showError(error.detail || 'Ошибка загрузки групп');
-        }
-    } catch (e) {
-        console.error('[LOAD_GROUPS] Ошибка загрузки групп:', e);
-        showError('Не удалось загрузить группы');
-    }
-}
-
 // Функция отображения групп в таблице
 function renderGroups(groups) {
     console.log('[RENDER_GROUPS] Начинаем рендеринг групп:', groups);
     
-    // Проверяем, что элемент существует
     const tbody = document.getElementById('groupsTable');
     if (!tbody) {
         console.error('[RENDER_GROUPS] Элемент groupsTable не найден');
-        
-        // Пробуем найти groupsList как запасной вариант
-        const groupsList = document.getElementById('groupsList');
-        if (groupsList) {
-            console.log('[RENDER_GROUPS] Найден groupsList вместо groupsTable');
-            renderGroupsAsList(groups);
-            return;
-        }
         return;
     }
     
-    // Проверяем, что groups - массив
     const groupsArray = Array.isArray(groups) ? groups : (groups.groups || []);
     console.log('[RENDER_GROUPS] Количество групп:', groupsArray.length);
     
@@ -1146,20 +1135,15 @@ function renderGroups(groups) {
     tbody.innerHTML = groupsArray.map(group => {
         console.log('[RENDER_GROUPS] Обрабатываем группу:', group);
         
-        // Форматируем относительную дату
         const relativeDate = group.created_at ? formatRelativeDate(group.created_at) : 'неизвестно';
         
-        // Определяем, является ли текущий пользователь создателем
-        // Проверяем разные варианты
         const isCreator = 
             group.creator_login === currentUser || 
             group.creator === currentUserId ||
             group.creator_id === currentUserId;
         
-        // Определяем, что показывать в столбце "Создатель"
         const creatorDisplay = isCreator ? 'Вы ⭐' : (group.creator_login || 'Другой пользователь');
         
-        // Количество участников
         const membersCount = group.members ? group.members.length : 0;
         
         // Генерируем точки для участников (не более 15)
@@ -1168,14 +1152,14 @@ function renderGroups(groups) {
         
         return `
             <tr class="group-row" data-group-id="${group.id}" style="cursor: pointer;" title="Открыть группу">
-                <td>
-                    <strong>${group.name || 'Без названия'}</strong>
-                </td>
+                <td>${group.name || 'Без названия'}</td>
                 <td>${creatorDisplay}</td>
                 <td>${relativeDate}</td>
                 <td>
-                    <span class="badge bg-primary">${membersCount}</span>
-                    <span class="ms-2" title="Участники: ${membersCount}">${dots}</span>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-primary me-2">${membersCount}</span>
+                        <span title="Участники: ${membersCount}">${dots}</span>
+                    </div>
                 </td>
             </tr>
         `;
@@ -1285,16 +1269,6 @@ async function openGroup(groupId) {
         console.error('[OPEN_GROUP] Ошибка:', e);
         showError('Не удалось загрузить группу');
     }
-}
-
-// Функция открытия модалки групп
-async function openGroupsModal() {
-    if (!accessToken) {
-        showError('Сначала войдите в систему');
-        return;
-    }
-    
-    await loadGroups();
 }
 
 // Глобальная переменная для текущей группы
