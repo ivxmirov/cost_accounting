@@ -2450,22 +2450,39 @@ function displayMyGroupWallets(groupData) {
                     <th>Название</th>
                     <th>Валюта</th>
                     <th>Тип</th>
+                    <th class="text-end">Кредитный лимит</th>
                     <th class="text-end">Баланс</th>
                 </tr>
             </thead>
             <tbody>
                 ${myWallets.map(wallet => {
-                    const balance = parseFloat(wallet.balance) || 0;
+                    const balance = typeof wallet.balance === 'number' ? wallet.balance : (parseFloat(wallet.balance) || 0);
                     const currency = String(wallet.currency || 'rub').toLowerCase();
                     const walletType = wallet.type || wallet.wallet_type || 'debit';
                     const isCredit = walletType === 'credit';
+                    
+                    const creditLimit = isCredit 
+                        ? (typeof wallet.credit_limit === 'number' ? wallet.credit_limit : (parseFloat(wallet.credit_limit) || 0))
+                        : null;
+                    
+                    // Определяем жирность для баланса (как на главной странице)
+                    const balanceFontWeight = balance === 0 ? '' : 'fw-bold';
                     
                     return `
                         <tr>
                             <td>${wallet.name || 'Кошелек'}</td>
                             <td><span class="badge bg-secondary">${currency.toUpperCase()}</span></td>
-                            <td>${isCredit ? 'Кредитный' : 'Дебетовый'}</td>
-                            <td class="text-end">${formatAmount(balance, currency)}</td>
+                            <td>
+                                ${isCredit 
+                                    ? '<span class="badge bg-warning text-dark">Кредитный</span>' 
+                                    : '<span class="badge bg-success">Дебетовый</span>'}
+                            </td>
+                            <td class="text-end">
+                                ${isCredit 
+                                    ? `<strong>${formatAmount(creditLimit, currency)}</strong>` 
+                                    : '<span class="text-muted">—</span>'}
+                            </td>
+                            <td class="text-end ${balanceFontWeight}">${formatAmount(balance, currency)}</td>
                         </tr>
                     `;
                 }).join('')}
