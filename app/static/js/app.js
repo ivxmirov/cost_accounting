@@ -547,6 +547,9 @@ async function loadReport() {
                     const amount = typeof t.amount === 'number' ? t.amount : (parseFloat(t.amount) || 0);
                     const currency = String(t.currency || '').toLowerCase();
                     
+                    // Добавляем минус для расходов
+                    const displayAmount = t.type === 'expense' ? -Math.abs(amount) : amount;
+                    
                     return `
                         <tr>
                             <td>${date}</td>
@@ -709,13 +712,16 @@ function renderOperationsTable() {
         const amount = typeof t.amount === 'number' ? t.amount : (parseFloat(t.amount) || 0);
         const currency = String(t.currency || '').toLowerCase();
         
+        // Добавляем минус для расходов
+        const displayAmount = t.type === 'expense' ? -Math.abs(amount) : amount;
+        
         return `
             <tr>
                 <td>${date}</td>
                 <td>${typeIcon} <span class="${typeClass}">${typeLabel}</span></td>
                 <td>${walletName}</td>
                 <td>${t.category || t.description || '-'}</td>
-                <td class="text-end ${typeClass}"><strong>${formatAmount(amount, currency)}</strong></td>
+                <td class="text-end ${typeClass}"><strong>${formatAmount(displayAmount, currency)}</strong></td>
             </tr>
         `;
     }).join('');
