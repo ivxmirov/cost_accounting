@@ -83,6 +83,20 @@ async def get_user_groups(db: AsyncSession, user_id: int) -> list[Group]:
     return list(result.scalars().unique().all())
 
 
+async def get_user_group_wallets(db: AsyncSession, group_id: int, user_id: int) -> list[Wallet]:
+    """Получает кошельки пользователя, которые прикреплены к указанной группе."""
+
+    result = await db.execute(
+        select(Wallet)
+        .join(group_wallets, Wallet.id == group_wallets.c.wallet_id)
+        .where(
+            Wallet.user_id == user_id,
+            group_wallets.c.group_id == group_id
+        )
+    )
+    return list(result.scalars().all())
+
+
 async def get_group_by_id(db: AsyncSession, group_id: int) -> Group | None:
     """Получает группу по id без проверки прав пользователя"""
     result = await db.execute(

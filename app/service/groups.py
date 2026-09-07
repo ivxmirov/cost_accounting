@@ -165,29 +165,34 @@ async def get_user_group_by_id(
         wallets=[]
     )
 
-    # Получаем кошельки текущего пользователя
-    user_wallets = await wallets_repository.get_user_wallets(db, current_user.id)
+    user_wallets = await groups_repository.get_user_group_wallets(
+        db,
+        group_id=group_id,
+        user_id=current_user.id
+    )
 
-    # Фильтруем только те кошельки, которые прикреплены к группе
-    group_wallet_ids = {wallet.id for wallet in group.wallets}
-
-    # Преобразуем кошельки пользователя, которые прикреплены к группе
-    wallets = []
-    for wallet in user_wallets:
-        if wallet.id in group_wallet_ids:
-            effective_balance = await calculate_wallet_effective_balance(wallet)
-
-            wallet_schema = WalletTableSchema(
+    # Создаем схему
+    group_schema = GroupDetailResponseSchema(
+        id=group.id,
+        name=group.name,
+        creator=group.creator,
+        creator_login=group.creator_login if group.creator_user else None,
+        members=[member.login for member in group.members],
+        created_at=group.created_at,
+        total_balance=total_balance,
+        member_balances=member_balances,
+        wallets=[
+            WalletTableSchema(
                 id=wallet.id,
                 name=wallet.name,
                 currency=wallet.currency,
                 type=wallet.type,
                 user_id=wallet.user_id,
-                effective_balance=effective_balance
+                effective_balance=wallet.effective_balance
             )
-            wallets.append(wallet_schema)
-
-    group_schema.wallets = wallets
+            for wallet in user_wallets
+        ]
+    )
 
     return group_schema
 
