@@ -155,3 +155,28 @@ h1 {
 .modal-backdrop.fade {
     transition: none !important;
 }
+
+.wallet-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.wallet-table th:nth-child(1),
+.wallet-table td:nth-child(1) {
+    width: 40%;
+}
+
+.wallet-table th:nth-child(2),
+.wallet-table td:nth-child(2) {
+    width: 15%;
+}
+
+.wallet-table th:nth-child(3),
+.wallet-table td:nth-child(3) {
+    width: 20%;
+}
+
+.wallet-table th:nth-child(4),
+.wallet-table td:nth-child(4) {
+    width: 25%;
+}

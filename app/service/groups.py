@@ -14,6 +14,7 @@ from app.schemas import (
     GroupDetailResponseSchema,
     GroupListResponseSchema,
     MemberBalanceSchema,
+    WalletTableSchema,
 )
 from app.service import exchange_service
 from app.service.wallets import wallets_repository
@@ -82,8 +83,8 @@ async def create_group(
     )
 
     await db.commit()
+    await db.refresh(new_group)
 
-    # Создаем схему вручную
     schema = GroupDetailResponseSchema(
         id=new_group.id,
         name=new_group.name,
@@ -134,19 +135,7 @@ async def get_user_group_by_id(
 ) -> GroupDetailResponseSchema:
     """
     Получает информацию о группе с общим балансом.
-
-    Args:
-        db: Сессия БД
-        current_user: Текущий пользователь
-        group_id: Уникальный идентификатор группы
-
-    Returns:
-        Информация о группе с балансом
-
-    Raises:
-        HTTPException: Если группа не найдена или у пользователя нет к ней доступа
     """
-
     group = await groups_repository.get_group_by_id(db, group_id)
 
     # Проверяем, существует ли группа
@@ -163,35 +152,58 @@ async def get_user_group_by_id(
     # Сортируем участников по алфавиту
     group.members.sort(key=lambda member: member.login.lower())
     member_balances.sort(key=lambda x: x.login.lower())
-    group_schema = GroupDetailResponseSchema.model_validate(group)
-    group_schema.total_balance = total_balance
-    group_schema.member_balances = member_balances
+
+    group_schema = GroupDetailResponseSchema(
+        id=group.id,
+        name=group.name,
+        creator=group.creator,
+        creator_login=group.creator_login if group.creator_user else None,
+        members=[member.login for member in group.members],
+        created_at=group.created_at,
+        total_balance=total_balance,
+        member_balances=member_balances,
+        wallets=[]
+    )
+
+    # Получаем кошельки текущего пользователя
+    user_wallets = await wallets_repository.get_user_wallets(db, current_user.id)
+
+    # Фильтруем только те кошельки, которые прикреплены к группе
+    group_wallet_ids = {wallet.id for wallet in group.wallets}
+
+    # Преобразуем кошельки пользователя, которые прикреплены к группе
+    wallets = []
+    for wallet in user_wallets:
+        if wallet.id in group_wallet_ids:
+            effective_balance = await calculate_wallet_effective_balance(wallet)
+
+            wallet_schema = WalletTableSchema(
+                id=wallet.id,
+                name=wallet.name,
+                currency=wallet.currency,
+                type=wallet.type,
+                user_id=wallet.user_id,
+                effective_balance=effective_balance
+            )
+            wallets.append(wallet_schema)
+
+    group_schema.wallets = wallets
 
     return group_schema
 
 
-async def calculate_wallet_effective_balance(wallet):
+async def calculate_wallet_effective_balance(wallet: Wallet) -> Decimal:
     """
-    Рассчитывает эффективный баланс кошелька.
-
-    Для дебетовых кошельков: эффективный баланс = текущий баланс.
-    Для кредитных кошельков: эффективный баланс = текущий баланс - кредитный лимит.
+    Рассчитывает эффективный баланс кошелька в рублях.
     """
-    # Это условие выполнится только у дебетовых кошельков
-    if wallet.credit_limit is None:
-        credit_limit = Decimal("0")
-    else:
-        # Это условие выполнится только у кредитных кошельков
-        credit_limit: Decimal = wallet.credit_limit
-
     if wallet.currency == CurrencyEnum.RUB:
-        return wallet.balance - credit_limit
+        return wallet.effective_balance
     else:
         exchange_rate = await exchange_service.get_exchange_rate(
             wallet.currency,
             CurrencyEnum.RUB,
         )
-        return exchange_rate * (wallet.balance - credit_limit)
+        return exchange_rate * wallet.effective_balance
 
 
 async def calculate_member_balances(

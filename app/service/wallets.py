@@ -6,7 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.enum import CurrencyEnum, WalletType
 from app.models import User
 from app.repository import wallets as wallets_repository
-from app.schemas import TotalBalance, WalletCreateSchema, WalletResponseSchema, WalletTableSchema
+from app.schemas import (
+    TotalBalance,
+    WalletCreateSchema,
+    WalletDetailResponseSchema,
+    WalletTableSchema,
+)
 from app.service import exchange_service
 
 
@@ -14,7 +19,7 @@ async def create_wallet(
     db: AsyncSession,
     current_user: User,
     wallet: WalletCreateSchema,
-) -> WalletResponseSchema:
+) -> WalletDetailResponseSchema:
     """
     Создает новый кошелек для пользователя с проверкой на дубликаты
     Args:
@@ -59,7 +64,7 @@ async def create_wallet(
     )
 
     await db.commit()
-    return WalletResponseSchema.model_validate(new_wallet)
+    return WalletDetailResponseSchema.model_validate(new_wallet)
 
 
 async def delete_wallet_by_id(
@@ -130,7 +135,7 @@ async def get_total_user_balance(db: AsyncSession, current_user: User) -> TotalB
     return TotalBalance(total_balance=total_balance)
 
 
-async def get_user_wallets(db: AsyncSession, current_user: User) -> list[WalletResponseSchema]:
+async def get_user_wallets(db: AsyncSession, current_user: User) -> list[WalletDetailResponseSchema]:
     """
     Получает список всех кошельков пользователя
     Args:
@@ -140,14 +145,14 @@ async def get_user_wallets(db: AsyncSession, current_user: User) -> list[WalletR
         Список всех кошельков пользователя
     """
     wallets = await wallets_repository.get_user_wallets(db, current_user.id)
-    return [WalletResponseSchema.model_validate(wallet) for wallet in wallets]
+    return [WalletDetailResponseSchema.model_validate(wallet) for wallet in wallets]
 
 
 async def get_wallet_by_name(
     db: AsyncSession,
     current_user: User,
     wallet_name: str,
-) -> WalletResponseSchema:
+) -> WalletDetailResponseSchema:
     """
     Получает кошелек пользователя по названию
     Args:
@@ -164,7 +169,7 @@ async def get_wallet_by_name(
 
     wallet = await wallets_repository.get_wallet_by_name(db, current_user.id, wallet_name)
 
-    return WalletResponseSchema.model_validate(wallet)
+    return WalletDetailResponseSchema.model_validate(wallet)
 
 
 async def calculate_wallet_effective_balance(wallet) -> Decimal:

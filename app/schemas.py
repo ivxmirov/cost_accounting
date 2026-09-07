@@ -110,28 +110,22 @@ class UserResponseSchema(BaseModel):
     login: str
 
 
-class WalletResponseSchema(BaseModel):
+class WalletBaseSchema(BaseModel):
     model_config = {"from_attributes": True}
 
     id: int
     name: str
-    balance: Decimal
     currency: CurrencyEnum
     type: WalletType
-    credit_limit: Decimal | None
     user_id: int
 
 
-class WalletTableSchema(BaseModel):
-    """Упрощенная схема кошелька для таблицы"""
-
-    model_config = {"from_attributes": True}
-
-    id: int
-    name: str
-    currency: CurrencyEnum
-    type: WalletType
+class WalletDetailResponseSchema(WalletBaseSchema):
     balance: Decimal
+    credit_limit: Decimal | None
+
+
+class WalletTableSchema(WalletBaseSchema):
     effective_balance: Decimal
 
 
@@ -146,7 +140,7 @@ class GroupDetailResponseSchema(BaseModel):
     created_at: datetime
     total_balance: Decimal = Decimal("0")
     member_balances: list[MemberBalanceSchema] = Field(default_factory=list)
-    wallets: list[WalletResponseSchema] = Field(default_factory=list)
+    wallets: list[WalletTableSchema] = Field(default_factory=list)
 
     @field_validator("members", mode="before")
     @classmethod
@@ -228,8 +222,8 @@ class TransferCreateSchemaV2(TransferCreateSchema):
 class TransferResponseSchema(BaseModel):
     model_config = {"from_attributes": True}
     success: bool
-    from_wallet: WalletResponseSchema
-    to_wallet: WalletResponseSchema
+    from_wallet: WalletDetailResponseSchema
+    to_wallet: WalletDetailResponseSchema
     transferred_amount: Decimal
     received_amount: Decimal
     exchange_rate: Decimal

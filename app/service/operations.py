@@ -16,7 +16,7 @@ from app.schemas import (
     OperationResponse,
     TransferCreateSchemaV2,
     TransferResponseSchema,
-    WalletResponseSchema,
+    WalletDetailResponseSchema,
 )
 from app.service.exchange_service import get_exchange_rate
 
@@ -271,8 +271,8 @@ async def transfer_between_wallets_v2(
         return (
             TransferResponseSchema(
                 success=True,
-                from_wallet=WalletResponseSchema.model_validate(from_wallet),
-                to_wallet=WalletResponseSchema.model_validate(to_wallet),
+                from_wallet=WalletDetailResponseSchema.model_validate(from_wallet),
+                to_wallet=WalletDetailResponseSchema.model_validate(to_wallet),
                 transferred_amount=existing_operation.amount,
                 received_amount=target_amount,
                 exchange_rate=exchange_rate,
@@ -302,8 +302,8 @@ async def transfer_between_wallets_v2(
     return (
         TransferResponseSchema(
             success=True,
-            from_wallet=WalletResponseSchema.model_validate(from_wallet),
-            to_wallet=WalletResponseSchema.model_validate(to_wallet),
+            from_wallet=WalletDetailResponseSchema.model_validate(from_wallet),
+            to_wallet=WalletDetailResponseSchema.model_validate(to_wallet),
             transferred_amount=transfer.amount,
             received_amount=target_amount,
             exchange_rate=exchange_rate,

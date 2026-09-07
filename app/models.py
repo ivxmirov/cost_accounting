@@ -123,3 +123,14 @@ class Wallet(Base):
         secondary=group_wallets,
         back_populates="wallets",
     )
+
+    @property
+    def effective_balance(self) -> Decimal:
+        """Эффективный баланс с учетом кредитного лимита.
+
+        Для дебетовых кошельков: эффективный баланс = текущий баланс.
+        Для кредитных кошельков: эффективный баланс = текущий баланс - кредитный лимит.
+        """
+        if self.credit_limit is None:
+            return self.balance
+        return self.balance - self.credit_limit

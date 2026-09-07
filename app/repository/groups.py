@@ -89,7 +89,7 @@ async def get_group_by_id(db: AsyncSession, group_id: int) -> Group | None:
         select(Group)
         .options(
             selectinload(Group.members),
-            selectinload(Group.wallets),
+            selectinload(Group.wallets).joinedload(Wallet.user),
             joinedload(Group.creator_user),
         )
         .where(Group.id == group_id)
@@ -112,9 +112,14 @@ async def get_group_wallets(
         Список кошельков группы
     """
     result = await db.execute(
-        select(Wallet).join(group_wallets).where(group_wallets.c.group_id == group_id),
+        select(Wallet)
+        .join(group_wallets)
+        .where(group_wallets.c.group_id == group_id)
+        .options(
+            joinedload(Wallet.user),
+        ),
     )
-    return list(result.scalars().all())
+    return list(result.scalars().unique().all())
 
 
 async def is_wallet_attached_to_group(

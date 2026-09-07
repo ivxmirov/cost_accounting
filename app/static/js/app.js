@@ -1428,25 +1428,21 @@ function renderGroupMembersList(users) {
     });
 }
 
-function renderWalletsTable() {
-    const tbody = document.getElementById('walletsTable');
-    
-    if (wallets.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">У вас пока нет кошельков</td></tr>';
-        return;
+// Функция-хелпер для генерации строк таблицы кошельков
+function generateWalletRows(walletsList) {
+    if (!walletsList || walletsList.length === 0) {
+        return '<tr><td colspan="4" class="text-center text-muted">Нет кошельков</td></tr>';
     }
-
-    tbody.innerHTML = wallets.map(w => {
-        // Используем effective_balance, если он есть, иначе вычисляем
+    
+    return walletsList.map(w => {
         const effectiveBalance = typeof w.effective_balance === 'number' 
             ? w.effective_balance 
-            : (parseFloat(w.effective_balance) || 0);
+            : (parseFloat(w.effective_balance) || parseFloat(w.balance) || 0);
         
         const currency = String(w.currency || '').toLowerCase();
         const walletType = w.type || w.wallet_type || 'debit';
         const isCredit = walletType === 'credit';
         
-        // Определяем класс для эффективного баланса
         let balanceClass = '';
         let balanceFontWeight = '';
         
@@ -1460,19 +1456,62 @@ function renderWalletsTable() {
         
         return `
             <tr>
-                <td>${w.name}</td>
-                <td><span class="badge bg-secondary">${currency.toUpperCase()}</span></td>
-                <td>
+                <td class="col-4">${w.name || 'Кошелек'}</td>
+                <td class="col-2"><span class="badge bg-secondary">${currency.toUpperCase()}</span></td>
+                <td class="col-3">
                     ${isCredit 
                         ? '<span class="badge bg-warning text-dark">Кредитный</span>' 
                         : '<span class="badge bg-success">Дебетовый</span>'}
                 </td>
-                <td class="text-end ${balanceClass} ${balanceFontWeight}">
+                <td class="col-3 text-end ${balanceClass} ${balanceFontWeight}">
                     ${formatAmount(effectiveBalance, currency)}
                 </td>
             </tr>
         `;
     }).join('');
+}
+
+// Главная страница
+function renderWalletsTable() {
+    const tbody = document.getElementById('walletsTable');
+    if (!tbody) return;
+    tbody.innerHTML = generateWalletRows(wallets);
+}
+
+// Детали группы
+function displayMyGroupWallets(groupData) {
+    const container = document.getElementById('myGroupWallets');
+    if (!container) return;
+    
+    const groupWallets = groupData.wallets || [];
+    const myWallets = groupWallets.filter(wallet => {
+        return wallet.user_id === currentUserId || 
+               wallet.owner_id === currentUserId || 
+               wallet.creator_id === currentUserId;
+    });
+    
+    if (myWallets.length === 0) {
+        container.innerHTML = '<div class="text-muted p-3">Вы не прикрепили ни одного кошелька</div>';
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="table-responsive">
+            <table class="table table-hover wallet-table">
+                <thead>
+                    <tr>
+                        <th class="col-4">Название</th>
+                        <th class="col-2">Валюта</th>
+                        <th class="col-3">Тип</th>
+                        <th class="col-3 text-end">Баланс</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${generateWalletRows(myWallets)}
+                </tbody>
+            </table>
+        </div>
+    `;
 }
 
 function renderOperationsTable() {
@@ -2460,75 +2499,4 @@ async function deleteGroup() {
         console.error('[DELETE_GROUP] Ошибка:', e);
         showError('Ошибка подключения: ' + e.message);
     }
-}
-
-// Функция отображения кошельков пользователя в группе
-function displayMyGroupWallets(groupData) {
-    const container = document.getElementById('myGroupWallets');
-    if (!container) {
-        console.error('[MY_WALLETS] Элемент myGroupWallets не найден');
-        return;
-    }
-    
-    // Получаем кошельки группы
-    const groupWallets = groupData.wallets || [];
-    
-    // Фильтруем кошельки текущего пользователя
-    const myWallets = groupWallets.filter(wallet => {
-        return wallet.user_id === currentUserId || 
-               wallet.owner_id === currentUserId || 
-               wallet.creator_id === currentUserId;
-    });
-    
-    if (myWallets.length === 0) {
-        container.innerHTML = '<div class="text-muted p-3">Вы не прикрепили ни одного кошелька</div>';
-        return;
-    }
-    
-    container.innerHTML = `
-        <table class="table table-sm">
-            <thead>
-                <tr>
-                    <th>Название</th>
-                    <th>Валюта</th>
-                    <th>Тип</th>
-                    <th class="text-end">Кредитный лимит</th>
-                    <th class="text-end">Баланс</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${myWallets.map(wallet => {
-                    const balance = typeof wallet.balance === 'number' ? wallet.balance : (parseFloat(wallet.balance) || 0);
-                    const currency = String(wallet.currency || 'rub').toLowerCase();
-                    const walletType = wallet.type || wallet.wallet_type || 'debit';
-                    const isCredit = walletType === 'credit';
-                    
-                    const creditLimit = isCredit 
-                        ? (typeof wallet.credit_limit === 'number' ? wallet.credit_limit : (parseFloat(wallet.credit_limit) || 0))
-                        : null;
-                    
-                    // Определяем жирность для баланса (как на главной странице)
-                    const balanceFontWeight = balance === 0 ? '' : 'fw-bold';
-                    
-                    return `
-                        <tr>
-                            <td>${wallet.name || 'Кошелек'}</td>
-                            <td><span class="badge bg-secondary">${currency.toUpperCase()}</span></td>
-                            <td>
-                                ${isCredit 
-                                    ? '<span class="badge bg-warning text-dark">Кредитный</span>' 
-                                    : '<span class="badge bg-success">Дебетовый</span>'}
-                            </td>
-                            <td class="text-end">
-                                ${isCredit 
-                                    ? `<strong>${formatAmount(creditLimit, currency)}</strong>` 
-                                    : '<span class="text-muted">—</span>'}
-                            </td>
-                            <td class="text-end ${balanceFontWeight}">${formatAmount(balance, currency)}</td>
-                        </tr>
-                    `;
-                }).join('')}
-            </tbody>
-        </table>
-    `;
 }
