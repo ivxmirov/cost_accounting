@@ -112,6 +112,7 @@ class UserResponseSchema(BaseModel):
 
 class WalletResponseSchema(BaseModel):
     model_config = {"from_attributes": True}
+
     id: int
     name: str
     balance: Decimal
@@ -123,7 +124,9 @@ class WalletResponseSchema(BaseModel):
 
 class WalletTableSchema(BaseModel):
     """Упрощенная схема кошелька для таблицы"""
+
     model_config = {"from_attributes": True}
+
     id: int
     name: str
     currency: CurrencyEnum
@@ -132,18 +135,18 @@ class WalletTableSchema(BaseModel):
     effective_balance: Decimal
 
 
-class GroupResponseSchema(BaseModel):
+class GroupDetailResponseSchema(BaseModel):
     model_config = {"from_attributes": True}
 
     id: int
     name: str
     creator: int | None = None
     creator_login: str | None = None
-    members: list[str] = []
+    members: list[str] = Field(default_factory=list)
     created_at: datetime
     total_balance: Decimal = Decimal("0")
-    member_balances: list[MemberBalanceSchema] = []
-    wallets: list[WalletResponseSchema] = []
+    member_balances: list[MemberBalanceSchema] = Field(default_factory=list)
+    wallets: list[WalletResponseSchema] = Field(default_factory=list)
 
     @field_validator("members", mode="before")
     @classmethod
@@ -154,6 +157,17 @@ class GroupResponseSchema(BaseModel):
         if isinstance(v, list) and v and hasattr(v[0], "login"):
             return [member.login for member in v]
         return v
+
+
+class GroupListResponseSchema(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    name: str
+    creator_id: int | None = None
+    created_at: datetime
+    total_balance: Decimal = Decimal("0")
+    members_count: int = 0
 
 
 class OperationResponse(BaseModel):

@@ -406,9 +406,9 @@ async function loadGroups() {
 
     try {
         console.log('[LOAD_GROUPS] Загружаем группы...');
-        console.log('[LOAD_GROUPS] URL:', `${API_BASE_V2}/users/me/groups`);
+        console.log('[LOAD_GROUPS] URL:', `${API_BASE_V2}/groups`);  // Исправлено
         
-        const response = await fetchWithAuth(`${API_BASE_V2}/users/me/groups`);
+        const response = await fetchWithAuth(`${API_BASE_V2}/groups`);  // Исправлено
         console.log('[LOAD_GROUPS] Статус:', response.status);
         
         if (response.ok) {
@@ -1258,20 +1258,14 @@ function renderGroups(groups) {
     }
 
     tbody.innerHTML = groupsArray.map(group => {
-        console.log('[RENDER_GROUPS] Обрабатываем группу:', group);
-        
         const relativeDate = group.created_at ? formatRelativeDate(group.created_at) : 'неизвестно';
         
         // Определяем, является ли текущий пользователь создателем
-        const isCreator = 
-            group.creator_login === currentUser || 
-            group.creator === currentUserId ||
-            group.creator_id === currentUserId;
-        
-        // Отображаем "Вы ⭐" для создателя, иначе "Другой пользователь"
+        const isCreator = group.creator_id === currentUserId;
         const creatorDisplay = isCreator ? 'Вы ⭐' : 'Другой пользователь';
         
-        const membersCount = group.members ? group.members.length : 0;
+        // Используем members_count из схемы
+        const membersCount = group.members_count || 0;
         
         // Генерируем точки для участников (не более 15)
         const dotsCount = Math.min(membersCount, 15);

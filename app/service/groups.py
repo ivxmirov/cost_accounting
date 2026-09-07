@@ -9,7 +9,12 @@ from app.enum import CurrencyEnum
 from app.models import Group, User, Wallet
 from app.repository import groups as groups_repository
 from app.repository.groups import is_user_in_group
-from app.schemas import GroupCreateSchema, GroupResponseSchema, MemberBalanceSchema
+from app.schemas import (
+    GroupCreateSchema,
+    GroupDetailResponseSchema,
+    GroupListResponseSchema,
+    MemberBalanceSchema,
+)
 from app.service import exchange_service
 from app.service.wallets import wallets_repository
 
@@ -20,7 +25,7 @@ async def create_group(
     db: AsyncSession,
     current_user: User,
     group_data: GroupCreateSchema,
-) -> GroupResponseSchema:
+) -> GroupDetailResponseSchema:
     """
     Создает новую группу с бизнес-валидацией.
 
@@ -77,36 +82,31 @@ async def create_group(
     )
 
     await db.commit()
-    return GroupResponseSchema.model_validate(obj=new_group)
+    return GroupDetailResponseSchema.model_validate(obj=new_group)
 
 
-async def get_current_user_groups(
+async def get_current_user_groups_list(
     db: AsyncSession,
     current_user: User,
-) -> list[GroupResponseSchema]:
+) -> list[GroupListResponseSchema]:
     """
-    Возвращает список всех групп, в которых состоит текущий пользователь.
-
-    Args:
-        db: Сессия базы данных
-        current_user: Текущий пользователь
-    Returns:
-        Список всех групп, в которых состоит текущий пользователь
+    Получение списка групп для отображения в таблице.
     """
-    groups = await groups_repository.get_user_groups(db, user_id=current_user.id)
+    groups: list[Group] = await groups_repository.get_user_groups(db, user_id=current_user.id)
     result = []
 
     for group in groups:
-        # Вычисляем общий баланс группы
         total_balance = await calculate_group_balance(db, group.id)
+        members_count = len(group.members)
 
-        # Вычисляем балансы участников
-        member_balances = await calculate_member_balances(db, group.id)
-
-        # Создаем схему с дополнительными данными
-        schema = GroupResponseSchema.model_validate(obj=group)
-        schema.total_balance = total_balance
-        schema.member_balances = member_balances
+        schema = GroupListResponseSchema(
+            id=group.id,
+            name=group.name,
+            creator_id=group.creator,
+            members_count=members_count,
+            created_at=group.created_at,
+            total_balance=total_balance,
+        )
 
         result.append(schema)
 
@@ -117,7 +117,7 @@ async def get_user_group_by_id(
     db: AsyncSession,
     current_user: User,
     group_id: int,
-) -> GroupResponseSchema:
+) -> GroupDetailResponseSchema:
     """
     Получает информацию о группе с общим балансом.
 
@@ -149,7 +149,7 @@ async def get_user_group_by_id(
     # Сортируем участников по алфавиту
     group.members.sort(key=lambda member: member.login.lower())
     member_balances.sort(key=lambda x: x.login.lower())
-    group_schema = GroupResponseSchema.model_validate(group)
+    group_schema = GroupDetailResponseSchema.model_validate(group)
     group_schema.total_balance = total_balance
     group_schema.member_balances = member_balances
 

@@ -3,13 +3,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependency import get_current_user, get_db
 from app.models import User
-from app.schemas import GroupCreateSchema, GroupResponseSchema
+from app.schemas import GroupCreateSchema, GroupDetailResponseSchema, GroupListResponseSchema
 from app.service import groups as groups_service
 
 router = APIRouter()
 
 
-@router.post(path="/groups", response_model=GroupResponseSchema, status_code=201)
+@router.post(path="/groups", response_model=GroupDetailResponseSchema, status_code=201)
 async def create_group_v2(
     group: GroupCreateSchema,
     db: AsyncSession = Depends(get_db),
@@ -18,7 +18,7 @@ async def create_group_v2(
     return await groups_service.create_group(db, current_user, group)
 
 
-@router.get(path="/groups/{group_id}", response_model=GroupResponseSchema, status_code=200)
+@router.get(path="/groups/{group_id}", response_model=GroupDetailResponseSchema, status_code=200)
 async def get_group_v2(
     group_id: int,
     db: AsyncSession = Depends(get_db),
@@ -27,10 +27,21 @@ async def get_group_v2(
     return await groups_service.get_user_group_by_id(db, current_user, group_id)
 
 
+@router.get(path="/groups", response_model=list[GroupListResponseSchema], status_code=200)
+async def get_user_groups_v2(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Получение списка групп текущего пользователя.
+    """
+    return await groups_service.get_current_user_groups_list(db, current_user)
+
+
 @router.post(
     path="/groups/{group_id}/wallets/{wallet_id}",
     status_code=200,
-    response_model=GroupResponseSchema,
+    response_model=GroupDetailResponseSchema,
 )
 async def attach_wallet_to_group_v2(
     group_id: int,
@@ -50,7 +61,7 @@ async def attach_wallet_to_group_v2(
 @router.delete(
     path="/groups/{group_id}/wallets/{wallet_id}",
     status_code=200,
-    response_model=GroupResponseSchema,
+    response_model=GroupDetailResponseSchema,
 )
 async def detach_wallet_from_group_v2(
     group_id: int,
