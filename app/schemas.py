@@ -117,11 +117,11 @@ class WalletBaseSchema(BaseModel):
     name: str
     currency: CurrencyEnum
     type: WalletType
+    balance: Decimal
     user_id: int
 
 
 class WalletDetailResponseSchema(WalletBaseSchema):
-    balance: Decimal
     credit_limit: Decimal | None
 
 

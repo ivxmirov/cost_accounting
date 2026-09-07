@@ -28,7 +28,6 @@ dependencies = [
 dev = [
     "pre-commit>=4.6.0",
     "ruff>=0.15.12",
-    "mypy>=1.20.2",
     "alembic>=1.18.5",
     "ty>=0.0.73",
 ]
@@ -72,30 +71,11 @@ skip-magic-trailing-comma = false
 # Перенос импортов в зависимости от запятой в конце строки (уважать запятые)
 split-on-trailing-comma = false
 
-[tool.mypy]
-python_version = "3.12"
-strict = false
-ignore_missing_imports = true
-warn_return_any = false
-warn_unused_configs = true
-follow_imports = "normal"
+[tool.ty.src]
+include = ["app/", "main.py"]
 exclude = [
-    "venv/",
-    ".venv/",
-    "tests/",
-    "migrations/",
-    ".*/__pycache__/",
     "alembic/",
+    "migrations/",
     "test-reports/",
-]
-cache_dir = ".mypy_cache"
-
-[tool.pyright]
-exclude = [
-    "**/node_modules",
-    "**/__pycache__",
-    "**/.*",
-    "alembic/**",
-    "test-reports/**",
-    ".venv",
+    "tests/",
 ]

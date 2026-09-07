@@ -100,7 +100,7 @@ async def create_group(
     return schema
 
 
-async def get_current_user_groups_list(
+async def get_current_user_groups(
     db: AsyncSession,
     current_user: User,
 ) -> list[GroupListResponseSchema]:
@@ -171,7 +171,6 @@ async def get_user_group_by_id(
         user_id=current_user.id
     )
 
-    # Создаем схему
     group_schema = GroupDetailResponseSchema(
         id=group.id,
         name=group.name,
@@ -188,7 +187,8 @@ async def get_user_group_by_id(
                 currency=wallet.currency,
                 type=wallet.type,
                 user_id=wallet.user_id,
-                effective_balance=wallet.effective_balance
+                effective_balance=wallet.effective_balance,
+                balance=wallet.balance,
             )
             for wallet in user_wallets
         ]

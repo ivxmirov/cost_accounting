@@ -221,6 +221,7 @@ async def get_user_wallets_with_effective_balance(
             type=wallet.type,
             effective_balance=effective_balance,
             user_id=user_id,
+            balance=wallet.balance,
         )
         result.append(wallet_schema)
 

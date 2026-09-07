@@ -596,7 +596,6 @@ async function loadWallets() {
 
         if (response.ok) {
             const rawWallets = await response.json();
-            console.log('[WALLETS] Получены кошельки:', rawWallets); // Для отладки
             
             wallets = rawWallets.map(w => {
                 // Обычный баланс

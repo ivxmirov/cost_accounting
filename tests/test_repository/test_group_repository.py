@@ -12,6 +12,7 @@ async def test_create_group_without_adding_members_not_exists(
         db_session,
         creator_id=current_user.id,
         group_name="test_group",
+        members=list(),
     )
 
     # members уже загружен через selectinload в репозитории

@@ -35,7 +35,7 @@ async def get_user_groups_v2(
     """
     Получение списка групп текущего пользователя.
     """
-    return await groups_service.get_current_user_groups_list(db, current_user)
+    return await groups_service.get_current_user_groups(db, current_user)
 
 
 @router.post(
