@@ -6,14 +6,12 @@ repos:
         entry: uv run ruff check --fix
         language: system
         types: [python]
-        exclude: ^(alembic/|\.venv/|venv/)
         
       - id: ruff-format
         name: ruff-format
         entry: uv run ruff format
         language: system
         types: [python]
-        exclude: ^(alembic/|\.venv/|venv/)
         
       - id: ty
         name: ty
@@ -21,4 +19,3 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-        exclude: ^(alembic/|\.venv/|venv/)
