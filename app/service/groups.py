@@ -82,7 +82,21 @@ async def create_group(
     )
 
     await db.commit()
-    return GroupDetailResponseSchema.model_validate(obj=new_group)
+
+    # Создаем схему вручную
+    schema = GroupDetailResponseSchema(
+        id=new_group.id,
+        name=new_group.name,
+        creator=new_group.creator,
+        creator_login=current_user.login,
+        members=[current_user.login] + [member.login for member in other_members],
+        created_at=new_group.created_at,
+        total_balance=Decimal("0"),
+        member_balances=[],
+        wallets=[]
+    )
+
+    return schema
 
 
 async def get_current_user_groups_list(

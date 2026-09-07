@@ -23,8 +23,8 @@ class GroupCreateSchema(BaseModel):
     @field_validator("members_logins")
     @classmethod
     def validate_members_logins(cls, v: list[str]) -> list[str]:
-        # Нормализуем и убираем дубликаты
-        normalized = list(set(login.strip().lower() for login in v))
+        # Убираем дубликаты
+        normalized = list(set(v))
         return normalized
 
 

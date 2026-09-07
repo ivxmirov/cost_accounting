@@ -2,6 +2,7 @@ from sqlalchemy import delete, exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
+from app.dependency import users_repository
 from app.models import Group, User, Wallet, group_members, group_wallets
 from app.repository.wallets import get_user_wallets
 
@@ -22,18 +23,11 @@ async def create_group(
 ) -> Group:
     """
     Создаёт группу и добавляет создателя как участника.
-
-    Args:
-        db: Асинхронная сессия БД
-        creator_id: Уникальный идентификатор пользователя-админа
-        group_name: Название группы
-
-    Returns:
-        Созданная группа с загруженными участниками
     """
-    creator = await db.get(User, creator_id)
     group = Group(name=group_name, creator=creator_id)
-    group.members.append(creator)  # ty: ignore[invalid-argument-type]  # pyright: ignore[reportArgumentType]
+    creator = await users_repository.get_user_by_id(db, creator_id)
+    if creator:
+        group.members.append(creator)
 
     for member in members:
         group.members.append(member)
@@ -41,9 +35,14 @@ async def create_group(
     db.add(group)
     await db.flush()
 
-    # Загружаем с отношениями
     result = await db.execute(
-        select(Group).options(selectinload(Group.members)).where(Group.id == group.id),
+        select(Group)
+        .options(
+            selectinload(Group.members),
+            selectinload(Group.wallets),
+            joinedload(Group.creator_user),
+        )
+        .where(Group.id == group.id)
     )
     return result.scalar_one()
 
