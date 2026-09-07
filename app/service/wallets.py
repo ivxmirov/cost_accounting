@@ -135,7 +135,10 @@ async def get_total_user_balance(db: AsyncSession, current_user: User) -> TotalB
     return TotalBalance(total_balance=total_balance)
 
 
-async def get_user_wallets(db: AsyncSession, current_user: User) -> list[WalletDetailResponseSchema]:
+async def get_user_wallets(
+    db: AsyncSession,
+    current_user: User
+) -> list[WalletDetailResponseSchema]:
     """
     Получает список всех кошельков пользователя
     Args:
@@ -216,8 +219,8 @@ async def get_user_wallets_with_effective_balance(
             name=wallet.name,
             currency=wallet.currency,
             type=wallet.type,
-            balance=wallet.balance,
             effective_balance=effective_balance,
+            user_id=user_id,
         )
         result.append(wallet_schema)
 
