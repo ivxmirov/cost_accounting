@@ -1096,6 +1096,7 @@ async function openGroup(groupId) {
 let currentGroupId = null;
 
 // Отображение деталей группы с балансом
+// Отображение деталей группы с балансом
 function displayGroupDetails(groupData) {
     console.log('[GROUP_DETAILS] Данные группы:', groupData);
     
@@ -1114,7 +1115,7 @@ function displayGroupDetails(groupData) {
         modalTitle.textContent = groupData.name || 'Информация о группе';
     }
     
-    // Отображаем создателя
+    // Отображаем создателя и дату создания
     const creatorDisplay = isCreator 
         ? `${groupData.creator_login || currentUser} ⭐` 
         : (groupData.creator_login || `Пользователь ${groupData.creator_id || groupData.creator}`);
@@ -1122,6 +1123,24 @@ function displayGroupDetails(groupData) {
     const creatorEl = document.getElementById('groupCreator');
     if (creatorEl) {
         creatorEl.textContent = creatorDisplay;
+    }
+    
+    // Отображаем дату и время создания
+    const createdDateEl = document.getElementById('groupCreatedDate');
+    if (createdDateEl) {
+        if (groupData.created_at) {
+            const createdDate = new Date(groupData.created_at);
+            const formattedDate = createdDate.toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            createdDateEl.textContent = formattedDate;
+        } else {
+            createdDateEl.textContent = 'неизвестно';
+        }
     }
     
     // Отображаем общий баланс
