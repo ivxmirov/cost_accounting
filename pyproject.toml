@@ -58,11 +58,26 @@ exclude = [
 [tool.ruff.lint]
 # Набор правил для проверки кода
 select = [
-    "E",   # pycodestyle errors - ошибки стиля (отступы, пробелы, пустые строки)
-    "F",   # pyflakes - ошибки кода (неиспользуемые импорты, неопределенные имена)
-    "I",   # isort - порядок импортов (стандартные, сторонние, локальные)
-    "N",   # pep8-naming - соглашения об именовании (CamelCase для классов, snake_case для функций)
-    "W",   # pycodestyle warnings - предупреждения стиля (не ошибки, но лучше исправить)
+    "E",   # pycodestyle errors - ошибки стиля
+    "W",   # pycodestyle warnings - предупреждения стиля
+    "F",   # pyflakes - ошибки кода
+    "I",   # isort - порядок импортов
+    "N",   # pep8-naming - именование
+    "B",   # flake8-bugbear - поиск багов и потенциальных проблем
+    "A",   # flake8-builtins - проверка затенения встроенных функций
+    "C4",  # flake8-comprehensions - упрощение comprehensions
+    "SIM", # flake8-simplify - упрощение кода
+    "RET", # flake8-return - проверка return в функциях
+    "ARG", # flake8-unused-arguments - неиспользуемые аргументы
+    "PTH", # flake8-use-pathlib - использование pathlib вместо os.path
+    "UP",  # pyupgrade - обновление синтаксиса до новых версий Python
+    "ASYNC", # async-specific - проверки для асинхронного кода
+]
+
+# Игнорировать определенные правила
+ignore = [
+    "B008",  # Вызов функций в аргументах по умолчанию (часто бывает нужно)
+    "ARG002", # Неиспользуемые аргументы методов (часто нужны для интерфейсов)
 ]
 
 [tool.ruff.format]

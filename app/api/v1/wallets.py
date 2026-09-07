@@ -46,5 +46,4 @@ async def delete_wallet(
     """
     Удаляет кошелек текущего пользователя по ID.
     """
-    result = await wallets_service.delete_wallet_by_id(db, current_user, wallet_id)
-    return result
+    return await wallets_service.delete_wallet_by_id(db, current_user, wallet_id)

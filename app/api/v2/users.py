@@ -22,8 +22,7 @@ async def get_all_users_v2(
     """
     Получение списка всех пользователей.
     """
-    users = await users_service.get_all_users(db)
-    return users
+    return await users_service.get_all_users(db)
 
 
 @router.get("/users/me/groups", response_model=list[GroupDetailResponseSchema])
