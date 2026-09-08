@@ -3,7 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependency import get_current_user, get_db
 from app.models import User
-from app.schemas import GroupCreateSchema, GroupDetailResponseSchema, GroupListResponseSchema
+from app.schemas import (
+    GroupCreateSchema,
+    GroupDetailResponseSchema,
+    GroupListResponseSchema,
+    WalletTableSchema,
+)
 from app.service import groups as groups_service
 
 router = APIRouter()
@@ -38,6 +43,22 @@ async def get_user_groups_v2(
     return await groups_service.get_current_user_groups(db, current_user)
 
 
+@router.get(
+    path="/groups/{group_id}/wallets/me",
+    response_model=list[WalletTableSchema],
+    status_code=200,
+)
+async def get_my_group_wallets_v2(
+    group_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Получает список кошельков текущего пользователя, которые прикрелены к указанной группе.
+    """
+    return await groups_service.get_user_group_wallets(db, current_user, group_id)
+
+
 @router.post(
     path="/groups/{group_id}/wallets/{wallet_id}",
     status_code=200,
@@ -52,10 +73,7 @@ async def attach_wallet_to_group_v2(
     """
     Прикрепляет кошелек к группе.
     """
-    updated_group = await groups_service.attach_wallet_to_group(
-        db, current_user, group_id, wallet_id
-    )
-    return updated_group
+    return await groups_service.attach_wallet_to_group(db, current_user, group_id, wallet_id)
 
 
 @router.delete(
@@ -72,10 +90,7 @@ async def detach_wallet_from_group_v2(
     """
     Открепляет кошелек от группы.
     """
-    updated_group = await groups_service.detach_wallet_from_group(
-        db, current_user, group_id, wallet_id
-    )
-    return updated_group
+    return await groups_service.detach_wallet_from_group(db, current_user, group_id, wallet_id)
 
 
 @router.delete(
@@ -140,5 +155,4 @@ async def delete_group_v2(
     """
     Удаление группы.
     """
-    result = await groups_service.delete_group(db, current_user, group_id)
-    return result
+    return await groups_service.delete_group(db, current_user, group_id)

@@ -185,6 +185,46 @@ async def get_user_group_by_id(
     )
 
 
+async def get_user_group_wallets(
+    db: AsyncSession,
+    current_user: User,
+    group_id: int,
+) -> list[WalletTableSchema]:
+    """
+    Получает список кошельков текущего пользователя, которые прикрелены к указанной группе.
+    """
+    group = await groups_repository.get_group_by_id(db, group_id)
+
+    # Проверяем, существует ли группа
+    if not group:
+        raise HTTPException(status_code=404, detail="Такой группы не существует")
+
+    # Проверяем, является ли пользователь участником группы
+    if not await is_user_in_group(db, current_user.id, group_id):
+        raise HTTPException(status_code=403, detail="Вы не являетесь участником этой группы")
+
+    wallets: list[Wallet] = await groups_repository.get_user_group_wallets(
+        db, group_id, current_user.id
+    )
+
+    result = []
+    for wallet in wallets:
+        effective_balance: Decimal = await calculate_wallet_effective_balance(wallet)
+        result.append(
+            WalletTableSchema(
+                id=wallet.id,
+                name=wallet.name,
+                currency=wallet.currency,
+                type=wallet.type,
+                balance=wallet.balance,
+                user_id=wallet.user_id,
+                effective_balance=effective_balance,
+            )
+        )
+
+    return result
+
+
 async def calculate_wallet_effective_balance(wallet: Wallet) -> Decimal:
     """
     Рассчитывает эффективный баланс кошелька в рублях.

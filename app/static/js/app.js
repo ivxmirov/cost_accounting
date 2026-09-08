@@ -178,39 +178,6 @@ window.addEventListener('DOMContentLoaded', () => {
     tryAutoLogin();
 });
 
-function showToast(title, message, isError = false) {
-    const toastEl = document.getElementById('toastNotification');
-    const toastTitle = document.getElementById('toastTitle');
-    const toastBody = document.getElementById('toastBody');
-    const toastHeader = toastEl.querySelector('.toast-header');
-    
-    toastTitle.textContent = title;
-    toastBody.textContent = message;
-    
-    // Цвета в зависимости от типа
-    if (isError) {
-        toastHeader.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
-        toastHeader.style.color = 'white';
-    } else {
-        toastHeader.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
-        toastHeader.style.color = 'white';
-    }
-    
-    const toast = new bootstrap.Toast(toastEl, {
-        autohide: true,
-        delay: 3000
-    });
-    toast.show();
-}
-
-function showError(message) {
-    showToast('❌ Ошибка', message, true);
-}
-
-function showSuccess(message) {
-    showToast('✅ Успешно', message, false);
-}
-
 function closeModal(modalId) {
     const modalEl = document.getElementById(modalId);
     const modal = bootstrap.Modal.getInstance(modalEl);
@@ -334,13 +301,6 @@ function logout() {
     document.getElementById('password').value = '';
     
     showSuccess('Вы вышли из системы');
-}
-
-function showMainSection() {
-    document.getElementById('authSection').style.display = 'none';
-    document.getElementById('mainSection').style.display = 'block';
-    document.getElementById('currentUser').textContent = currentUser;
-    loadAllData();
 }
 
 async function loadAllData() {
@@ -1207,6 +1167,150 @@ function displayGroupDetails(groupData) {
     }
 }
 
+function showToast(title, message, isError = false) {
+    const toastEl = document.getElementById('toastNotification');
+    const toastTitle = document.getElementById('toastTitle');
+    const toastBody = document.getElementById('toastBody');
+    const toastHeader = toastEl.querySelector('.toast-header');
+    
+    toastTitle.textContent = title;
+    toastBody.textContent = message;
+    
+    // Цвета в зависимости от типа
+    if (isError) {
+        toastHeader.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+        toastHeader.style.color = 'white';
+    } else {
+        toastHeader.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+        toastHeader.style.color = 'white';
+    }
+    
+    const toast = new bootstrap.Toast(toastEl, {
+        autohide: true,
+        delay: 3000
+    });
+    toast.show();
+}
+
+function showError(message) {
+    showToast('❌ Ошибка', message, true);
+}
+
+function showSuccess(message) {
+    showToast('✅ Успешно', message, false);
+}
+
+function showMainSection() {
+    document.getElementById('authSection').style.display = 'none';
+    document.getElementById('mainSection').style.display = 'block';
+    document.getElementById('currentUser').textContent = currentUser;
+    loadAllData();
+}
+
+// Функция показа модалки прикрепления кошелька
+async function showAttachWalletModal() {
+    if (!currentGroupId) {
+        showError('Группа не выбрана');
+        return;
+    }
+    
+    const select = document.getElementById('attachWalletSelect');
+    if (!select) return;
+    
+    try {
+        // Получаем все кошельки пользователя
+        const walletsResponse = await fetchWithAuth(`${API_BASE_V1}/wallets`);
+        if (!walletsResponse.ok) throw new Error('Ошибка загрузки кошельков');
+        const allWallets = await walletsResponse.json();
+        
+        // Получаем прикрепленные кошельки
+        const attachedResponse = await fetchWithAuth(
+            `${API_BASE_V2}/groups/${currentGroupId}/wallets/me`
+        );
+        let attachedIds = new Set();
+        if (attachedResponse.ok) {
+            const attachedWallets = await attachedResponse.json();
+            attachedWallets.forEach(w => attachedIds.add(w.id));
+        }
+        
+        // Фильтруем не прикрепленные
+        const availableWallets = allWallets.filter(w => !attachedIds.has(w.id));
+        
+        if (availableWallets.length === 0) {
+            select.innerHTML = '<option value="">Все кошельки уже прикреплены</option>';
+        } else {
+            select.innerHTML = availableWallets.map(w => {
+                const effectiveBalance = parseFloat(w.effective_balance) || 0;
+                const currency = String(w.currency || '').toLowerCase();
+                return `<option value="${w.id}">${w.name} ( ${formatAmount(effectiveBalance, currency)} )</option>`;
+            }).join('');
+        }
+        
+        const modal = new bootstrap.Modal(document.getElementById('attachWalletModal'));
+        modal.show();
+        
+    } catch (e) {
+        console.error('[ATTACH_WALLET] Ошибка:', e);
+        showError('Ошибка загрузки кошельков');
+    }
+}
+
+// Функция показа модалки открепления кошелька
+async function showDetachWalletModal() {
+    if (!currentGroupId) {
+        showError('Группа не выбрана');
+        return;
+    }
+    
+    const select = document.getElementById('detachWalletSelect');
+    if (!select) {
+        showError('Модалка открепления не найдена');
+        return;
+    }
+    
+    try {
+        // Загружаем кошельки пользователя, прикрепленные к группе
+        const response = await fetchWithAuth(
+            `${API_BASE_V2}/groups/${currentGroupId}/wallets/me`
+        );
+        
+        console.log('[DETACH_WALLET] Статус:', response.status);
+        
+        if (response.ok) {
+            const groupWallets = await response.json();
+            console.log('[DETACH_WALLET] Кошельки пользователя в группе:', groupWallets);
+            
+            if (groupWallets.length === 0) {
+                select.innerHTML = '<option value="">У вас нет прикрепленных кошельков</option>';
+            } else {
+                select.innerHTML = groupWallets.map(w => {
+                    const effectiveBalance = typeof w.effective_balance === 'number' 
+                        ? w.effective_balance 
+                        : (parseFloat(w.effective_balance) || 0);
+                    const currency = String(w.currency || '').toLowerCase();
+                    return `<option value="${w.id}">${w.name} ( ${formatAmount(effectiveBalance, currency)} )</option>`;
+                }).join('');
+            }
+            
+            // Показываем модалку
+            const modal = new bootstrap.Modal(document.getElementById('detachWalletModal'));
+            modal.show();
+            
+        } else if (response.status === 401) {
+            showError('Не авторизован');
+        } else if (response.status === 403) {
+            showError('Вы не являетесь участником этой группы');
+        } else if (response.status === 404) {
+            showError('Группа не найдена');
+        } else {
+            const error = await response.json();
+            showError(extractErrorMessage(error, 'Ошибка загрузки кошельков'));
+        }
+    } catch (e) {
+        console.error('[DETACH_WALLET] Ошибка:', e);
+        showError('Ошибка подключения: ' + e.message);
+    }
+}
 
 // Глобальная переменная для хранения выбранных участников
 let selectedMembers = new Set();
@@ -1249,6 +1353,213 @@ async function showCreateGroupModal() {
             renderGroupMembersList(filteredUsers);
         });
     }
+}
+
+// Функция показа модалки добавления участника с поиском
+async function showAddMemberModal() {
+    if (!currentGroupId) {
+        showError('Группа не выбрана');
+        return;
+    }
+    
+    // Загружаем всех пользователей
+    const users = await loadAllUsers();
+    
+    // Фильтруем текущего пользователя
+    const availableUsers = users.filter(user => user.login !== currentUser);
+    
+    if (availableUsers.length === 0) {
+        showError('Нет доступных пользователей');
+        return;
+    }
+    
+    // Создаем модалку с поиском
+    const modalHTML = `
+        <div class="modal fade" id="addMemberModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Добавить участника</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Поиск пользователя</label>
+                            <input type="text" class="form-control" id="userSearchInput" 
+                                   placeholder="Начните вводить логин..." 
+                                   autocomplete="off">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Выберите участника</label>
+                            <select class="form-select" id="newMemberSelect">
+                                <option value="">Выберите пользователя...</option>
+                                ${availableUsers.map(user => 
+                                    `<option value="${user.id}">${user.login}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div id="selectedUserInfo" class="alert alert-info" style="display: none;">
+                            Выбран: <strong id="selectedUserLogin"></strong>
+                        </div>
+                    </div>
+                    <div class="modal-footer d-flex justify-content-between">
+                        <button type="button" class="btn btn-success" onclick="addMemberToGroup()" id="addMemberButton">
+                            Добавить
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Отмена
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Удаляем существующую модалку, если есть
+    const existingModal = document.getElementById('addMemberModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Добавляем новую модалку
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Получаем элементы
+    const searchInput = document.getElementById('userSearchInput');
+    const select = document.getElementById('newMemberSelect');
+    const addButton = document.getElementById('addMemberButton');
+    const selectedUserInfo = document.getElementById('selectedUserInfo');
+    const selectedUserLogin = document.getElementById('selectedUserLogin');
+    
+    // Обработчик поиска
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        
+        if (searchTerm === '') {
+            // Показываем всех пользователей
+            select.innerHTML = '<option value="">Выберите пользователя...</option>' + 
+                availableUsers.map(user => 
+                    `<option value="${user.id}">${user.login}</option>`
+                ).join('');
+        } else {
+            // Фильтруем пользователей
+            const filteredUsers = availableUsers.filter(user => 
+                user.login.toLowerCase().includes(searchTerm)
+            );
+            
+            if (filteredUsers.length === 0) {
+                select.innerHTML = '<option value="">Пользователи не найдены</option>';
+            } else {
+                select.innerHTML = '<option value="">Выберите пользователя...</option>' + 
+                    filteredUsers.map(user => 
+                        `<option value="${user.id}">${user.login}</option>`
+                    ).join('');
+            }
+        }
+        
+        // Сбрасываем выбор
+        selectedUserInfo.style.display = 'none';
+    });
+    
+    // Обработчик выбора пользователя
+    select.addEventListener('change', function() {
+        const selectedUserId = this.value;
+        
+        if (selectedUserId) {
+            const selectedUser = availableUsers.find(user => user.id == selectedUserId);
+            if (selectedUser) {
+                selectedUserLogin.textContent = selectedUser.login;
+                selectedUserInfo.style.display = 'block';
+            }
+        } else {
+            selectedUserInfo.style.display = 'none';
+        }
+    });
+    
+    // Показываем модалку
+    const modal = new bootstrap.Modal(document.getElementById('addMemberModal'));
+    modal.show();
+    
+    // Фокусируемся на поиске
+    setTimeout(() => {
+        searchInput.focus();
+    }, 300);
+}
+
+// Функция показа модалки удаления участника
+function showRemoveMemberModal() {
+    if (!currentGroupId) {
+        showError('Группа не выбрана');
+        return;
+    }
+    
+    // Получаем список участников из текущей группы
+    const membersList = document.getElementById('groupDetailsMembersList');
+    if (!membersList) {
+        showError('Список участников не найден');
+        return;
+    }
+    
+    // Извлекаем логины участников из списка
+    const members = [];
+    const memberItems = membersList.querySelectorAll('li');
+    memberItems.forEach(item => {
+        const span = item.querySelector('span:first-child');
+        if (span) {
+            // Убираем звездочку у текущего пользователя
+            const login = span.textContent.replace('⭐', '').trim();
+            members.push(login);
+        }
+    });
+    
+    // Фильтруем текущего пользователя (нельзя удалить самого себя)
+    const availableMembers = members.filter(login => login !== currentUser);
+    
+    if (availableMembers.length === 0) {
+        showError('Нет участников для удаления');
+        return;
+    }
+    
+    // Создаем модалку динамически
+    const modalHTML = `
+        <div class="modal fade" id="removeMemberModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Удалить участника</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Выберите участника</label>
+                            <select class="form-select" id="removeMemberSelect">
+                                ${availableMembers.map(login => 
+                                    `<option value="${login}">${login}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer d-flex justify-content-between">
+                        <button type="button" class="btn btn-danger" onclick="removeMemberFromGroup()">Удалить</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Удаляем существующую модалку, если есть
+    const existingModal = document.getElementById('removeMemberModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Добавляем новую модалку
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Показываем модалку
+    const modal = new bootstrap.Modal(document.getElementById('removeMemberModal'));
+    modal.show();
 }
 
 // Функция отображения групп в таблице
@@ -1477,42 +1788,6 @@ function renderWalletsTable() {
     tbody.innerHTML = generateWalletRows(wallets);
 }
 
-// Детали группы
-function displayMyGroupWallets(groupData) {
-    const container = document.getElementById('myGroupWallets');
-    if (!container) return;
-    
-    const groupWallets = groupData.wallets || [];
-    const myWallets = groupWallets.filter(wallet => {
-        return wallet.user_id === currentUserId || 
-               wallet.owner_id === currentUserId || 
-               wallet.creator_id === currentUserId;
-    });
-    
-    if (myWallets.length === 0) {
-        container.innerHTML = '<div class="text-muted p-3">Вы не прикрепили ни одного кошелька</div>';
-        return;
-    }
-    
-    container.innerHTML = `
-        <div class="table-responsive">
-            <table class="table table-hover wallet-table">
-                <thead>
-                    <tr>
-                        <th class="col-4">Название</th>
-                        <th class="col-2">Валюта</th>
-                        <th class="col-3">Тип</th>
-                        <th class="col-3 text-end">Баланс</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${generateWalletRows(myWallets)}
-                </tbody>
-            </table>
-        </div>
-    `;
-}
-
 function renderOperationsTable() {
     const tbody = document.getElementById('transactionsTable');
     
@@ -1568,6 +1843,42 @@ function renderOperationsTable() {
             </tr>
         `;
     }).join('');
+}
+
+// Детали группы
+function displayMyGroupWallets(groupData) {
+    const container = document.getElementById('myGroupWallets');
+    if (!container) return;
+    
+    const groupWallets = groupData.wallets || [];
+    const myWallets = groupWallets.filter(wallet => {
+        return wallet.user_id === currentUserId || 
+               wallet.owner_id === currentUserId || 
+               wallet.creator_id === currentUserId;
+    });
+    
+    if (myWallets.length === 0) {
+        container.innerHTML = '<div class="text-muted p-3">Вы не прикрепили ни одного кошелька</div>';
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="table-responsive">
+            <table class="table table-hover wallet-table">
+                <thead>
+                    <tr>
+                        <th class="col-4">Название</th>
+                        <th class="col-2">Валюта</th>
+                        <th class="col-3">Тип</th>
+                        <th class="col-3 text-end">Баланс</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${generateWalletRows(myWallets)}
+                </tbody>
+            </table>
+        </div>
+    `;
 }
 
 // Функция обновления отображения выбранных участников
@@ -1689,36 +2000,6 @@ async function createGroup() {
     }
 }
 
-// Функция показа модалки прикрепления кошелька
-function showAttachWalletModal() {
-    if (!currentGroupId) {
-        showError('Группа не выбрана');
-        return;
-    }
-    
-    const select = document.getElementById('attachWalletSelect');
-    if (!select) {
-        showError('Модалка прикрепления не найдена');
-        return;
-    }
-    
-    if (wallets.length === 0) {
-        select.innerHTML = '<option value="">У вас нет кошельков</option>';
-    } else {
-        select.innerHTML = wallets.map(w => {
-            // Используем эффективный баланс
-            const effectiveBalance = typeof w.effective_balance === 'number' 
-                ? w.effective_balance 
-                : (parseFloat(w.effective_balance) || 0);
-            const currency = String(w.currency || '').toLowerCase();
-            return `<option value="${w.id}">${w.name} ( ${formatAmount(effectiveBalance, currency)} )</option>`;
-        }).join('');
-    }
-    
-    const modal = new bootstrap.Modal(document.getElementById('attachWalletModal'));
-    modal.show();
-}
-
 // Функция прикрепления кошелька к группе
 async function attachWalletToGroup() {
     if (!currentGroupId) {
@@ -1767,36 +2048,6 @@ async function attachWalletToGroup() {
         console.error('[ATTACH_WALLET] Ошибка:', e);
         showError('Ошибка подключения: ' + e.message);
     }
-}
-
-// Функция показа модалки открепления кошелька
-function showDetachWalletModal() {
-    if (!currentGroupId) {
-        showError('Группа не выбрана');
-        return;
-    }
-    
-    const select = document.getElementById('detachWalletSelect');
-    if (!select) {
-        showError('Модалка открепления не найдена');
-        return;
-    }
-    
-    if (wallets.length === 0) {
-        select.innerHTML = '<option value="">У вас нет кошельков</option>';
-    } else {
-        select.innerHTML = wallets.map(w => {
-            // Используем эффективный баланс
-            const effectiveBalance = typeof w.effective_balance === 'number' 
-                ? w.effective_balance 
-                : (parseFloat(w.effective_balance) || 0);
-            const currency = String(w.currency || '').toLowerCase();
-            return `<option value="${w.id}">${w.name} ( ${formatAmount(effectiveBalance, currency)} )</option>`;
-        }).join('');
-    }
-    
-    const modal = new bootstrap.Modal(document.getElementById('detachWalletModal'));
-    modal.show();
 }
 
 // Функция открепления кошелька от группы
@@ -1970,137 +2221,6 @@ async function leaveGroup() {
 // Глобальная переменная для хранения всех пользователей
 let allUsers = [];
 
-// Функция показа модалки добавления участника с поиском
-async function showAddMemberModal() {
-    if (!currentGroupId) {
-        showError('Группа не выбрана');
-        return;
-    }
-    
-    // Загружаем всех пользователей
-    const users = await loadAllUsers();
-    
-    // Фильтруем текущего пользователя
-    const availableUsers = users.filter(user => user.login !== currentUser);
-    
-    if (availableUsers.length === 0) {
-        showError('Нет доступных пользователей');
-        return;
-    }
-    
-    // Создаем модалку с поиском
-    const modalHTML = `
-        <div class="modal fade" id="addMemberModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Добавить участника</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Поиск пользователя</label>
-                            <input type="text" class="form-control" id="userSearchInput" 
-                                   placeholder="Начните вводить логин..." 
-                                   autocomplete="off">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Выберите участника</label>
-                            <select class="form-select" id="newMemberSelect">
-                                <option value="">Выберите пользователя...</option>
-                                ${availableUsers.map(user => 
-                                    `<option value="${user.id}">${user.login}</option>`
-                                ).join('')}
-                            </select>
-                        </div>
-                        <div id="selectedUserInfo" class="alert alert-info" style="display: none;">
-                            Выбран: <strong id="selectedUserLogin"></strong>
-                        </div>
-                    </div>
-                    <div class="modal-footer d-flex justify-content-between">
-                        <button type="button" class="btn btn-success" onclick="addMemberToGroup()" id="addMemberButton">
-                            Добавить
-                        </button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            Отмена
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Удаляем существующую модалку, если есть
-    const existingModal = document.getElementById('addMemberModal');
-    if (existingModal) {
-        existingModal.remove();
-    }
-    
-    // Добавляем новую модалку
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    // Получаем элементы
-    const searchInput = document.getElementById('userSearchInput');
-    const select = document.getElementById('newMemberSelect');
-    const addButton = document.getElementById('addMemberButton');
-    const selectedUserInfo = document.getElementById('selectedUserInfo');
-    const selectedUserLogin = document.getElementById('selectedUserLogin');
-    
-    // Обработчик поиска
-    searchInput.addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase().trim();
-        
-        if (searchTerm === '') {
-            // Показываем всех пользователей
-            select.innerHTML = '<option value="">Выберите пользователя...</option>' + 
-                availableUsers.map(user => 
-                    `<option value="${user.id}">${user.login}</option>`
-                ).join('');
-        } else {
-            // Фильтруем пользователей
-            const filteredUsers = availableUsers.filter(user => 
-                user.login.toLowerCase().includes(searchTerm)
-            );
-            
-            if (filteredUsers.length === 0) {
-                select.innerHTML = '<option value="">Пользователи не найдены</option>';
-            } else {
-                select.innerHTML = '<option value="">Выберите пользователя...</option>' + 
-                    filteredUsers.map(user => 
-                        `<option value="${user.id}">${user.login}</option>`
-                    ).join('');
-            }
-        }
-        
-        // Сбрасываем выбор
-        selectedUserInfo.style.display = 'none';
-    });
-    
-    // Обработчик выбора пользователя
-    select.addEventListener('change', function() {
-        const selectedUserId = this.value;
-        
-        if (selectedUserId) {
-            const selectedUser = availableUsers.find(user => user.id == selectedUserId);
-            if (selectedUser) {
-                selectedUserLogin.textContent = selectedUser.login;
-                selectedUserInfo.style.display = 'block';
-            }
-        } else {
-            selectedUserInfo.style.display = 'none';
-        }
-    });
-    
-    // Показываем модалку
-    const modal = new bootstrap.Modal(document.getElementById('addMemberModal'));
-    modal.show();
-    
-    // Фокусируемся на поиске
-    setTimeout(() => {
-        searchInput.focus();
-    }, 300);
-}
-
 // Функция добавления участника в группу
 async function addMemberToGroup() {
     if (!currentGroupId) {
@@ -2190,82 +2310,6 @@ async function searchUserByLogin(login) {
         console.error('[SEARCH_USER] Ошибка:', e);
         return null;
     }
-}
-
-// Функция показа модалки удаления участника
-function showRemoveMemberModal() {
-    if (!currentGroupId) {
-        showError('Группа не выбрана');
-        return;
-    }
-    
-    // Получаем список участников из текущей группы
-    const membersList = document.getElementById('groupDetailsMembersList');
-    if (!membersList) {
-        showError('Список участников не найден');
-        return;
-    }
-    
-    // Извлекаем логины участников из списка
-    const members = [];
-    const memberItems = membersList.querySelectorAll('li');
-    memberItems.forEach(item => {
-        const span = item.querySelector('span:first-child');
-        if (span) {
-            // Убираем звездочку у текущего пользователя
-            const login = span.textContent.replace('⭐', '').trim();
-            members.push(login);
-        }
-    });
-    
-    // Фильтруем текущего пользователя (нельзя удалить самого себя)
-    const availableMembers = members.filter(login => login !== currentUser);
-    
-    if (availableMembers.length === 0) {
-        showError('Нет участников для удаления');
-        return;
-    }
-    
-    // Создаем модалку динамически
-    const modalHTML = `
-        <div class="modal fade" id="removeMemberModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Удалить участника</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Выберите участника</label>
-                            <select class="form-select" id="removeMemberSelect">
-                                ${availableMembers.map(login => 
-                                    `<option value="${login}">${login}</option>`
-                                ).join('')}
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer d-flex justify-content-between">
-                        <button type="button" class="btn btn-danger" onclick="removeMemberFromGroup()">Удалить</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Удаляем существующую модалку, если есть
-    const existingModal = document.getElementById('removeMemberModal');
-    if (existingModal) {
-        existingModal.remove();
-    }
-    
-    // Добавляем новую модалку
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    // Показываем модалку
-    const modal = new bootstrap.Modal(document.getElementById('removeMemberModal'));
-    modal.show();
 }
 
 // Функция удаления участника из группы
