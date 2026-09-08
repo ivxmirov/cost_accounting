@@ -420,19 +420,20 @@
                             autocomplete="off">
                     </div>
                     
+                    <!-- Выбранные участники - ВСЕГДА видимы -->
+                    <div class="mb-3">
+                        <label class="form-label">Выбранные участники:</label>
+                        <div id="selectedMembersContainer" class="p-2 bg-light rounded">
+                            <span class="text-muted">Никто не выбран</span>
+                        </div>
+                    </div>
+                    
                     <div class="mb-3">
                         <label class="form-label">Выберите участников</label>
                         <div id="groupMembersList" class="list-group" style="max-height: 250px; overflow-y: auto;">
                             <div class="text-muted p-2">Загрузка пользователей...</div>
                         </div>
                         <div class="form-text">Выберите одного или нескольких участников</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Выбранные участники:</label>
-                        <div id="selectedMembersContainer" class="d-flex flex-wrap gap-2">
-                            <span class="text-muted">Никто не выбран</span>
-                        </div>
                     </div>
                 </div>
                 <div class="modal-footer d-flex justify-content-between">

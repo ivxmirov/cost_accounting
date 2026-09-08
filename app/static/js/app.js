@@ -1328,6 +1328,7 @@ async function showCreateGroupModal() {
     
     // Загружаем всех пользователей
     const users = await loadAllUsers();
+    allUsers = users;  // Сохраняем глобально
     
     // Фильтруем текущего пользователя
     const availableUsers = users.filter(user => user.login !== currentUser);
@@ -1702,30 +1703,33 @@ function renderGroupMembersList(users) {
     const listContainer = document.getElementById('groupMembersList');
     if (!listContainer) return;
     
+    let html = '';
+    
+    // Показываем только список пользователей
     if (users.length === 0) {
-        listContainer.innerHTML = '<div class="text-muted p-2">Пользователи не найдены</div>';
-        return;
+        html = '<div class="text-muted p-2">Пользователи не найдены</div>';
+    } else {
+        html = users.map(user => {
+            const isChecked = selectedMembers.has(user.id);
+            return `
+                <label class="list-group-item d-flex align-items-center" style="cursor: pointer;">
+                    <input type="checkbox" 
+                           class="form-check-input me-2 member-checkbox" 
+                           value="${user.id}" 
+                           data-login="${user.login}"
+                           ${isChecked ? 'checked' : ''}>
+                    <span>${user.login}</span>
+                </label>
+            `;
+        }).join('');
     }
     
-    listContainer.innerHTML = users.map(user => {
-        const isChecked = selectedMembers.has(user.id);
-        return `
-            <label class="list-group-item d-flex align-items-center" style="cursor: pointer;">
-                <input type="checkbox" 
-                       class="form-check-input me-2 member-checkbox" 
-                       value="${user.id}" 
-                       data-login="${user.login}"
-                       ${isChecked ? 'checked' : ''}>
-                <span>${user.login}</span>
-            </label>
-        `;
-    }).join('');
+    listContainer.innerHTML = html;
     
     // Добавляем обработчики для чекбоксов
     document.querySelectorAll('.member-checkbox').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
             const userId = parseInt(this.value);
-            const login = this.getAttribute('data-login');
             
             if (this.checked) {
                 selectedMembers.add(userId);
@@ -1733,9 +1737,68 @@ function renderGroupMembersList(users) {
                 selectedMembers.delete(userId);
             }
             
+            // Обновляем только контейнер с выбранными
             updateSelectedMembersDisplay();
         });
     });
+}
+
+// Обновленная функция для отображения выбранных участников
+function updateSelectedMembersDisplay() {
+    const container = document.getElementById('selectedMembersContainer');
+    if (!container) return;
+    
+    if (selectedMembers.size === 0) {
+        container.innerHTML = '<span class="text-muted">Никто не выбран</span>';
+        return;
+    }
+    
+    const selectedUsers = allUsers.filter(user => selectedMembers.has(user.id));
+    
+    container.innerHTML = `
+        <div class="d-flex flex-wrap gap-1">
+            ${selectedUsers.map(user => `
+                <span class="badge bg-primary">
+                    ${user.login}
+                    <button type="button" 
+                            class="btn-close btn-close-white ms-1" 
+                            style="font-size: 0.6rem;"
+                            onclick="removeSelectedMember(${user.id})">
+                    </button>
+                </span>
+            `).join('')}
+        </div>
+    `;
+}
+
+// Функция для удаления выбранного участника
+function removeSelectedMember(userId) {
+    selectedMembers.delete(userId);
+    
+    // Обновляем только контейнер с выбранными
+    updateSelectedMembersDisplay();
+    
+    // Обновляем чекбоксы в списке (без перерисовки выбранных)
+    const checkbox = document.querySelector(`.member-checkbox[value="${userId}"]`);
+    if (checkbox) {
+        checkbox.checked = false;
+    }
+}
+
+// Функция для получения отфильтрованных пользователей
+function getFilteredUsers() {
+    const searchInput = document.getElementById('groupMembersSearch');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    
+    const availableUsers = allUsers.filter(user => user.login !== currentUser);
+    
+    if (!searchTerm) {
+        return availableUsers;
+    }
+    
+    return availableUsers.filter(user => 
+        user.login.toLowerCase().includes(searchTerm)
+    );
 }
 
 // Функция-хелпер для генерации строк таблицы кошельков
@@ -1891,18 +1954,22 @@ function updateSelectedMembersDisplay() {
         return;
     }
     
-    // Получаем логины выбранных пользователей
-    const selectedLogins = [];
-    const checkboxes = document.querySelectorAll('.member-checkbox');
-    checkboxes.forEach(checkbox => {
-        if (checkbox.checked) {
-            selectedLogins.push(checkbox.getAttribute('data-login'));
-        }
-    });
+    const selectedUsers = allUsers.filter(user => selectedMembers.has(user.id));
     
-    container.innerHTML = selectedLogins.map(login => 
-        `<span class="badge bg-primary">${login} ✕</span>`
-    ).join('');
+    container.innerHTML = `
+        <div class="d-flex flex-wrap gap-1">
+            ${selectedUsers.map(user => `
+                <span class="badge bg-primary">
+                    ${user.login}
+                    <button type="button" 
+                            class="btn-close btn-close-white ms-1" 
+                            style="font-size: 0.6rem;"
+                            onclick="removeSelectedMember(${user.id})">
+                    </button>
+                </span>
+            `).join('')}
+        </div>
+    `;
 }
 
 // Обновленная функция создания группы
