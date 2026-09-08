@@ -147,9 +147,15 @@ async def get_user_group_by_id(
     total_balance: Decimal = await calculate_group_balance(db, group_id)
     member_balances = await calculate_member_balances(db, group_id)
 
-    # Сортируем участников по алфавиту
-    group.members.sort(key=lambda member: member.login.lower())
-    member_balances.sort(key=lambda x: x.login.lower())
+    # Сортируем участников: сначала текущий пользователь, потом остальные по алфавиту
+    # Кортеж (member.login != current_user.login, member.login.lower()) сортирует:
+    #   - сначала по False (0) - текущий пользователь;
+    #   - потом по True (1) - остальные;
+    #   - внутри каждой группы - по алфавиту.
+    group.members.sort(
+        key=lambda member: (member.login != current_user.login, member.login.lower())
+    )
+    member_balances.sort(key=lambda x: (x.login != current_user.login, x.login.lower()))
 
     user_wallets = await groups_repository.get_user_group_wallets(
         db, group_id=group_id, user_id=current_user.id
