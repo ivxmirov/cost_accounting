@@ -1,11 +1,10 @@
 from decimal import Decimal
-from typing import Dict, Tuple
 
 import aiohttp
 
 from app.enum import CurrencyEnum
 
-FALLBACK_RATES: Dict[Tuple[str, str], Decimal] = {
+FALLBACK_RATES: dict[tuple[str, str], Decimal] = {
     (CurrencyEnum.USD, CurrencyEnum.RUB): Decimal(str(95.0)),
     (CurrencyEnum.USD, CurrencyEnum.EUR): Decimal(str(0.92)),
     (CurrencyEnum.EUR, CurrencyEnum.RUB): Decimal(str(103.26)),
@@ -28,7 +27,7 @@ async def get_exchange_rate(base: CurrencyEnum, target: CurrencyEnum) -> Decimal
     url = f"https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/{base}.json"
     timeout = aiohttp.ClientTimeout(total=5.0)
     try:
-        async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with aiohttp.ClientSession(timeout=timeout) as session:  # noqa: SIM117
             async with session.get(url) as response:
                 response.raise_for_status()
                 data = await response.json()

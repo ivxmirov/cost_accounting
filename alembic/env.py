@@ -10,7 +10,6 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from alembic import context
-
 from app.database import DATABASE_URL, Base
 from app.models import Operation, User, Wallet  # noqa: F401
 

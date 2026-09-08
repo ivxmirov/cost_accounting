@@ -136,8 +136,7 @@ async def get_total_user_balance(db: AsyncSession, current_user: User) -> TotalB
 
 
 async def get_user_wallets(
-    db: AsyncSession,
-    current_user: User
+    db: AsyncSession, current_user: User
 ) -> list[WalletDetailResponseSchema]:
     """
     Получает список всех кошельков пользователя
@@ -182,21 +181,15 @@ async def calculate_wallet_effective_balance(wallet) -> Decimal:
     Для дебетовых кошельков: эффективный баланс = текущий баланс.
     Для кредитных кошельков: эффективный баланс = текущий баланс - кредитный лимит.
     """
-    # Это условие выполнится только у дебетовых кошельков
-    if wallet.credit_limit is None:
-        credit_limit = Decimal("0")
-    else:
-        # Это условие выполнится только у кредитных кошельков
-        credit_limit = wallet.credit_limit
+    credit_limit = Decimal("0") if wallet.credit_limit is None else wallet.credit_limit
 
     if wallet.currency == CurrencyEnum.RUB:
         return wallet.balance - credit_limit
-    else:
-        exchange_rate = await exchange_service.get_exchange_rate(
-            wallet.currency,
-            CurrencyEnum.RUB,
-        )
-        return exchange_rate * (wallet.balance - credit_limit)
+    exchange_rate = await exchange_service.get_exchange_rate(
+        wallet.currency,
+        CurrencyEnum.RUB,
+    )
+    return exchange_rate * (wallet.balance - credit_limit)
 
 
 async def get_user_wallets_with_effective_balance(

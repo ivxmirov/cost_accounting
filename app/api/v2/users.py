@@ -17,7 +17,7 @@ router = APIRouter()
 )
 async def get_all_users_v2(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _: User = Depends(get_current_user),
 ):
     """
     Получение списка всех пользователей.
@@ -40,7 +40,7 @@ async def get_my_groups_v2(
 async def search_users_v2(
     login: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _: User = Depends(get_current_user),
 ):
     """
     Поиск пользователя по логину.

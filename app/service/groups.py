@@ -85,7 +85,7 @@ async def create_group(
     await db.commit()
     await db.refresh(new_group)
 
-    schema = GroupDetailResponseSchema(
+    return GroupDetailResponseSchema(
         id=new_group.id,
         name=new_group.name,
         creator=new_group.creator,
@@ -94,10 +94,8 @@ async def create_group(
         created_at=new_group.created_at,
         total_balance=Decimal("0"),
         member_balances=[],
-        wallets=[]
+        wallets=[],
     )
-
-    return schema
 
 
 async def get_current_user_groups(
@@ -153,25 +151,11 @@ async def get_user_group_by_id(
     group.members.sort(key=lambda member: member.login.lower())
     member_balances.sort(key=lambda x: x.login.lower())
 
-    group_schema = GroupDetailResponseSchema(
-        id=group.id,
-        name=group.name,
-        creator=group.creator,
-        creator_login=group.creator_login if group.creator_user else None,
-        members=[member.login for member in group.members],
-        created_at=group.created_at,
-        total_balance=total_balance,
-        member_balances=member_balances,
-        wallets=[]
-    )
-
     user_wallets = await groups_repository.get_user_group_wallets(
-        db,
-        group_id=group_id,
-        user_id=current_user.id
+        db, group_id=group_id, user_id=current_user.id
     )
 
-    group_schema = GroupDetailResponseSchema(
+    return GroupDetailResponseSchema(
         id=group.id,
         name=group.name,
         creator=group.creator,
@@ -191,10 +175,8 @@ async def get_user_group_by_id(
                 balance=wallet.balance,
             )
             for wallet in user_wallets
-        ]
+        ],
     )
-
-    return group_schema
 
 
 async def calculate_wallet_effective_balance(wallet: Wallet) -> Decimal:
@@ -203,12 +185,11 @@ async def calculate_wallet_effective_balance(wallet: Wallet) -> Decimal:
     """
     if wallet.currency == CurrencyEnum.RUB:
         return wallet.effective_balance
-    else:
-        exchange_rate = await exchange_service.get_exchange_rate(
-            wallet.currency,
-            CurrencyEnum.RUB,
-        )
-        return exchange_rate * wallet.effective_balance
+    exchange_rate = await exchange_service.get_exchange_rate(
+        wallet.currency,
+        CurrencyEnum.RUB,
+    )
+    return exchange_rate * wallet.effective_balance
 
 
 async def calculate_member_balances(
@@ -318,8 +299,7 @@ async def attach_wallet_to_group(
     await groups_repository.attach_wallet_to_group(db, group_id, wallet_id)
 
     # Возвращаем обновленную группу
-    updated_group = await groups_repository.get_group_by_id(db, group_id)
-    return updated_group
+    return await groups_repository.get_group_by_id(db, group_id)
 
 
 async def detach_wallet_from_group(
@@ -362,8 +342,7 @@ async def detach_wallet_from_group(
     await groups_repository.detach_wallet_from_group(db, group_id, wallet_id)
 
     # Возвращаем обновленную группу
-    updated_group = await groups_repository.get_group_by_id(db, group_id)
-    return updated_group
+    return await groups_repository.get_group_by_id(db, group_id)
 
 
 async def leave_group(

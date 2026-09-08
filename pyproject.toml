@@ -20,8 +20,6 @@ dependencies = [
     "pydantic-settings>=2.14.2",
     "aiosqlite>=0.22.1",
     "httpx2>=2.5.0",
-    "pytest>=8.4.2",
-    "pytest-asyncio>=0.24.0",
 ]
 
 [dependency-groups]
@@ -49,10 +47,11 @@ asyncio_default_fixture_loop_scope = "function"
 line-length = 100
 # Целевая версия Python для проверки синтаксиса и правил
 target-version = "py312"
-# Папки, которые Ruff НЕ будет проверять
+# Папки, которые Ruff не будет проверять
 exclude = [
-    "alembic",       # Миграции Alembic (автогенерируемый код)
-    "test-reports",  # Отчеты о тестах
+    "alembic/**",
+    "tests/**",
+    "test-reports/**",
 ]
 
 [tool.ruff.lint]

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 
@@ -19,9 +19,9 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     to_encode = data.copy()
 
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(
+        expire = datetime.now(UTC) + timedelta(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
         )
 
@@ -40,7 +40,7 @@ def create_refresh_token(data: dict) -> str:
         Подписанный JWT refresh токен в виде строки
     """
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    expire = datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
@@ -59,9 +59,8 @@ def verify_token(token: str) -> dict:
         ValueError: Если токен невалидный или истек
     """
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise ValueError("Token has expired")
-    except jwt.InvalidTokenError:
-        raise ValueError("Invalid token")
+        return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    except jwt.ExpiredSignatureError as e:
+        raise ValueError("Token has expired") from e
+    except jwt.InvalidTokenError as e:
+        raise ValueError("Invalid token") from e

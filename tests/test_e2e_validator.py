@@ -1,10 +1,9 @@
 import ast
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 
-def extract_string_from_node(node) -> Optional[str]:
+def extract_string_from_node(node) -> str | None:
     """Извлекает строковый литерал из узла AST, обрабатывая f-строки и обычные строки."""
     if isinstance(node, ast.Constant):
         if isinstance(node.value, str):
@@ -22,7 +21,7 @@ def extract_string_from_node(node) -> Optional[str]:
     return None
 
 
-def extract_endpoint_from_call(node: ast.Call) -> Optional[str]:
+def extract_endpoint_from_call(node: ast.Call) -> str | None:
     """Извлекает URL эндпоинта из вызова client.post/get."""
     if not isinstance(node.func, ast.Attribute):
         return None
@@ -48,7 +47,7 @@ def extract_endpoint_from_call(node: ast.Call) -> Optional[str]:
     return None
 
 
-def extract_api_calls_from_function(func_node) -> List[Tuple[str, str]]:
+def extract_api_calls_from_function(func_node) -> list[tuple[str, str]]:
     """Извлекает все вызовы API (метод, эндпоинт) из тестовой функции."""
     calls = []
 
@@ -66,12 +65,12 @@ def extract_api_calls_from_function(func_node) -> List[Tuple[str, str]]:
     return calls
 
 
-def extract_api_calls_from_test(file_path: str, test_name: str) -> List[Tuple[str, str]]:
+def extract_api_calls_from_test(file_path: str, test_name: str) -> list[tuple[str, str]]:
     """Извлекает вызовы API из тестовой функции в Python файле."""
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Test file not found: {file_path}")
 
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, encoding="utf-8") as f:
         source = f.read()
 
     try:
@@ -95,10 +94,10 @@ def normalize_endpoint(endpoint: str) -> str:
 
 def validate_test_structure(
     test_name: str,
-    actual_calls: List[Tuple[str, str]],
-    expected_pattern: List[Tuple[str, str]],
+    actual_calls: list[tuple[str, str]],
+    expected_pattern: list[tuple[str, str]],
     allow_extra: bool = True,
-) -> Tuple[bool, str]:
+) -> tuple[bool, str]:
     """Проверяет что фактические вызовы соответствуют ожидаемому паттерну.
 
     Args:
@@ -142,25 +141,24 @@ def validate_test_structure(
             )
 
         return True, ""
-    else:
-        if len(actual_normalized) != len(expected_normalized):
+    if len(actual_normalized) != len(expected_normalized):
+        return (
+            False,
+            f"Test '{test_name}' has wrong number of calls. "
+            f"Expected {len(expected_normalized)}, got {len(actual_normalized)}. "
+            f"Expected: {expected_pattern}. Actual: {actual_calls}",
+        )
+
+    for i, (actual, expected) in enumerate(zip(actual_normalized, expected_normalized)):
+        if actual != expected:
             return (
                 False,
-                f"Test '{test_name}' has wrong number of calls. "
-                f"Expected {len(expected_normalized)}, got {len(actual_normalized)}. "
-                f"Expected: {expected_pattern}. Actual: {actual_calls}",
+                f"Test '{test_name}' call {i + 1} mismatch: expected {expected}, got {actual}. "
+                f"Expected sequence: {expected_pattern}. "
+                f"Actual sequence: {actual_calls}",
             )
 
-        for i, (actual, expected) in enumerate(zip(actual_normalized, expected_normalized)):
-            if actual != expected:
-                return (
-                    False,
-                    f"Test '{test_name}' call {i + 1} mismatch: expected {expected}, got {actual}. "
-                    f"Expected sequence: {expected_pattern}. "
-                    f"Actual sequence: {actual_calls}",
-                )
-
-        return True, ""
+    return True, ""
 
 
 def get_test_file_path() -> str:
@@ -170,7 +168,7 @@ def get_test_file_path() -> str:
     return str(test_file)
 
 
-EXPECTED_PATTERNS: Dict[str, List[Tuple[str, str]]] = {
+EXPECTED_PATTERNS: dict[str, list[tuple[str, str]]] = {
     "test_e2e_basic_user_flow_registration_to_expense": [
         ("POST", "/api/v1/users"),
         ("POST", "/api/v1/wallets"),
@@ -312,7 +310,7 @@ def test_all_required_tests_present():
     if not os.path.exists(test_file):
         assert False, f"test_e2e.py file not found at {test_file}"
 
-    with open(test_file, "r", encoding="utf-8") as f:
+    with open(test_file, encoding="utf-8") as f:
         source = f.read()
 
     try:

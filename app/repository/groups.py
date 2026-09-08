@@ -89,10 +89,7 @@ async def get_user_group_wallets(db: AsyncSession, group_id: int, user_id: int) 
     result = await db.execute(
         select(Wallet)
         .join(group_wallets, Wallet.id == group_wallets.c.wallet_id)
-        .where(
-            Wallet.user_id == user_id,
-            group_wallets.c.group_id == group_id
-        )
+        .where(Wallet.user_id == user_id, group_wallets.c.group_id == group_id)
     )
     return list(result.scalars().all())
 

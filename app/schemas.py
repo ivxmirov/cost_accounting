@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
@@ -24,8 +24,7 @@ class GroupCreateSchema(BaseModel):
     @classmethod
     def validate_members_logins(cls, v: list[str]) -> list[str]:
         # Убираем дубликаты
-        normalized = list(set(v))
-        return normalized
+        return list(set(v))
 
 
 class MemberBalanceSchema(BaseModel):
@@ -315,7 +314,7 @@ class BulkExpenseOperationSchema(BulkOperationBase):
 
 
 BulkOperation = Annotated[
-    Union[BulkIncomeOperationSchema, BulkExpenseOperationSchema],
+    BulkIncomeOperationSchema | BulkExpenseOperationSchema,
     Field(discriminator="operation_type"),
 ]
 

@@ -1,4 +1,4 @@
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -36,7 +36,7 @@ async def get_current_user(
         if not login:
             raise HTTPException(status_code=401, detail="Invalid token: no subject")
     except ValueError as e:
-        raise HTTPException(status_code=401, detail=str(e))
+        raise HTTPException(status_code=401, detail=str(e)) from e
 
     # Ищем пользователя по логину из токена
     user = await users_repository.get_user_by_login(db, login)
