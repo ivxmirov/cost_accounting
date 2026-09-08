@@ -147,6 +147,7 @@ async def get_user_wallets(
         Список всех кошельков пользователя
     """
     wallets = await wallets_repository.get_user_wallets(db, current_user.id)
+    wallets.sort(key=lambda wallet: wallet.name.lower())
     return [WalletDetailResponseSchema.model_validate(wallet) for wallet in wallets]
 
 
@@ -200,6 +201,7 @@ async def get_user_wallets_with_effective_balance(
     Получает кошельки пользователя с эффективным балансом.
     """
     wallets = await wallets_repository.get_user_wallets(db, user_id)
+    wallets.sort(key=lambda wallet: wallet.name.lower())
 
     result = []
     for wallet in wallets:

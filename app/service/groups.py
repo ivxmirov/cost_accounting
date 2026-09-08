@@ -106,6 +106,7 @@ async def get_current_user_groups(
     Получение списка групп для отображения в таблице.
     """
     groups: list[Group] = await groups_repository.get_user_groups(db, user_id=current_user.id)
+    groups.sort(key=lambda group: group.name.lower())
     result = []
 
     for group in groups:
@@ -206,6 +207,7 @@ async def get_user_group_wallets(
     wallets: list[Wallet] = await groups_repository.get_user_group_wallets(
         db, group_id, current_user.id
     )
+    wallets.sort(key=lambda wallet: wallet.name.lower())
 
     result = []
     for wallet in wallets:

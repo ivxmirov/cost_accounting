@@ -1281,7 +1281,7 @@ async function showDetachWalletModal() {
             console.log('[DETACH_WALLET] Кошельки пользователя в группе:', groupWallets);
             
             if (groupWallets.length === 0) {
-                select.innerHTML = '<option value="">У вас нет прикрепленных кошельков</option>';
+                select.innerHTML = '<option value="">Вы не прикрепили ни одного кошелька</option>';
             } else {
                 select.innerHTML = groupWallets.map(w => {
                     const effectiveBalance = typeof w.effective_balance === 'number' 
