@@ -1115,9 +1115,27 @@ function displayGroupDetails(groupData) {
         memberManagementButtons.style.display = isCreator ? 'block' : 'none';
     }
     
+    // Управляем кнопками выхода/удаления
+    const leaveGroupButton = document.getElementById('leaveGroupButton');
+    const leaveAndDeleteGroupButton = document.getElementById('leaveAndDeleteGroupButton');
+    
+    if (leaveGroupButton && leaveAndDeleteGroupButton) {
+        if (isCreator) {
+            // Для создателя показываем одну кнопку
+            leaveGroupButton.style.display = 'none';
+            leaveAndDeleteGroupButton.style.display = 'block';
+            leaveAndDeleteGroupButton.textContent = 'Покинуть и удалить группу';
+        } else {
+            // Для обычных участников показываем обычную кнопку
+            leaveGroupButton.style.display = 'block';
+            leaveAndDeleteGroupButton.style.display = 'none';
+        }
+    }
+    
+    // Удаляем старую кнопку deleteGroupButton, если она есть
     const deleteGroupButton = document.getElementById('deleteGroupButton');
     if (deleteGroupButton) {
-        deleteGroupButton.style.display = isCreator ? 'inline-block' : 'none';
+        deleteGroupButton.remove(); // Удаляем полностью
     }
     
     // Обновляем количество участников
@@ -1749,7 +1767,7 @@ function updateSelectedMembersDisplay() {
     if (!container) return;
     
     if (selectedMembers.size === 0) {
-        container.innerHTML = '<span class="text-muted">Никто не выбран</span>';
+        container.innerHTML = '<span class="text-muted">Выберите одного или нескольких участников</span>';
         return;
     }
     
@@ -1950,7 +1968,7 @@ function updateSelectedMembersDisplay() {
     if (!container) return;
     
     if (selectedMembers.size === 0) {
-        container.innerHTML = '<span class="text-muted">Никто не выбран</span>';
+        container.innerHTML = '<span class="text-muted">Выберите одного или нескольких участников</span>';
         return;
     }
     
@@ -2229,9 +2247,19 @@ async function leaveGroup() {
         return;
     }
     
+    // Определяем, является ли пользователь создателем
+    const isCreator = 
+        document.getElementById('leaveAndDeleteGroupButton').style.display === 'block';
+    
     // Подтверждение действия
-    if (!confirm('Вы уверены, что хотите покинуть группу?')) {
-        return;
+    if (isCreator) {
+        if (!confirm('Вы создатель группы. При выходе группа будет удалена!\n\nВнимание!\n- Все участники будут исключены\n- Все прикрепленные кошельки будут откреплены\n- Это действие нельзя отменить!\n\nПродолжить?')) {
+            return;
+        }
+    } else {
+        if (!confirm('Вы уверены, что хотите покинуть группу?')) {
+            return;
+        }
     }
     
     try {
@@ -2248,7 +2276,7 @@ async function leaveGroup() {
         console.log('[LEAVE_GROUP] Статус:', response.status);
         
         if (response.ok) {
-            showSuccess('Вы вышли из группы');
+            showSuccess(isCreator ? 'Группа удалена' : 'Вы вышли из группы');
             
             // Закрываем модалку группы
             const groupModalElement = document.getElementById('groupDetailsModal');

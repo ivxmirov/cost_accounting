@@ -424,7 +424,7 @@
                     <div class="mb-3">
                         <label class="form-label">Выбранные участники:</label>
                         <div id="selectedMembersContainer" class="p-2 bg-light rounded">
-                            <span class="text-muted">Никто не выбран</span>
+                            <span class="text-muted">Выберите одного или нескольких участников</span>
                         </div>
                     </div>
                     
@@ -433,7 +433,6 @@
                         <div id="groupMembersList" class="list-group" style="max-height: 250px; overflow-y: auto;">
                             <div class="text-muted p-2">Загрузка пользователей...</div>
                         </div>
-                        <div class="form-text">Выберите одного или нескольких участников</div>
                     </div>
                 </div>
                 <div class="modal-footer d-flex justify-content-between">
@@ -523,12 +522,14 @@
                     <div class="row mt-4 mb-2">
                         <div class="col">
                             <div class="d-flex gap-2">
+                                <!-- Кнопка для обычных участников -->
                                 <button class="btn btn-danger btn-sm flex-fill" id="leaveGroupButton" onclick="leaveGroup()">
                                     Покинуть группу
                                 </button>
-                                <!-- Кнопка удаления группы (только для создателя) -->
-                                <button class="btn btn-dark btn-sm flex-fill" id="deleteGroupButton" onclick="deleteGroup()" style="display: none;">
-                                    Удалить группу
+                                
+                                <!-- Кнопка для создателя (покинуть и удалить) -->
+                                <button class="btn btn-danger btn-sm flex-fill" id="leaveAndDeleteGroupButton" onclick="leaveGroup()" style="display: none;">
+                                    Покинуть и удалить группу
                                 </button>
                             </div>
                         </div>

@@ -401,6 +401,9 @@ async def leave_group(
     """
     Удаляет текущего пользователя из группы.
 
+    Бизнес-логика:
+        если создатель группы выходит из нее, то удаляется вся группа
+
     Args:
         db: Сессия БД
         current_user: Текущий пользователь
@@ -417,11 +420,16 @@ async def leave_group(
     if not await groups_repository.is_user_in_group(db, current_user.id, group_id):
         raise HTTPException(status_code=403, detail="Вы не являетесь участником этой группы")
 
-    # Открепляем кошельки пользователя от группы
-    await groups_repository.detach_user_wallets_from_group(db, group_id, current_user.id)
+    # Если пользователь является создателем группы, то удаляем группу
+    if groups_repository.is_user_group_creator(db, group_id, current_user.id):
+        await groups_repository.delete_group(db, group_id)
 
-    # Если все проверки пройдены, текущий пользователь удаляется из группы
-    await groups_repository.remove_user_from_group(db, group_id, current_user.id)
+    else:
+        # Открепляем кошельки пользователя от группы
+        await groups_repository.detach_user_wallets_from_group(db, group_id, current_user.id)
+
+        # Если все проверки пройдены, текущий пользователь удаляется из группы
+        await groups_repository.remove_user_from_group(db, group_id, current_user.id)
 
 
 async def add_user_to_group(
