@@ -1241,27 +1241,32 @@ async function showAttachWalletModal() {
         if (!walletsResponse.ok) throw new Error('Ошибка загрузки кошельков');
         const allWallets = await walletsResponse.json();
         
-        // Получаем прикрепленные кошельки
-        const attachedResponse = await fetchWithAuth(
-            `${API_BASE_V2}/groups/${currentGroupId}/wallets/me`
-        );
-        let attachedIds = new Set();
-        if (attachedResponse.ok) {
-            const attachedWallets = await attachedResponse.json();
-            attachedWallets.forEach(w => attachedIds.add(w.id));
-        }
-        
-        // Фильтруем не прикрепленные
-        const availableWallets = allWallets.filter(w => !attachedIds.has(w.id));
-        
-        if (availableWallets.length === 0) {
-            select.innerHTML = '<option value="">Все кошельки уже прикреплены</option>';
+        // Проверяем наличие кошельков
+        if (!allWallets || allWallets.length === 0) {
+            select.innerHTML = '<option value="">Нет кошельков</option>';
         } else {
-            select.innerHTML = availableWallets.map(w => {
-                const effectiveBalance = parseFloat(w.effective_balance) || 0;
-                const currency = String(w.currency || '').toLowerCase();
-                return `<option value="${w.id}">${w.name} ( ${formatAmount(effectiveBalance, currency)} )</option>`;
-            }).join('');
+            // Получаем прикрепленные кошельки
+            const attachedResponse = await fetchWithAuth(
+                `${API_BASE_V2}/groups/${currentGroupId}/wallets/me`
+            );
+            let attachedIds = new Set();
+            if (attachedResponse.ok) {
+                const attachedWallets = await attachedResponse.json();
+                attachedWallets.forEach(w => attachedIds.add(w.id));
+            }
+            
+            // Фильтруем не прикрепленные
+            const availableWallets = allWallets.filter(w => !attachedIds.has(w.id));
+            
+            if (availableWallets.length === 0) {
+                select.innerHTML = '<option value="">Все кошельки уже прикреплены</option>';
+            } else {
+                select.innerHTML = availableWallets.map(w => {
+                    const effectiveBalance = parseFloat(w.effective_balance) || 0;
+                    const currency = String(w.currency || '').toLowerCase();
+                    return `<option value="${w.id}">${w.name} ( ${formatAmount(effectiveBalance, currency)} )</option>`;
+                }).join('');
+            }
         }
         
         const modal = new bootstrap.Modal(document.getElementById('attachWalletModal'));
