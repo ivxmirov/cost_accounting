@@ -59,6 +59,36 @@ class OperationRequest(BaseModel):
         return v
 
 
+class UserRequest(BaseModel):
+    login: str = Field(..., min_length=3, max_length=127, pattern=r"^[a-zA-Z0-9_]+$")
+    password: str = Field(..., min_length=6)
+
+
+class UserResponseSchema(BaseModel):
+    model_config = {"from_attributes": True}
+    id: int
+    login: str
+
+
+class WalletBaseSchema(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: int
+    name: str
+    currency: CurrencyEnum
+    type: WalletType
+    balance: Decimal
+    user_id: int
+
+
+class WalletDetailResponseSchema(WalletBaseSchema):
+    credit_limit: Decimal | None
+
+
+class WalletTableSchema(WalletBaseSchema):
+    effective_balance: Decimal
+
+
 class WalletCreateSchema(BaseModel):
     name: str = Field(..., max_length=127)
     initial_balance: Decimal = Decimal("0")
@@ -100,36 +130,6 @@ class WalletCreateSchema(BaseModel):
             if isinstance(exponent, int) and exponent < -2:
                 raise ValueError("Кредитный лимит не может иметь более 2 знаков после запятой")
         return v
-
-
-class UserRequest(BaseModel):
-    login: str = Field(..., min_length=3, max_length=127, pattern=r"^[a-zA-Z0-9_]+$")
-    password: str = Field(..., min_length=6)
-
-
-class UserResponseSchema(BaseModel):
-    model_config = {"from_attributes": True}
-    id: int
-    login: str
-
-
-class WalletBaseSchema(BaseModel):
-    model_config = {"from_attributes": True}
-
-    id: int
-    name: str
-    currency: CurrencyEnum
-    type: WalletType
-    balance: Decimal
-    user_id: int
-
-
-class WalletDetailResponseSchema(WalletBaseSchema):
-    credit_limit: Decimal | None
-
-
-class WalletTableSchema(WalletBaseSchema):
-    effective_balance: Decimal
 
 
 class GroupDetailResponseSchema(BaseModel):

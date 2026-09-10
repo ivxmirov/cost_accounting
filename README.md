@@ -97,18 +97,36 @@ Response (201 Created):
 }
 ```
 
+**Для выполнения запросов, требующих авторизацию**
+**Сначала получите <access_token> через эндпоинт `/api/v1/auth/login`:**
+
+```bash
+curl -X 'POST' \
+  'http://127.0.0.1:8000/api/v1/auth/login' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "login": "your_login",
+    "password": "your_password"
+  }'
+```
+
+В ответе придёт <access_token>.
+Подставьте его в заголовок Authorization вместо <access_token>
+
 **Создать кошелек** - требуется авторизация
 
 ```bash
 curl -X 'POST' \
   'http://127.0.0.1:8000/api/v1/wallets' \
   -H 'accept: application/json' \
-  -H 'Authorization: Bearer your_login' \
+  -H 'Authorization: Bearer <access_token>' \
   -H 'Content-Type: application/json' \
   -d '{
   "name": "wallet_example",
   "initial_balance": 500,
-  "currency": "rub"
+  "currency": "rub",
+  "type": "debit",
+  "credit_limit": None
 }'
 ```
 
@@ -118,7 +136,9 @@ Response (201 Created):
   "id": 1,
   "name": "wallet_example",
   "balance": "500.0000000000",
-  "currency": "rub"
+  "currency": "rub",
+  "type": "debit",
+  "credit_limit": None
 }
 ```
 
@@ -128,7 +148,7 @@ Response (201 Created):
 curl -X 'POST' \
   'http://127.0.0.1:8000/api/v1/operations/income' \
   -H 'accept: application/json' \
-  -H 'Authorization: Bearer your_login' \
+  -H 'Authorization: Bearer <access_token>' \
   -H 'Content-Type: application/json' \
   -d '{
   "wallet_name": "wallet_example",
@@ -156,7 +176,7 @@ Response (201 Created):
 curl -X 'POST' \
   'http://127.0.0.1:8000/api/v1/operations/transfer' \
   -H 'accept: application/json' \
-  -H 'Authorization: Bearer your_login' \
+  -H 'Authorization: Bearer <access_token>' \
   -H 'Content-Type: application/json' \
   -d '{
   "from_wallet_id": 1,
@@ -181,7 +201,7 @@ Response (201 Created):
 
 ## Структура
 
-```text
+```
 cost_accounting
 ├─ .pre-commit-config.yaml
 ├─ .python-version
@@ -190,8 +210,11 @@ cost_accounting
 │  ├─ README
 │  ├─ script.py.mako
 │  └─ versions
-│     ├─ 4e767668dbe0_initial_migration.py
-│     └─ 7b909f9a3286_add_operations_and_wallets_models.py
+│     ├─ 14f1ce32c670_04_create_table_group_wallets.py
+│     ├─ 6e52b96e29ae_03_group_creator_id.py
+│     ├─ 87658c8418bb_00_initial_migration.py
+│     ├─ c91c710ac91d_01_field_credit_limit_nullable_true.py
+│     └─ d4db97a5952c_02_add_field_group_created_at.py
 ├─ alembic.ini
 ├─ app
 │  ├─ api
@@ -218,6 +241,7 @@ cost_accounting
 │  │  └─ __init__.py
 │  ├─ models.py
 │  ├─ repository
+│  │  ├─ groups.py
 │  │  ├─ operations.py
 │  │  ├─ users.py
 │  │  ├─ wallets.py
@@ -226,6 +250,7 @@ cost_accounting
 │  ├─ service
 │  │  ├─ auth.py
 │  │  ├─ exchange_service.py
+│  │  ├─ groups.py
 │  │  ├─ operations.py
 │  │  ├─ users.py
 │  │  ├─ wallets.py
@@ -263,6 +288,7 @@ cost_accounting
 │  ├─ test_middleware_request_logging.py
 │  ├─ test_report_csv.py
 │  ├─ test_repository
+│  │  ├─ test_group_repository.py
 │  │  ├─ test_user_repository.py
 │  │  └─ test_wallet_repository.py
 │  ├─ test_service
@@ -273,6 +299,7 @@ cost_accounting
 │  ├─ test_transfer_v2.py
 │  └─ __init__.py
 └─ uv.lock
+
 ```
 
 ## Автор

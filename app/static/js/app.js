@@ -675,7 +675,7 @@ function updateWalletSelects() {
         if (!select) return;
         
         if (wallets.length === 0) {
-            select.innerHTML = '<option value="">Сначала создайте кошелек</option>';
+            select.innerHTML = '<option value="">Нет кошельков</option>';
         } else {
             select.innerHTML = wallets.map(w => {
                 // Используем обычный баланс для селектов операций (доход, расход, перевод)
@@ -814,7 +814,7 @@ async function addIncome() {
     }
 
     if (wallets.length === 0) {
-        showError('Сначала создайте кошелек');
+        showError('Нет кошельков');
         return;
     }
 
@@ -881,7 +881,7 @@ async function addExpense() {
     }
 
     if (wallets.length === 0) {
-        showError('Сначала создайте кошелек');
+        showError('Нет кошельков');
         return;
     }
 
@@ -2487,7 +2487,7 @@ function updateDeleteWalletSelect() {
     if (!select) return;
     
     if (wallets.length === 0) {
-        select.innerHTML = '<option value="">У вас нет кошельков</option>';
+        select.innerHTML = '<option value="">Нет кошельков</option>';
         return;
     }
     

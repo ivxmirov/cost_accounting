@@ -1,4 +1,3 @@
-import logging
 from decimal import Decimal
 
 from fastapi import HTTPException
@@ -17,8 +16,6 @@ from app.schemas import (
 )
 from app.service import exchange_service
 from app.service.wallets import wallets_repository
-
-logger = logging.getLogger(__name__)
 
 
 async def create_group(
