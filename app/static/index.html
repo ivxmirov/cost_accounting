@@ -523,8 +523,8 @@
                     <div class="row mt-3 mb-3" id="memberManagementButtons" style="display: none;">
                         <div class="col">
                             <div class="d-flex gap-2">
-                                <button class="btn btn-success btn-sm flex-fill" onclick="showAddMemberModal()">
-                                    Добавить участника
+                                <button class="btn btn-success btn-sm flex-fill" onclick="showAddMembersModal()">
+                                    Добавить участников
                                 </button>
                                 <button class="btn btn-orange btn-sm flex-fill" onclick="showRemoveMemberModal()">
                                     Удалить участника
@@ -606,6 +606,48 @@
         </div>
     </div>
 
+    <!-- Модалка добавления участников -->
+    <div class="modal fade" id="addMembersModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Добавить участников</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Поиск участников</label>
+                        <input type="text" class="form-control" id="addMembersSearch" 
+                            placeholder="Начните вводить логин..." 
+                            autocomplete="off">
+                    </div>
+
+                    <!-- Выбранные участники -->
+                    <div class="mb-3">
+                        <label class="form-label">Выбранные участники:</label>
+                        <div id="addMembersSelectedContainer" class="p-2 bg-light rounded">
+                            <span class="text-muted">Выберите одного или нескольких участников</span>
+                        </div>
+                    </div>
+
+                    <!-- Список для выбора -->
+                    <div class="mb-3">
+                        <label class="form-label">Доступные пользователи</label>
+                        <div id="addMembersList" class="list-group" style="max-height: 250px; overflow-y: auto;">
+                            <div class="text-muted p-2">Загрузка пользователей...</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer d-flex justify-content-between">
+                    <button type="button" class="btn btn-success" onclick="addMembersToGroup()">
+                        Добавить
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast контейнер -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3">
         <div id="toastNotification" class="toast" role="alert">
@@ -673,6 +715,11 @@
         // Обновляем список кошельков при открытии модалки удаления
         document.getElementById('deleteWalletModal').addEventListener('show.bs.modal', function() {
             updateDeleteWalletSelect();
+        });
+
+        document.getElementById('addMembersModal').addEventListener('hidden.bs.modal', function() {
+            addMembersSelected.clear();
+            document.getElementById('addMembersSearch').value = '';
         });
     </script>
 </body>

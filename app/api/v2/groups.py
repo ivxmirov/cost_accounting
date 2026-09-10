@@ -7,6 +7,7 @@ from app.schemas import (
     GroupCreateSchema,
     GroupDetailResponseSchema,
     GroupListResponseSchema,
+    MembersAddSchema,
     WalletTableSchema,
 )
 from app.service import groups as groups_service
@@ -20,6 +21,8 @@ async def create_group_v2(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Создать группу."""
+
     return await groups_service.create_group(db, current_user, group)
 
 
@@ -29,6 +32,8 @@ async def get_group_v2(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Получить группу."""
+
     return await groups_service.get_user_group_by_id(db, current_user, group_id)
 
 
@@ -37,9 +42,8 @@ async def get_user_groups_v2(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Получение списка групп текущего пользователя.
-    """
+    """Получить список групп текущего пользователя."""
+
     return await groups_service.get_current_user_groups(db, current_user)
 
 
@@ -53,9 +57,8 @@ async def get_my_group_wallets_v2(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Получает список кошельков текущего пользователя, которые прикрелены к указанной группе.
-    """
+    """Получить список кошельков текущего пользователя, прикреленых к указанной группе."""
+
     return await groups_service.get_user_group_wallets(db, current_user, group_id)
 
 
@@ -70,9 +73,8 @@ async def attach_wallet_to_group_v2(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Прикрепляет кошелек к группе.
-    """
+    """Прикрепить кошелек к группе."""
+
     return await groups_service.attach_wallet_to_group(db, current_user, group_id, wallet_id)
 
 
@@ -87,9 +89,8 @@ async def detach_wallet_from_group_v2(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Открепляет кошелек от группы.
-    """
+    """Открепить кошелек от группы."""
+
     return await groups_service.detach_wallet_from_group(db, current_user, group_id, wallet_id)
 
 
@@ -99,9 +100,8 @@ async def leave_group_v2(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Выход текущего пользователя из группы.
-    """
+    """Выход текущего пользователя из группы."""
+
     await groups_service.leave_group(db, current_user, group_id)
     return {"message": "Вы вышли из группы"}
 
@@ -113,11 +113,22 @@ async def add_member_to_group_v2(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Добавление участника в группу.
-    """
+    """Добавить участника в группу."""
+
     await groups_service.add_user_to_group(db, current_user, group_id, user_id)
     return {"message": "Пользователь добавлен в группу"}
+
+
+@router.post(path="/groups/{group_id}/members", status_code=200)
+async def add_members_to_group_v2(
+    group_id: int,
+    data: MembersAddSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Добавить несколько участников в группу."""
+
+    return await groups_service.add_users_to_group(db, current_user, group_id, data.members_ids)
 
 
 @router.delete(path="/groups/{group_id}/members/{user_id}", status_code=200)
@@ -127,9 +138,8 @@ async def remove_member_from_group_v2(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Удаление участника из группы.
-    """
+    """Удалить участника из группы."""
+
     await groups_service.remove_user_from_group(db, current_user, group_id, user_id)
     return {"message": "Участник удален из группы"}
 
@@ -143,7 +153,6 @@ async def delete_group_v2(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Удаление группы.
-    """
+    """Удалить группу."""
+
     return await groups_service.delete_group(db, current_user, group_id)

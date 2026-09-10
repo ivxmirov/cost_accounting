@@ -34,6 +34,10 @@ class MemberBalanceSchema(BaseModel):
     effective_balance: Decimal = Decimal("0")
 
 
+class MembersAddSchema(BaseModel):
+    members_ids: list[int]
+
+
 class OperationRequest(BaseModel):
     wallet_name: str = Field(..., max_length=127)
     amount: Decimal
