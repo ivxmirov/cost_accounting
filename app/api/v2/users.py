@@ -19,9 +19,8 @@ async def get_all_users_v2(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
-    """
-    Получение списка всех пользователей.
-    """
+    """Получить список всех пользователей."""
+
     return await users_service.get_all_users(db)
 
 
@@ -33,24 +32,22 @@ async def get_my_groups_v2(
     return await groups_service.get_current_user_groups(db, current_user)
 
 
-@router.get(
-    path="/users/search",
-    status_code=200,
-)
+@router.get(path="/users/search", status_code=200)
 async def search_users_v2(
     login: str,
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
-    """
-    Поиск пользователя по логину.
-    """
-    if not login:
-        return []
+    """Искать пользователя по логину."""
 
-    user = await users_service.search_user_by_login(db, login)
+    return await users_service.search_user_by_login(db, login)
 
-    if not user:
-        return []
 
-    return user
+@router.delete(path="users/me", status_code=200)
+async def delete_current_user(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Удалить текущего пользователя."""
+
+    return await users_service.delete_current_user(db, current_user)

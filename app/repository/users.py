@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import User
@@ -33,3 +33,8 @@ async def create_user(db: AsyncSession, login: str, password_hash: str) -> User:
     db.add(user)
     await db.flush()
     return user
+
+
+async def delete_user(db: AsyncSession, user_id: int) -> None:
+    await db.execute(delete(User).where(User.id == user_id))
+    await db.commit()

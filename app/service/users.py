@@ -1,6 +1,7 @@
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models import User
 from app.repository import users as users_repository
 from app.schemas import UserResponseSchema
 from app.utils.password import hash_password
@@ -43,7 +44,7 @@ async def create_user(db: AsyncSession, login: str, password: str) -> UserRespon
 
 async def search_user_by_login(db: AsyncSession, login: str) -> UserResponseSchema | None:
     """
-    Поиск пользователя по точному логину.
+    Найти пользователя по точному логину.
 
     Args:
         db: Сессия БД
@@ -52,15 +53,27 @@ async def search_user_by_login(db: AsyncSession, login: str) -> UserResponseSche
     Returns:
         UserResponseSchema | None: Схема пользователя или None
     """
-    # Проверяем, что логин не пустой
     if not login or not login.strip():
         return None
 
-    # Переиспользуем существующую функцию из репозитория
     user = await users_repository.get_user_by_login(db, login.strip())
 
     if not user:
         return None
 
-    # Возвращаем схему пользователя
     return UserResponseSchema.model_validate(user)
+
+
+async def delete_current_user(db: AsyncSession, current_user: User) -> None:
+    """
+    Удалить текущего пользователя.
+
+    Args:
+        db: Сессия БД
+        current_user: Текущий пользователь
+
+    Returns:
+        None
+    """
+
+    return await users_repository.delete_user(db, current_user.id)

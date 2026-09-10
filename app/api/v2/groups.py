@@ -93,10 +93,7 @@ async def detach_wallet_from_group_v2(
     return await groups_service.detach_wallet_from_group(db, current_user, group_id, wallet_id)
 
 
-@router.delete(
-    path="/groups/{group_id}/members/me",
-    status_code=200,
-)
+@router.delete(path="/groups/{group_id}/members/me", status_code=200)
 async def leave_group_v2(
     group_id: int,
     db: AsyncSession = Depends(get_db),
@@ -109,10 +106,7 @@ async def leave_group_v2(
     return {"message": "Вы вышли из группы"}
 
 
-@router.post(
-    path="/groups/{group_id}/members/{user_id}",
-    status_code=200,
-)
+@router.post(path="/groups/{group_id}/members/{user_id}", status_code=200)
 async def add_member_to_group_v2(
     group_id: int,
     user_id: int,
@@ -126,10 +120,7 @@ async def add_member_to_group_v2(
     return {"message": "Пользователь добавлен в группу"}
 
 
-@router.delete(
-    path="/groups/{group_id}/members/{user_id}",
-    status_code=200,
-)
+@router.delete(path="/groups/{group_id}/members/{user_id}", status_code=200)
 async def remove_member_from_group_v2(
     group_id: int,
     user_id: int,

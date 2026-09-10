@@ -8,7 +8,6 @@ import app.repository.users as users_repository
 from app.enum import CurrencyEnum
 from app.models import Group, User, Wallet
 from app.repository import groups as groups_repository
-from app.repository.groups import is_user_in_group
 from app.schemas import (
     GroupCreateSchema,
     GroupDetailResponseSchema,
@@ -45,7 +44,7 @@ async def create_group(
         HTTPException: Если создатель в списке участников
         HTTPException: Если какой-то пользователь не найден
     """
-    # 1. Проверка на дубликат
+    # Проверка на дубликат
     if await groups_repository.is_group_exist(
         db,
         user_id=current_user.id,
@@ -56,7 +55,7 @@ async def create_group(
             detail="Нельзя создавать несколько групп с одинаковым названием",
         )
 
-    # 2. Получаем всех участников по логинам с проверкой на существование
+    # Получаем всех участников по логинам с проверкой на существование
     unique_logins = set(group_data.members_logins)
     members = []
     for login in unique_logins:
@@ -68,10 +67,10 @@ async def create_group(
             )
         members.append(user)
 
-    # 3. Убираем создателя из списка участников (безопасно по Уникальный идентификатор)
+    # Убираем создателя из списка участников (безопасно по Уникальный идентификатор)
     other_members = [m for m in members if m.id != current_user.id]
 
-    # 4. Проверяем, что остался хотя бы один участник помимо создателя группы
+    # Проверяем, что остался хотя бы один участник помимо создателя группы
     if not other_members:
         raise HTTPException(status_code=400, detail="Добавьте хотя бы одного участника помимо себя")
 
@@ -127,6 +126,55 @@ async def get_current_user_groups(
     return result
 
 
+async def _get_group_and_check_membership(
+    db: AsyncSession,
+    current_user: User,
+    group_id: int,
+) -> Group:
+    """
+    Получает группу и проверяет, что текущий пользователь является её участником.
+
+    Raises:
+        HTTPException 404: Если группа не найдена
+        HTTPException 403: Если пользователь не является участником группы
+    """
+    group = await groups_repository.get_group_by_id(db, group_id)
+
+    if not group:
+        raise HTTPException(status_code=404, detail="Такой группы не существует")
+
+    if not await groups_repository.is_user_in_group(db, current_user.id, group_id):
+        raise HTTPException(status_code=403, detail="Вы не являетесь участником этой группы")
+
+    return group
+
+
+async def _get_group_and_check_creator(
+    db: AsyncSession,
+    current_user: User,
+    group_id: int,
+) -> Group:
+    """
+    Получает группу и проверяет, что текущий пользователь является её создателем.
+
+    Raises:
+        HTTPException 404: Если группа не найдена
+        HTTPException 403: Если пользователь не является создателем группы
+    """
+    group = await groups_repository.get_group_by_id(db, group_id)
+
+    if not group:
+        raise HTTPException(status_code=404, detail="Такой группы не существует")
+
+    if not await groups_repository.is_user_group_creator(db, group_id, current_user.id):
+        raise HTTPException(
+            status_code=403,
+            detail="Только создатель группы может выполнить это действие",
+        )
+
+    return group
+
+
 async def get_user_group_by_id(
     db: AsyncSession,
     current_user: User,
@@ -135,15 +183,9 @@ async def get_user_group_by_id(
     """
     Получает информацию о группе с общим балансом.
     """
-    group = await groups_repository.get_group_by_id(db, group_id)
-
     # Проверяем, существует ли группа
-    if not group:
-        raise HTTPException(status_code=404, detail="Такой группы не существует")
-
     # Проверяем, является ли пользователь участником группы
-    if not await is_user_in_group(db, current_user.id, group_id):
-        raise HTTPException(status_code=403, detail="Вы не являетесь участником этой группы")
+    group = await _get_group_and_check_membership(db, current_user, group_id)
 
     total_balance: Decimal = await calculate_group_balance(db, group_id)
     member_balances = await calculate_member_balances(db, group_id)
@@ -194,15 +236,9 @@ async def get_user_group_wallets(
     """
     Получает список кошельков текущего пользователя, которые прикрелены к указанной группе.
     """
-    group = await groups_repository.get_group_by_id(db, group_id)
-
     # Проверяем, существует ли группа
-    if not group:
-        raise HTTPException(status_code=404, detail="Такой группы не существует")
-
     # Проверяем, является ли пользователь участником группы
-    if not await is_user_in_group(db, current_user.id, group_id):
-        raise HTTPException(status_code=403, detail="Вы не являетесь участником этой группы")
+    await _get_group_and_check_membership(db, current_user, group_id)
 
     wallets: list[Wallet] = await groups_repository.get_user_group_wallets(
         db, group_id, current_user.id
@@ -328,12 +364,8 @@ async def attach_wallet_to_group(
     """
 
     # Проверяем, существует ли группа
-    if not await groups_repository.get_group_by_id(db, group_id):
-        raise HTTPException(status_code=404, detail="Такой группы не существует")
-
     # Проверяем, является ли пользователь участником группы
-    if not await groups_repository.is_user_in_group(db, current_user.id, group_id):
-        raise HTTPException(status_code=403, detail="Вы не являетесь участником группы")
+    await _get_group_and_check_membership(db, current_user, group_id)
 
     # Проверяем, что кошелек принадлежит пользователю
     if not await wallets_repository.get_wallet_by_id(db, current_user.id, wallet_id):
@@ -371,12 +403,8 @@ async def detach_wallet_from_group(
     """
 
     # Проверяем, существует ли группа
-    if not await groups_repository.get_group_by_id(db, group_id):
-        raise HTTPException(status_code=404, detail="Такой группы не существует")
-
     # Проверяем, является ли пользователь участником группы
-    if not await groups_repository.is_user_in_group(db, current_user.id, group_id):
-        raise HTTPException(status_code=403, detail="Вы не являетесь участником этой группы")
+    await _get_group_and_check_membership(db, current_user, group_id)
 
     # Проверяем, что кошелек принадлежит пользователю
     if not await wallets_repository.get_wallet_by_id(db, current_user.id, wallet_id):
@@ -412,23 +440,18 @@ async def leave_group(
     Raises:
         HTTPException: Если группа не найдена или пользователь не является участником группы
     """
-    # Проверяем, существует ли группа
-    if not await groups_repository.get_group_by_id(db, group_id):
-        raise HTTPException(status_code=404, detail="Такой группы не существует")
 
+    # Проверяем, существует ли группа
     # Проверяем, является ли пользователь участником группы
-    if not await groups_repository.is_user_in_group(db, current_user.id, group_id):
-        raise HTTPException(status_code=403, detail="Вы не являетесь участником этой группы")
+    await _get_group_and_check_membership(db, current_user, group_id)
 
     # Если пользователь является создателем группы, то удаляем группу
-    if groups_repository.is_user_group_creator(db, group_id, current_user.id):
+    if await groups_repository.is_user_group_creator(db, group_id, current_user.id):
         await groups_repository.delete_group(db, group_id)
-
     else:
-        # Открепляем кошельки пользователя от группы
+        # Если пользователь не является создателем группы, то открепляем его кошельки от группы
         await groups_repository.detach_user_wallets_from_group(db, group_id, current_user.id)
-
-        # Если все проверки пройдены, текущий пользователь удаляется из группы
+        # Текущий пользователь удаляется из группы
         await groups_repository.remove_user_from_group(db, group_id, current_user.id)
 
 
@@ -437,7 +460,7 @@ async def add_user_to_group(
     current_user: User,
     group_id: int,
     user_id: int,
-) -> dict:
+) -> None:
     """
     Добавляет пользователя в группу.
 
@@ -454,12 +477,8 @@ async def add_user_to_group(
     """
 
     # Проверяем, существует ли группа
-    if not await groups_repository.get_group_by_id(db, group_id):
-        raise HTTPException(status_code=404, detail="Такой группы не существует")
-
     # Проверяем, является ли текущий пользователь создателем группы
-    if not await groups_repository.is_user_group_creator(db, group_id, current_user.id):
-        raise HTTPException(status_code=403, detail="Вы не можете добавлять участников группы")
+    await _get_group_and_check_creator(db, current_user, group_id)
 
     # Проверяем, существует ли добавляемый пользователь
     user = await users_repository.get_user_by_id(db, user_id)
@@ -477,15 +496,13 @@ async def add_user_to_group(
     # Если все проверки пройдены, пользователь добавляется в группу
     await groups_repository.add_user_to_group(db, group_id, user_id)
 
-    return {"message": "Пользователь успешно добавлен в группу"}
-
 
 async def remove_user_from_group(
     db: AsyncSession,
     current_user: User,
     group_id: int,
     user_id: int,
-) -> dict:
+) -> None:
     """
     Удаление пользователя из группы создателем группы.
 
@@ -502,12 +519,8 @@ async def remove_user_from_group(
     """
 
     # Проверяем, существует ли группа
-    if not await groups_repository.get_group_by_id(db, group_id):
-        raise HTTPException(status_code=404, detail="Такой группы не существует")
-
     # Проверяем, является ли текущий пользователь создателем группы
-    if not await groups_repository.is_user_group_creator(db, group_id, current_user.id):
-        raise HTTPException(status_code=403, detail="Вы не можете удалять участников группы")
+    await _get_group_and_check_creator(db, current_user, group_id)
 
     # Нельзя удалить самого себя
     if user_id == current_user.id:
@@ -523,14 +536,12 @@ async def remove_user_from_group(
     # Если все проверки пройдены, пользователь удаляется из группы
     await groups_repository.remove_user_from_group(db, group_id, user_id)
 
-    return {"message": "Пользователь успешно удален из группы"}
-
 
 async def delete_group(
     db: AsyncSession,
     current_user: User,
     group_id: int,
-) -> dict:
+) -> None:
     """
     Удаляет группу.
 
@@ -546,14 +557,8 @@ async def delete_group(
         HTTPException: Если группа не найдена
                        или текущий пользователь не является создателем группы
     """
-    group = await groups_repository.get_group_by_id(db, group_id)
-
-    if group is None:
-        raise HTTPException(status_code=404, detail="Такой группы не существует")
-
-    if not await groups_repository.is_user_group_creator(db, group_id, current_user.id):
-        raise HTTPException(status_code=403, detail="Только создатель группы может удалить ее")
+    # Проверяем, существует ли группа
+    # Проверяем, является ли текущий пользователь создателем группы
+    await _get_group_and_check_creator(db, current_user, group_id)
 
     await groups_repository.delete_group(db, group_id)
-
-    return {"message": "Группа удалена"}
