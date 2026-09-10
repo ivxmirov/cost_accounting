@@ -30,9 +30,23 @@
 
         <!-- Основной интерфейс -->
         <div id="mainSection" style="display: none;">
+
             <div class="alert alert-info d-flex justify-content-between align-items-center">
                 <span>Добро пожаловать, <strong id="currentUser"></strong>!</span>
-                <button onclick="logout()" class="btn btn-sm btn-outline-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">🚪</button>
+                <div class="d-flex gap-2">
+                    <button onclick="deleteCurrentUser()" 
+                            class="btn btn-sm btn-outline-danger" 
+                            style="font-size: 0.75rem; padding: 0.25rem 0.5rem;"
+                            title="Удалить аккаунт">
+                        ❌
+                    </button>
+                    <button onclick="logout()" 
+                            class="btn btn-sm btn-outline-secondary" 
+                            style="font-size: 0.75rem; padding: 0.25rem 0.5rem;"
+                            title="Выйти">
+                        🚪
+                    </button>
+                </div>
             </div>
 
             <!-- Общий баланс -->
@@ -150,6 +164,7 @@
                     </div>
                 </div>
             </div>
+        </div>
 
     <!-- Модалка добавления кошелька -->
     <div class="modal fade" id="addWalletModal" tabindex="-1">

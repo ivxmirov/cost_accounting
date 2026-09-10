@@ -2510,6 +2510,53 @@ function updateDeleteWalletSelect() {
     }).join('');
 }
 
+// Функция удаления текущего пользователя
+async function deleteCurrentUser() {
+    if (!accessToken) {
+        showError('Сначала войдите в систему');
+        return;
+    }
+
+    // Подтверждение
+    const confirmed = confirm(
+        'Вы уверены, что хотите удалить свой аккаунт?\n\n' +
+        '⚠️ ВНИМАНИЕ! Это действие нельзя отменить!\n' +
+        'Будут удалены все ваши кошельки, операции и группы.'
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const response = await fetchWithAuth(`${API_BASE_V2}/users/me`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        console.log('[DELETE_USER] Статус:', response.status);
+
+        if (response.ok) {
+            showSuccess('Аккаунт удален');
+            logout();
+        } else {
+            let errorMessage = 'Ошибка удаления аккаунта';
+            try {
+                const errorData = await response.json();
+                errorMessage = extractErrorMessage(errorData, errorMessage);
+            } catch (e) {
+                // Игнорируем
+            }
+            showError(errorMessage);
+        }
+    } catch (e) {
+        console.error('[DELETE_USER] Ошибка:', e);
+        showError('Ошибка подключения: ' + e.message);
+    }
+}
+
 // Функция удаления кошелька
 async function deleteWallet() {
     if (!accessToken) {

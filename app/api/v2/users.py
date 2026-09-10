@@ -44,7 +44,7 @@ async def search_users_v2(
 
 
 @router.delete(path="users/me", status_code=200)
-async def delete_current_user(
+async def delete_current_user_v2(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
