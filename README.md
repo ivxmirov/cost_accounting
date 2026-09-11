@@ -1,43 +1,46 @@
 # Счетчик финансов :1234::pen:
-Система по учету личных доходов и расходов пользователя
+Система по учету доходов и расходов пользователя, а также групп пользователей.
 
 ## Технологии
 Основной стек проекта, все зависимости управляются через uv
 
-**Основные:**  
+**Основные:**
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.135+-009688.svg)](https://fastapi.tiangolo.com)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0+-D71F00.svg)](https://www.sqlalchemy.org)
 [![asyncpg](https://img.shields.io/badge/asyncpg-0.31+-2F6790.svg)](https://github.com/MagicStack/asyncpg)
+[![Pydantic](https://img.shields.io/badge/Pydantic-2.13+-E92063.svg)](https://docs.pydantic.dev)
+[![PyJWT](https://img.shields.io/badge/PyJWT-2.13+-000000.svg)](https://pyjwt.readthedocs.io)
 
-**Инфраструктура:**  
+**Инфраструктура:**
 [![uv](https://img.shields.io/badge/uv-0.7+-DE5FE2.svg)](https://docs.astral.sh/uv)
 [![Uvicorn](https://img.shields.io/badge/Uvicorn-0.42+-4B8BBE.svg)](https://www.uvicorn.org)
 [![HTTPX](https://img.shields.io/badge/HTTPX-0.28+-5A29E4.svg)](https://www.python-httpx.org)
 [![Aiohttp](https://img.shields.io/badge/Aiohttp-3.13+-2C5BB4.svg)](https://docs.aiohttp.org)
 [![Alembic](https://img.shields.io/badge/Alembic-1.18+-6E4B8B.svg)](https://alembic.sqlalchemy.org)
+[![aiosqlite](https://img.shields.io/badge/aiosqlite-0.22+-2E7D32.svg)](https://github.com/omnilib/aiosqlite)
 
-**Качество кода:**  
+**Качество кода:**
 [![Ruff](https://img.shields.io/badge/Ruff-0.15+-D7FF64.svg)](https://docs.astral.sh/ruff)
-[![Mypy](https://img.shields.io/badge/Mypy-1.20+-2F4858.svg)](https://mypy-lang.org)
+[![ty](https://img.shields.io/badge/ty-0.0.73+-FF6B6B.svg)](https://github.com/astral-sh/ty)
 [![Pytest](https://img.shields.io/badge/Pytest-8.4+-0A9EDC.svg)](https://docs.pytest.org)
 [![Pre-commit](https://img.shields.io/badge/pre--commit-4.6+-FAB040.svg)](https://pre-commit.com)
 
 ## Быстрый старт
 
-1. Клонировать репозиторий
+**1.** Клонировать репозиторий
 
 ```bash
 git clone https://github.com/ivxmirov/cost_accounting.git
 ```
 
-2. Установить зависимости (включая dev и test-зависимости)
+**2.** Установить зависимости (включая dev и test-зависимости)
 
 ```bash
 uv sync --group dev --group test
 ```
 
-3. Настроить переменные окружения
+**3.** Настроить переменные окружения
   
    Скопируйте .env и .env.test и отредактируйте их под свои настройки
 
@@ -46,25 +49,25 @@ cp .env.example .env
 cp .env.test.example .env.test
 ```
 
-4. Применить миграции базы данных
+**4.** Применить миграции базы данных
 
 ```bash
 uv run alembic upgrade head
 ```
 
-5. Запустить сервер для разработки
+**5.** Запустить сервер для разработки
 
 ```bash
 uv run uvicorn app.main:app --reload
 ```
 
-6. Запустить тесты
+**6.** Запустить тесты
 
 ```bash
 uv run pytest
 ```
 
-7. Установить pre-commit хуки (опционально)
+**7.** Установить pre-commit хуки (опционально)
 
 ```bash
 uv run pre-commit install
@@ -97,8 +100,7 @@ Response (201 Created):
 }
 ```
 
-**Для выполнения запросов, требующих авторизацию**
-**Сначала получите <access_token> через эндпоинт `/api/v1/auth/login`:**
+### Для выполнения запросов, требующих авторизацию, сначала получите <access_token> через эндпоинт `/api/v1/auth/login`:
 
 ```bash
 curl -X 'POST' \
@@ -110,8 +112,7 @@ curl -X 'POST' \
   }'
 ```
 
-В ответе придёт <access_token>.
-Подставьте его в заголовок Authorization вместо <access_token>
+### В ответе придёт <access_token>. Подставьте его в заголовок Authorization вместо <access_token>.
 
 **Создать кошелек** - требуется авторизация
 
