@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.enum import CurrencyEnum, WalletType
@@ -24,7 +25,15 @@ async def test_create_wallet(db_session: AsyncSession, current_user):
     assert wallet.balance == Decimal("10")
 
 
-async def test_is_wallet_exists_success(db_session: AsyncSession, current_user, wallet):
+@pytest.mark.parametrize("wallet_type", ["debit", "credit"])
+async def test_is_wallet_exists_success(
+    db_session: AsyncSession,
+    current_user,
+    wallet_factory,
+    wallet_type: str,
+):
+    wallet = await wallet_factory(wallet_type)
+
     is_exists = await wallets_repository.is_wallet_exist(
         db_session,
         user_id=current_user.id,
@@ -44,7 +53,10 @@ async def test_is_wallet_exists_not_exists(db_session: AsyncSession, current_use
     assert is_exists is False
 
 
-async def test_is_wallet_exists_other_user(db_session: AsyncSession, wallet):
+async def test_is_wallet_exists_other_user(
+    db_session: AsyncSession,
+    debit_wallet,
+):
     user = User(login="test_1")
     db_session.add(user)
     await db_session.flush()
@@ -52,22 +64,22 @@ async def test_is_wallet_exists_other_user(db_session: AsyncSession, wallet):
     is_exists = await wallets_repository.is_wallet_exist(
         db_session,
         user_id=user.id,
-        wallet_name=wallet.name,
+        wallet_name=debit_wallet.name,
     )
 
     assert is_exists is False
 
 
-async def test_get_wallet_by_name_success(db_session: AsyncSession, current_user, wallet):
+async def test_get_wallet_by_name_success(db_session: AsyncSession, current_user, credit_wallet):
     found_wallet = await wallets_repository.get_wallet_by_name(
         db_session,
         user_id=current_user.id,
-        wallet_name=wallet.name,
+        wallet_name=credit_wallet.name,
     )
 
     assert found_wallet is not None
-    assert found_wallet.name == wallet.name
-    assert found_wallet.balance == wallet.balance
+    assert found_wallet.name == credit_wallet.name
+    assert found_wallet.balance == credit_wallet.balance
     assert found_wallet.user_id == current_user.id
 
 
@@ -81,7 +93,7 @@ async def test_get_wallet_by_name_not_exists(db_session: AsyncSession, current_u
     assert found_wallet is None
 
 
-async def test_get_wallet_by_name_other_user(db_session: AsyncSession, wallet):
+async def test_get_wallet_by_name_other_user(db_session: AsyncSession, debit_wallet):
     user = User(login="test_2")
     db_session.add(user)
     await db_session.flush()
@@ -89,13 +101,20 @@ async def test_get_wallet_by_name_other_user(db_session: AsyncSession, wallet):
     found_wallet = await wallets_repository.get_wallet_by_name(
         db_session,
         user_id=user.id,
-        wallet_name=wallet.name,
+        wallet_name=debit_wallet.name,
     )
 
     assert found_wallet is None
 
 
-async def test_add_income(db_session: AsyncSession, current_user, wallet):
+@pytest.mark.parametrize("wallet_type", ["debit", "credit"])
+async def test_add_income(
+    db_session: AsyncSession,
+    current_user,
+    wallet_factory,
+    wallet_type: str,
+):
+    wallet = await wallet_factory(wallet_type, balance=Decimal("100"))
     initial_balance = wallet.balance
     income_amount = Decimal("50")
 
@@ -110,11 +129,17 @@ async def test_add_income(db_session: AsyncSession, current_user, wallet):
     assert updated_wallet.id == wallet.id
 
 
-async def test_add_expense(db_session: AsyncSession, current_user, wallet):
-    wallet.balance = Decimal("100")
-    await db_session.flush()
-
-    expense_amount = Decimal("30")
+@pytest.mark.parametrize("wallet_type", ["debit", "credit"])
+async def test_add_expense(
+    db_session: AsyncSession,
+    current_user,
+    wallet_factory,
+    wallet_type: str,
+):
+    wallet = await wallet_factory(wallet_type, balance=Decimal("100"))
+    initial_balance = wallet.balance
+    expense_amount = Decimal("50")
+    
     updated_wallet = await wallets_repository.add_expense(
         db_session,
         user_id=current_user.id,
@@ -122,7 +147,7 @@ async def test_add_expense(db_session: AsyncSession, current_user, wallet):
         amount=expense_amount,
     )
 
-    assert updated_wallet.balance == Decimal("100") - expense_amount
+    assert updated_wallet.balance == initial_balance - expense_amount
     assert updated_wallet.id == wallet.id
 
 
@@ -132,6 +157,7 @@ async def test_get_user_wallets(db_session: AsyncSession, current_user):
         balance=Decimal("100"),
         user_id=current_user.id,
         currency=CurrencyEnum.USD,
+        type=WalletType.DEBIT,
     )
     db_session.add(wallet1)
 
@@ -140,6 +166,8 @@ async def test_get_user_wallets(db_session: AsyncSession, current_user):
         balance=Decimal("200"),
         user_id=current_user.id,
         currency=CurrencyEnum.USD,
+        type=WalletType.CREDIT,
+        credit_limit=Decimal("250")
     )
     db_session.add(wallet2)
     await db_session.flush()
@@ -170,17 +198,17 @@ async def test_get_user_wallets_other_user(db_session: AsyncSession):
 async def test_get_wallet_by_id_without_user_check_success(
     db_session: AsyncSession,
     current_user,
-    wallet,
+    debit_wallet,
 ):
     found_wallet = await wallets_repository.get_wallet_by_id_without_user_check(
         db_session,
-        wallet_id=wallet.id,
+        wallet_id=debit_wallet.id,
     )
 
     assert found_wallet is not None
-    assert found_wallet.id == wallet.id
-    assert found_wallet.name == wallet.name
-    assert found_wallet.balance == wallet.balance
+    assert found_wallet.id == debit_wallet.id
+    assert found_wallet.name == debit_wallet.name
+    assert found_wallet.balance == debit_wallet.balance
     assert found_wallet.user_id == current_user.id
 
 
@@ -193,16 +221,16 @@ async def test_get_wallet_by_id_without_user_check_not_exists(db_session: AsyncS
     assert found_wallet is None
 
 
-async def test_get_wallet_by_id_without_user_check_other_user(db_session: AsyncSession, wallet):
+async def test_get_wallet_by_id_without_user_check_other_user(db_session: AsyncSession, credit_wallet):
     other_user = User(login="other_user_test")
     db_session.add(other_user)
     await db_session.flush()
 
     found_wallet = await wallets_repository.get_wallet_by_id_without_user_check(
         db_session,
-        wallet_id=wallet.id,
+        wallet_id=credit_wallet.id,
     )
 
     assert found_wallet is not None
-    assert found_wallet.id == wallet.id
-    assert found_wallet.user_id == wallet.user_id
+    assert found_wallet.id == credit_wallet.id
+    assert found_wallet.user_id == credit_wallet.user_id

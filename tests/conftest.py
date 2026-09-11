@@ -108,16 +108,6 @@ async def credit_wallet(db_session: AsyncSession, test_user):
 
 
 @pytest.fixture
-def test_debit_wallet(debit_wallet):
-    return debit_wallet
-
-
-@pytest.fixture
-def test_credit_wallet(credit_wallet):
-    return credit_wallet
-
-
-@pytest.fixture
 def db(db_session):
     return db_session
 
@@ -126,12 +116,12 @@ def db(db_session):
 async def wallet_factory(db_session, test_user):
     """Фабрика для создания кошельков."""
 
-    async def _create_wallet(wallet_type: str):
+    async def _create_wallet(wallet_type: str, balance: Decimal=Decimal("0")):
         wallet = Wallet(
             name=f"Test {wallet_type}",
-            balance=Decimal("0"),
             user_id=test_user.id,
             currency=CurrencyEnum.RUB,
+            balance=balance,
             type=WalletType.DEBIT if wallet_type == "debit" else WalletType.CREDIT,
             credit_limit=Decimal("100") if wallet_type == "credit" else None,
         )

@@ -10,8 +10,7 @@ class GenericExceptionMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         try:
-            response = await call_next(request)
-            return response
+            return await call_next(request)
         except HTTPException:
             raise
         except Exception:
@@ -21,7 +20,7 @@ class GenericExceptionMiddleware(BaseHTTPMiddleware):
             )
 
 
-async def http_exception_handler(request: Request, exc: HTTPException | Exception) -> JSONResponse:
+async def http_exception_handler(_: Request, exc: HTTPException | Exception) -> JSONResponse:
     """
     Обработчик для HTTPException (400, 404, 403 и т.д.)
 
@@ -60,7 +59,7 @@ async def http_exception_handler(request: Request, exc: HTTPException | Exceptio
 
 
 async def validation_exception_handler(
-    request: Request,
+    _: Request,
     exc: RequestValidationError | Exception,
 ) -> JSONResponse:
     """
@@ -110,10 +109,10 @@ async def validation_exception_handler(
         details = [{k: v for k, v in err.items() if k != "ctx"} for err in errors]
 
         return JSONResponse(
-            status_code=400,  # Меняем 422 на 400 для бизнес-ошибок
+            status_code=422,
             content={
                 "detail": error_message,  # Добавляем detail для совместимости с фронтендом
-                "code": "400",
+                "code": "422",
                 "message": error_message,
                 "details": details,
             },

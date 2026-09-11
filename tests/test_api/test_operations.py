@@ -1,22 +1,23 @@
 import uuid
 from decimal import Decimal
 
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.enum import CurrencyEnum
 from app.models import Wallet
 
 
-async def test_add_income_success(db_session: AsyncSession, client, test_user, auth_headers):
-    wallet = Wallet(
-        name="card",
-        balance=Decimal("50"),
-        user_id=test_user.id,
-        currency=CurrencyEnum.USD,
-    )
-    db_session.add(wallet)
-    await db_session.commit()
-    await db_session.refresh(wallet)
+@pytest.mark.parametrize("wallet_type", ["debit", "credit"])
+async def test_add_income_success(
+    db_session: AsyncSession,
+    client,
+    test_user,
+    auth_headers,
+    wallet_factory,
+    wallet_type: str,
+):
+    wallet = await wallet_factory(wallet_type, balance = Decimal("50"))
 
     response = client.put(
         "/api/v1/operations/income",
@@ -71,17 +72,22 @@ def test_add_income_unauthorized(client):
     assert response.status_code == 401
 
 
-async def test_add_expense_success(db_session: AsyncSession, client, test_user, auth_headers):
-    wallet = Wallet(name="card", balance=200, user_id=test_user.id, currency=CurrencyEnum.USD)
-    db_session.add(wallet)
-    await db_session.commit()
-    await db_session.refresh(wallet)
+@pytest.mark.parametrize("wallet_type", ["debit", "credit"])
+async def test_add_expense_success(
+    db_session: AsyncSession,
+    client,
+    test_user,
+    auth_headers,
+    wallet_factory,
+    wallet_type: str,
+):
+    wallet = await wallet_factory(wallet_type, balance = Decimal("200"))
 
     response = client.put(
         "/api/v1/operations/expense",
         json={
             "transaction_id": str(uuid.uuid4()),
-            "wallet_name": "card",
+            "wallet_name": wallet.name,
             "amount": 50.0,
             "description": "Food",
         },
@@ -99,22 +105,21 @@ async def test_add_expense_success(db_session: AsyncSession, client, test_user, 
     assert wallet.balance == Decimal("150")
 
 
+@pytest.mark.parametrize("wallet_type", ["debit", "credit"])
 async def test_add_expense_negative_amount(
     db_session: AsyncSession,
     client,
     test_user,
     auth_headers,
+    wallet_factory,
+    wallet_type: str,
 ):
-    wallet = Wallet(name="card", balance=200, user_id=test_user.id, currency=CurrencyEnum.USD)
-    db_session.add(wallet)
-    await db_session.commit()
-    await db_session.refresh(wallet)
-
+    wallet = await wallet_factory(wallet_type)
     response = client.put(
         "/api/v1/operations/expense",
         json={
             "transaction_id": str(uuid.uuid4()),
-            "wallet_name": "card",
+            "wallet_name": wallet.name,
             "amount": -100.0,
             "description": "Food",
         },
@@ -124,11 +129,16 @@ async def test_add_expense_negative_amount(
     assert response.status_code == 422
 
 
-async def test_add_expense_empty_name(db_session: AsyncSession, client, test_user, auth_headers):
-    wallet = Wallet(name="card", balance=200, user_id=test_user.id, currency=CurrencyEnum.USD)
-    db_session.add(wallet)
-    await db_session.commit()
-    await db_session.refresh(wallet)
+@pytest.mark.parametrize("wallet_type", ["debit", "credit"])
+async def test_add_expense_empty_name(
+    db_session: AsyncSession,
+    client,
+    test_user,
+    auth_headers,
+    wallet_factory,
+    wallet_type: str,
+):
+    wallet = await wallet_factory(wallet_type)
 
     response = client.put(
         "/api/v1/operations/expense",
@@ -174,22 +184,22 @@ def test_add_expense_unauthorized(client):
     assert response.status_code == 401
 
 
+@pytest.mark.parametrize("wallet_type", ["debit", "credit"])
 async def test_add_expense_not_enough_money(
     db_session: AsyncSession,
     client,
     test_user,
     auth_headers,
+    wallet_factory,
+    wallet_type: str,
 ):
-    wallet = Wallet(name="card", balance=200, user_id=test_user.id, currency=CurrencyEnum.USD)
-    db_session.add(wallet)
-    await db_session.commit()
-    await db_session.refresh(wallet)
+    wallet = await wallet_factory(wallet_type, balance = Decimal("100"))
 
     response = client.put(
         "/api/v1/operations/expense",
         json={
             "transaction_id": str(uuid.uuid4()),
-            "wallet_name": "card",
+            "wallet_name": wallet.name,
             "amount": 250.0,
             "description": "Food",
         },
