@@ -1576,7 +1576,7 @@ function updateRemoveMembersSelectedDisplay() {
     if (!container) return;
 
     if (removeMembersSelected.size === 0) {
-        container.innerHTML = '<span class="text-muted">Никто не выбран</span>';
+        container.innerHTML = '<span class="text-muted">Выберите одного или нескольких участников</span>';
         return;
     }
 
