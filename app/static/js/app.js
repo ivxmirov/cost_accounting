@@ -1576,7 +1576,7 @@ function updateRemoveMembersSelectedDisplay() {
     if (!container) return;
 
     if (removeMembersSelected.size === 0) {
-        container.innerHTML = '<span class="text-muted">Выберите одного или нескольких участников</span>';
+        container.innerHTML = '<span class="text-muted">Никто не выбран</span>';
         return;
     }
 
@@ -1723,7 +1723,7 @@ function updateAddMembersSelectedDisplay() {
     if (!container) return;
 
     if (addMembersSelected.size === 0) {
-        container.innerHTML = '<span class="text-muted">Выберите одного или нескольких участников</span>';
+        container.innerHTML = '<span class="text-muted">Никто не выбран</span>';
         return;
     }
 
@@ -1931,7 +1931,7 @@ function updateSelectedMembersDisplay() {
     if (!container) return;
     
     if (selectedMembers.size === 0) {
-        container.innerHTML = '<span class="text-muted">Выберите одного или нескольких участников</span>';
+        container.innerHTML = '<span class="text-muted">Никто не выбран</span>';
         return;
     }
     
@@ -2134,89 +2134,55 @@ async function createGroup() {
     }
 
     const name = document.getElementById('groupName').value.trim();
-    
-    // Проверяем название группы
+
     if (!name) {
         showError('Введите название группы');
         return;
     }
-    
-    // Получаем выбранных участников из чекбоксов
+
+    // Собираем логины из selectedMembers
     const membersLogins = [];
-    const checkboxes = document.querySelectorAll('.member-checkbox:checked');
-    checkboxes.forEach(checkbox => {
-        membersLogins.push(checkbox.getAttribute('data-login'));
-    });
-    
-    // Если чекбоксы не найдены, пробуем текстовое поле
-    if (membersLogins.length === 0) {
-        const membersInput = document.getElementById('groupMembers');
-        if (membersInput && membersInput.value.trim()) {
-            membersLogins.push(...membersInput.value
-                .split(',')
-                .map(login => login.trim())
-                .filter(login => login.length > 0)
-            );
+    selectedMembers.forEach(userId => {
+        const user = allUsers.find(u => u.id === userId);
+        if (user) {
+            membersLogins.push(user.login);
         }
-    }
-    
+    });
+
     if (membersLogins.length === 0) {
         showError('Выберите хотя бы одного участника');
         return;
     }
 
     try {
-        console.log('[GROUP] Создание группы:', {
-            name: name,
-            members_logins: membersLogins
-        });
-        
         const response = await fetchWithAuth(`${API_BASE_V2}/groups`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 name: name,
                 members_logins: membersLogins
             })
         });
 
-        console.log('[GROUP] Статус создания:', response.status);
-
         const data = await response.json();
-        
+
         if (response.ok) {
-            console.log('[GROUP] Группа создана:', data);
-            
             showSuccess('Группа создана');
-            
-            // Закрываем модалку создания
+
             const createModal = bootstrap.Modal.getInstance(document.getElementById('createGroupModal'));
-            if (createModal) {
-                createModal.hide();
-            }
-            
-            // Очищаем поля
-            const nameInput = document.getElementById('groupName');
-            if (nameInput) nameInput.value = '';
-            
-            const searchInput = document.getElementById('groupMembersSearch');
-            if (searchInput) searchInput.value = '';
-            
+            if (createModal) createModal.hide();
+
+            document.getElementById('groupName').value = '';
+            document.getElementById('groupMembersSearch').value = '';
+
             selectedMembers.clear();
             updateSelectedMembersDisplay();
-            
-            // Перезагружаем список групп
+
             await loadGroups();
-            
         } else {
-            const errorMessage = extractErrorMessage(data, 'Ошибка создания группы');
-            console.error('[GROUP] Ошибка от сервера:', data);
-            showError(errorMessage);
+            showError(extractErrorMessage(data, 'Ошибка создания группы'));
         }
     } catch (e) {
-        console.error('[GROUP] Исключение:', e);
         showError('Ошибка подключения: ' + e.message);
     }
 }

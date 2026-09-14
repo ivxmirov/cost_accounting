@@ -180,20 +180,3 @@ h1 {
 .wallet-table td:nth-child(4) {
     width: 25%;
 }
-
-/* Красные чекбоксы для удаления участников */
-.remove-member-checkbox:checked {
-    background-color: #dc3545;
-    border-color: #dc3545;
-}
-
-.remove-member-checkbox:focus {
-    border-color: #dc3545;
-    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
-}
-
-/* Красные бейджи выбранных участников */
-.badge.bg-danger-light {
-    background-color: #dc3545 !important;
-    color: #fff !important;
-}
