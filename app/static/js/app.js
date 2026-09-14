@@ -781,7 +781,7 @@ async function addWallet() {
         }
         
         if (response.ok) {
-            showSuccess('Кошелек успешно создан');
+            showSuccess('Кошелек создан');
             closeModal('addWalletModal');
             document.getElementById('walletName').value = '';
             document.getElementById('walletBalance').value = '0';
@@ -2189,7 +2189,7 @@ async function createGroup() {
         if (response.ok) {
             console.log('[GROUP] Группа создана:', data);
             
-            showSuccess('Группа успешно создана');
+            showSuccess('Группа создана');
             
             // Закрываем модалку создания
             const createModal = bootstrap.Modal.getInstance(document.getElementById('createGroupModal'));
@@ -2652,7 +2652,7 @@ async function deleteWallet() {
             const data = await response.json();
             console.log('[DELETE_WALLET] Успех:', data);
             
-            showSuccess(data.message || 'Кошелек успешно удален');
+            showSuccess(data.message || 'Кошелек удален');
             
             // Закрываем модалку
             const modalElement = document.getElementById('deleteWalletModal');
@@ -2708,7 +2708,7 @@ async function deleteGroup() {
             const data = await response.json();
             console.log('[DELETE_GROUP] Успех:', data);
             
-            showSuccess(data.message || 'Группа успешно удалена');
+            showSuccess(data.message || 'Группа удалена');
             
             // Закрываем модалку группы
             const groupModalElement = document.getElementById('groupDetailsModal');
