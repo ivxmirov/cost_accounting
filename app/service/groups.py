@@ -617,3 +617,58 @@ async def remove_user_from_group(
 
     # Если все проверки пройдены, пользователь удаляется из группы
     await groups_repository.remove_user_from_group(db, group_id, user_id)
+
+
+async def remove_users_from_group(
+    db: AsyncSession,
+    current_user: User,
+    group_id: int,
+    user_ids: list[int],
+) -> dict:
+    """
+    Удалить несколько пользователей из группы.
+
+    Returns:
+        dict: {removed: [...], skipped: [...], not_found: [...]}
+    """
+    # Проверяем, существует ли группа
+    # Проверяем, является ли текущий пользователь создателем группы
+    await _get_group_and_check_creator(db, current_user, group_id)
+
+    if not user_ids:
+        raise HTTPException(status_code=400, detail="Выберите хотя бы одного пользователя")
+
+    # Убираем дубликаты
+    unique_ids = set(user_ids)
+
+    if current_user.id in unique_ids:
+        raise HTTPException(
+            status_code=400,
+            detail="Нельзя удалить самого себя",
+        )
+
+    removed = []
+    skipped = []
+    not_found = []
+
+    for user_id in unique_ids:
+        user = await users_repository.get_user_by_id(db, user_id)
+        if not user:
+            not_found.append(user_id)
+            continue
+
+        if not await groups_repository.is_user_in_group(db, user_id, group_id):
+            skipped.append(user.login)
+            continue
+
+        await groups_repository.remove_user_from_group(db, group_id, user_id)
+        removed.append(user.login)
+
+    return {
+        "message": (
+            f"Удалено: {len(removed)}, пропущено: {len(skipped)}, не найдено: {len(not_found)}"
+        ),
+        "removed": removed,
+        "skipped": skipped,
+        "not_found": not_found,
+    }

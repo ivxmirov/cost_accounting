@@ -1460,81 +1460,223 @@ async function showAddMembersModal() {
     });
 }
 
-// Функция показа модалки удаления участника
-function showRemoveMemberModal() {
+// Глобальные переменные для удаления
+let removeMembersSelected = new Set();
+let removeMembersAllUsers = [];
+let removeMembersCurrentFiltered = [];
+
+// Открытие модалки удаления участников
+async function showRemoveMembersModal() {
     if (!currentGroupId) {
         showError('Группа не выбрана');
         return;
     }
-    
-    // Получаем список участников из текущей группы
+
+    // Очищаем состояние
+    removeMembersSelected.clear();
+    removeMembersAllUsers = [];
+    removeMembersCurrentFiltered = [];
+
+    // Получаем список участников из деталей группы
     const membersList = document.getElementById('groupDetailsMembersList');
     if (!membersList) {
         showError('Список участников не найден');
         return;
     }
-    
-    // Извлекаем логины участников из списка
+
     const members = [];
-    const memberItems = membersList.querySelectorAll('li');
-    memberItems.forEach(item => {
+    membersList.querySelectorAll('li').forEach(item => {
         const span = item.querySelector('span:first-child');
         if (span) {
-            // Убираем звездочку у текущего пользователя
             const login = span.textContent.replace('⭐', '').trim();
             members.push(login);
         }
     });
-    
-    // Фильтруем текущего пользователя (нельзя удалить самого себя)
-    const availableMembers = members.filter(login => login !== currentUser);
-    
-    if (availableMembers.length === 0) {
+
+    // Фильтруем текущего пользователя (нельзя удалить себя)
+    const availableLogins = members.filter(login => login !== currentUser);
+
+    if (availableLogins.length === 0) {
         showError('Нет участников для удаления');
         return;
     }
-    
-    // Создаем модалку динамически
-    const modalHTML = `
-        <div class="modal fade" id="removeMemberModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Удалить участника</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Выберите участника</label>
-                            <select class="form-select" id="removeMemberSelect">
-                                ${availableMembers.map(login => 
-                                    `<option value="${login}">${login}</option>`
-                                ).join('')}
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer d-flex justify-content-between">
-                        <button type="button" class="btn btn-danger" onclick="removeMemberFromGroup()">Удалить</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    </div>
-                </div>
-            </div>
+
+    // Загружаем всех пользователей и сопоставляем по логину
+    const users = await loadAllUsers();
+    removeMembersAllUsers = users.filter(user => availableLogins.includes(user.login));
+
+    // Показываем модалку
+    const modal = new bootstrap.Modal(document.getElementById('removeMembersModal'));
+    modal.show();
+
+    // Рендерим список
+    renderRemoveMembersList(removeMembersAllUsers);
+    updateRemoveMembersSelectedDisplay();
+
+    // Обработчик поиска
+    const searchInput = document.getElementById('removeMembersSearch');
+    searchInput.value = '';
+
+    // Удаляем старый обработчик через клонирование
+    const newSearchInput = searchInput.cloneNode(true);
+    searchInput.parentNode.replaceChild(newSearchInput, searchInput);
+
+    newSearchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        const filtered = removeMembersAllUsers.filter(user =>
+            user.login.toLowerCase().includes(searchTerm)
+        );
+        renderRemoveMembersList(filtered);
+    });
+}
+
+// Рендер списка участников для удаления
+function renderRemoveMembersList(users) {
+    const container = document.getElementById('removeMembersList');
+    if (!container) return;
+
+    removeMembersCurrentFiltered = users;
+
+    if (users.length === 0) {
+        container.innerHTML = '<div class="text-muted p-2">Участники не найдены</div>';
+        return;
+    }
+
+    container.innerHTML = users.map(user => {
+        const isChecked = removeMembersSelected.has(user.id);
+        return `
+            <label class="list-group-item d-flex align-items-center" style="cursor: pointer;">
+                <input type="checkbox" 
+                       class="form-check-input me-2 remove-member-checkbox" 
+                       value="${user.id}" 
+                       data-login="${user.login}"
+                       ${isChecked ? 'checked' : ''}>
+                <span>${user.login}</span>
+            </label>
+        `;
+    }).join('');
+
+    // Обработчики чекбоксов
+    container.querySelectorAll('.remove-member-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const userId = parseInt(this.value);
+            if (this.checked) {
+                removeMembersSelected.add(userId);
+            } else {
+                removeMembersSelected.delete(userId);
+            }
+            updateRemoveMembersSelectedDisplay();
+        });
+    });
+}
+
+// Обновление контейнера выбранных для удаления
+function updateRemoveMembersSelectedDisplay() {
+    const container = document.getElementById('removeMembersSelectedContainer');
+    if (!container) return;
+
+    if (removeMembersSelected.size === 0) {
+        container.innerHTML = '<span class="text-muted">Никто не выбран</span>';
+        return;
+    }
+
+    const selectedUsers = removeMembersAllUsers.filter(user => removeMembersSelected.has(user.id));
+
+    container.innerHTML = `
+        <div class="d-flex flex-wrap gap-1">
+            ${selectedUsers.map(user => `
+                <span class="badge bg-primary">
+                    ${user.login}
+                    <button type="button" 
+                            class="btn-close btn-close-white ms-1" 
+                            style="font-size: 0.6rem;"
+                            onclick="removeRemoveMember(${user.id})">
+                    </button>
+                </span>
+            `).join('')}
         </div>
     `;
-    
-    // Удаляем существующую модалку, если есть
-    const existingModal = document.getElementById('removeMemberModal');
-    if (existingModal) {
-        existingModal.remove();
-    }
-    
-    // Добавляем новую модалку
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    // Показываем модалку
-    const modal = new bootstrap.Modal(document.getElementById('removeMemberModal'));
-    modal.show();
 }
+
+// Снять выбор с участника
+function removeRemoveMember(userId) {
+    removeMembersSelected.delete(userId);
+    updateRemoveMembersSelectedDisplay();
+
+    const checkbox = document.querySelector(`.remove-member-checkbox[value="${userId}"]`);
+    if (checkbox) {
+        checkbox.checked = false;
+    }
+}
+
+// Отправка на бэкенд
+async function removeMembersFromGroup() {
+    if (!currentGroupId) {
+        showError('Группа не выбрана');
+        return;
+    }
+
+    if (removeMembersSelected.size === 0) {
+        showError('Выберите хотя бы одного участника');
+        return;
+    }
+
+    // Подтверждение
+    const selectedUsers = removeMembersAllUsers.filter(user => removeMembersSelected.has(user.id));
+    const logins = selectedUsers.map(u => u.login).join(', ');
+
+    if (!confirm(`Вы уверены, что хотите удалить следующих участников?\n\n${logins}`)) {
+        return;
+    }
+
+    const memberIds = Array.from(removeMembersSelected);
+
+    try {
+        console.log('[REMOVE_MEMBERS] Отправка:', memberIds);
+
+        const response = await fetchWithAuth(
+            `${API_BASE_V2}/groups/${currentGroupId}/members`,
+            {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ members_ids: memberIds })
+            }
+        );
+
+        console.log('[REMOVE_MEMBERS] Статус:', response.status);
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('[REMOVE_MEMBERS] Успех:', data);
+
+            if (data.removed && data.removed.length > 0) {
+                showSuccess(`Удалено участников: ${data.removed.length}`);
+            }
+            if (data.skipped && data.skipped.length > 0) {
+                showError(`Пропущено: ${data.skipped.join(', ')}`);
+            }
+
+            const modalEl = document.getElementById('removeMembersModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
+            await viewGroup(currentGroupId);
+        } else {
+            let errorMessage = 'Ошибка удаления участников';
+            try {
+                const errorData = await response.json();
+                errorMessage = extractErrorMessage(errorData, errorMessage);
+            } catch (e) {}
+            showError(errorMessage);
+        }
+    } catch (e) {
+        console.error('[REMOVE_MEMBERS] Ошибка:', e);
+        showError('Ошибка подключения: ' + e.message);
+    }
+}
+
 // Рендер списка пользователей
 function renderAddMembersList(users) {
     const container = document.getElementById('addMembersList');
@@ -2400,84 +2542,6 @@ async function searchUserByLogin(login) {
     } catch (e) {
         console.error('[SEARCH_USER] Ошибка:', e);
         return null;
-    }
-}
-
-// Функция удаления участника из группы
-async function removeMemberFromGroup() {
-    if (!currentGroupId) {
-        showError('Группа не выбрана');
-        return;
-    }
-    
-    const login = document.getElementById('removeMemberSelect').value;
-    
-    if (!login) {
-        showError('Выберите участника');
-        return;
-    }
-    
-    // Подтверждение действия
-    if (!confirm(`Вы уверены, что хотите удалить участника "${login}"?`)) {
-        return;
-    }
-    
-    try {
-        // Шаг 1: Ищем пользователя по логину (так же, как при добавлении)
-        const user = await searchUserByLogin(login);
-        
-        if (!user) {
-            showError(`Пользователь "${login}" не найден`);
-            return;
-        }
-        
-        // Шаг 2: Удаляем пользователя по ID
-        const response = await fetchWithAuth(
-            `${API_BASE_V2}/groups/${currentGroupId}/members/${user.id}`,
-            {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }
-        );
-        
-        console.log('[REMOVE_MEMBER] Статус:', response.status);
-        
-        if (response.ok) {
-            const data = await response.json();
-            showSuccess(data.message || `Пользователь "${login}" удален из группы`);
-            
-            // Закрываем модалку удаления
-            const removeModalElement = document.getElementById('removeMemberModal');
-            const removeModal = bootstrap.Modal.getInstance(removeModalElement);
-            if (removeModal) {
-                removeModal.hide();
-            }
-            
-            // Удаляем модалку из DOM
-            setTimeout(() => {
-                if (removeModalElement) {
-                    removeModalElement.remove();
-                }
-            }, 300);
-            
-            // Обновляем информацию о группе
-            await viewGroup(currentGroupId);
-            
-        } else {
-            let errorMessage = 'Ошибка удаления участника';
-            try {
-                const data = await response.json();
-                errorMessage = extractErrorMessage(data, errorMessage);
-            } catch (e) {
-                // Игнорируем ошибку парсинга
-            }
-            showError(errorMessage);
-        }
-    } catch (e) {
-        console.error('[REMOVE_MEMBER] Ошибка:', e);
-        showError('Ошибка подключения: ' + e.message);
     }
 }
 

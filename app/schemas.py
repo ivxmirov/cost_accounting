@@ -34,8 +34,22 @@ class MemberBalanceSchema(BaseModel):
     effective_balance: Decimal = Decimal("0")
 
 
-class MembersAddSchema(BaseModel):
+class MembersIdsBaseSchema(BaseModel):
+    """Базовая схема со списком ID участников."""
+
     members_ids: list[int]
+
+
+class MembersAddSchema(MembersIdsBaseSchema):
+    """Схема для добавления участников в группу."""
+
+    pass
+
+
+class MembersRemoveSchema(MembersIdsBaseSchema):
+    """Схема для удаления участников из группы."""
+
+    pass
 
 
 class OperationRequest(BaseModel):

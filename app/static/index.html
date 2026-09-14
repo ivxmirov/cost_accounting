@@ -107,7 +107,7 @@
                         <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#addWalletModal">
                             Добавить кошелек
                         </button>
-                        <button class="btn btn-orange w-100" data-bs-toggle="modal" data-bs-target="#deleteWalletModal">
+                        <button class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#deleteWalletModal">
                             Удалить кошелек
                         </button>
                     </div>
@@ -368,7 +368,7 @@
                     </div>
                 </div>
                 <div class="modal-footer d-flex justify-content-between">
-                    <button type="button" class="btn btn-orange" onclick="deleteWallet()">Удалить</button>
+                    <button type="button" class="btn btn-danger" onclick="deleteWallet()">Удалить</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
                 </div>
             </div>
@@ -526,8 +526,8 @@
                                 <button class="btn btn-success btn-sm flex-fill" onclick="showAddMembersModal()">
                                     Добавить участников
                                 </button>
-                                <button class="btn btn-orange btn-sm flex-fill" onclick="showRemoveMemberModal()">
-                                    Удалить участника
+                                <button class="btn btn-danger btn-sm flex-fill" onclick="showRemoveMembersModal()">
+                                    Удалить участников
                                 </button>
                             </div>
                         </div>
@@ -648,6 +648,48 @@
         </div>
     </div>
 
+    <!-- Модалка удаления участников -->
+    <div class="modal fade" id="removeMembersModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Удалить участников</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Поиск участников</label>
+                        <input type="text" class="form-control" id="removeMembersSearch" 
+                            placeholder="Начните вводить логин..." 
+                            autocomplete="off">
+                    </div>
+
+                    <!-- Выбранные участники -->
+                    <div class="mb-3">
+                        <label class="form-label">Выбранные участники:</label>
+                        <div id="removeMembersSelectedContainer" class="p-2 bg-light rounded">
+                            <span class="text-muted">Отметьте одного или нескольких участников</span>
+                        </div>
+                    </div>
+
+                    <!-- Список для выбора -->
+                    <div class="mb-3">
+                        <label class="form-label">Участники группы</label>
+                        <div id="removeMembersList" class="list-group" style="max-height: 250px; overflow-y: auto;">
+                            <div class="text-muted p-2">Загрузка участников...</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer d-flex justify-content-between">
+                    <button type="button" class="btn btn-danger" onclick="removeMembersFromGroup()">
+                        Удалить
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast контейнер -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3">
         <div id="toastNotification" class="toast" role="alert">
@@ -720,6 +762,12 @@
         document.getElementById('addMembersModal').addEventListener('hidden.bs.modal', function() {
             addMembersSelected.clear();
             document.getElementById('addMembersSearch').value = '';
+        });
+
+        document.getElementById('removeMembersModal').addEventListener('hidden.bs.modal', function() {
+            removeMembersSelected.clear();
+            const searchInput = document.getElementById('removeMembersSearch');
+            if (searchInput) searchInput.value = '';
         });
     </script>
 </body>

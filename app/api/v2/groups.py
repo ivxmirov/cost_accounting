@@ -8,6 +8,7 @@ from app.schemas import (
     GroupDetailResponseSchema,
     GroupListResponseSchema,
     MembersAddSchema,
+    MembersRemoveSchema,
     WalletTableSchema,
 )
 from app.service import groups as groups_service
@@ -142,6 +143,20 @@ async def remove_member_from_group_v2(
 
     await groups_service.remove_user_from_group(db, current_user, group_id, user_id)
     return {"message": "Участник удален из группы"}
+
+
+@router.delete(path="/groups/{group_id}/members", status_code=200)
+async def remove_members_from_group_v2(
+    group_id: int,
+    data: MembersRemoveSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Удалить несколько участников из группы."""
+
+    return await groups_service.remove_users_from_group(
+        db, current_user, group_id, data.members_ids
+    )
 
 
 @router.delete(
