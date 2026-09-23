@@ -1134,7 +1134,7 @@ function displayGroupDetails(groupData) {
             // Для создателя показываем одну кнопку
             leaveGroupButton.style.display = 'none';
             leaveAndDeleteGroupButton.style.display = 'block';
-            leaveAndDeleteGroupButton.textContent = 'Покинуть и удалить группу';
+            leaveAndDeleteGroupButton.textContent = 'Удалить группу';
         } else {
             // Для обычных участников показываем обычную кнопку
             leaveGroupButton.style.display = 'block';

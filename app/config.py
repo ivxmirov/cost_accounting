@@ -7,11 +7,15 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    databases_dsn: str = ""
-    redis_dsn: str = ""
-    redis_cache_ttl_seconds: int = 300
+    DATABASES_DSN: str = ""
+    REDIS_DSN: str = ""
+    REDIS_CACHE_TTL_SECONDS: int = 300
 
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=False,
+        extra="ignore",
+    )
 
 
 settings = Settings()
