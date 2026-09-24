@@ -50,14 +50,15 @@ jobs:
 
     steps:
       - name: Copy compose.yaml to server
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "compose.yaml"
+          source: "./compose.yaml"
           target: "/root/cost-accounting/"
+          debug: true
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
