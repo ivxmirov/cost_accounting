@@ -49,6 +49,16 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      - name: Copy compose.yaml to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "compose.yaml"
+          target: "/root/cost-accounting/"
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -60,19 +70,12 @@ jobs:
             set -e
             cd /root/cost-accounting
 
-            # Принудительно скачать свежий образ (игнорируя кэш тега latest)
             docker compose pull web --policy always
-
-            # Пересоздать контейнер с новым образом
             docker compose up -d --no-build --force-recreate web
-
-            # Удалить висячие образы
             docker image prune -f
 
-            # Дать время на старт
             sleep 10
 
-            # Проверка здоровья
             if ! curl -fsS http://127.0.0.1:8000/docs > /dev/null; then
               echo "❌ Приложение не отвечает"
               docker compose logs --tail=50 web
