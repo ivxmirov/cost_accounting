@@ -20,10 +20,7 @@ services:
       - "shared_buffers=128MB"
       - "-c"
       - "max_connections=20"
-    deploy:
-      resources:
-        limits:
-          memory: 400M
+    mem_limit: 400M
 
   redis:
     image: redis:7-alpine
@@ -32,15 +29,10 @@ services:
     volumes:
       - redisdata:/data
     command: ["redis-server", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
-    deploy:
-      resources:
-        limits:
-          memory: 96M
+    mem_limit: 96M
 
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/ivxmirov/cost_accounting/web:latest
     container_name: cost_app
     restart: unless-stopped
     ports:
@@ -57,9 +49,7 @@ services:
       redis:
         condition: service_started
     deploy:
-      resources:
-        limits:
-          memory: 400M
+      mem_limit: 400M
 
 volumes:
   pgdata:
