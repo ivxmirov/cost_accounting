@@ -50,6 +50,11 @@ h1 {
     background: #f8f9fa;
 }
 
+.table th,
+.table td {
+    white-space: nowrap;
+}
+
 #totalBalance {
     font-weight: bold;
     margin: 0;
@@ -159,21 +164,22 @@ h1 {
 .wallet-table {
     table-layout: fixed;
     width: 100%;
+    min-width: 800px;   /* или больше */
 }
 
 .wallet-table th:nth-child(1),
 .wallet-table td:nth-child(1) {
-    width: 40%;
+    width: 30%;
 }
 
 .wallet-table th:nth-child(2),
 .wallet-table td:nth-child(2) {
-    width: 15%;
+    width: 20%;
 }
 
 .wallet-table th:nth-child(3),
 .wallet-table td:nth-child(3) {
-    width: 20%;
+    width: 25%;
 }
 
 .wallet-table th:nth-child(4),
