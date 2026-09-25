@@ -34,4 +34,4 @@ app.include_router(operations_v2_router, prefix="/api/v2", tags=["operations-v2"
 app.include_router(groups_v2_router, prefix="/api/v2", tags=["groups-v2"])
 app.include_router(users_v2_router, prefix="/api/v2", tags=["users-v2"])
 
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
