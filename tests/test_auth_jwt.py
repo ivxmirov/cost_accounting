@@ -143,7 +143,7 @@ def test_registration_and_immediate_login_flow(client):
     assert me_data["login"] == "newuser"
 
 
-def test_multiple_endpoints_with_same_token(client, test_user, test_wallet):
+def test_multiple_endpoints_with_same_token(client, test_user):
     """Использование одного токена для доступа к разным защищенным эндпоинтам."""
     login_response = client.post(
         "/api/v1/auth/login",
