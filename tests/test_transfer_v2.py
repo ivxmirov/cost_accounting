@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.enum import CurrencyEnum
+from app.enum import CurrencyEnum, WalletType
 from app.models import Wallet
 
 
@@ -18,12 +18,14 @@ async def test_transfer_v2_with_custom_amount_success(
         user_id=test_user.id,
         name="RUB Wallet",
         currency=CurrencyEnum.RUB,
+        type=WalletType.DEBIT,
         balance=Decimal("10000.0"),
     )
     wallet2 = Wallet(
         user_id=test_user.id,
         name="USD Wallet",
         currency=CurrencyEnum.USD,
+        type=WalletType.CREDIT,
         balance=Decimal("0.0"),
     )
     db.add(wallet1)
@@ -57,7 +59,6 @@ async def test_transfer_v2_without_custom_amount_fallback_to_v1(
     client,
     test_user,
     db: AsyncSession,
-    mock_currency_api,
     auth_headers,
 ):
     """v2: Перевод без кастомной суммы работает как v1 (автоконверсия)."""
@@ -65,12 +66,14 @@ async def test_transfer_v2_without_custom_amount_fallback_to_v1(
         user_id=test_user.id,
         name="USD Wallet",
         currency=CurrencyEnum.USD,
+        type=WalletType.DEBIT,
         balance=Decimal("1000.0"),
     )
     wallet2 = Wallet(
         user_id=test_user.id,
         name="EUR Wallet",
         currency=CurrencyEnum.EUR,
+        type=WalletType.CREDIT,
         balance=Decimal("0.0"),
     )
     db.add(wallet1)
@@ -107,12 +110,14 @@ async def test_transfer_v2_custom_amount_same_currency(
         user_id=test_user.id,
         name="Wallet 1",
         currency=CurrencyEnum.USD,
+        type=WalletType.DEBIT,
         balance=Decimal("500.0"),
     )
     wallet2 = Wallet(
         user_id=test_user.id,
         name="Wallet 2",
         currency=CurrencyEnum.USD,
+        type=WalletType.CREDIT,
         balance=Decimal("200.0"),
     )
     db.add(wallet1)
@@ -151,12 +156,14 @@ async def test_transfer_v2_custom_amount_insufficient_funds(
         user_id=test_user.id,
         name="Wallet 1",
         currency=CurrencyEnum.USD,
+        type=WalletType.DEBIT,
         balance=Decimal("50.0"),
     )
     wallet2 = Wallet(
         user_id=test_user.id,
         name="Wallet 2",
         currency=CurrencyEnum.USD,
+        type=WalletType.CREDIT,
         balance=Decimal("0.0"),
     )
     db.add(wallet1)
@@ -179,7 +186,7 @@ async def test_transfer_v2_custom_amount_insufficient_funds(
     assert response.status_code == 400
 
 
-def test_transfer_v2_custom_amount_wallet_not_found(client, test_user, auth_headers):
+def test_transfer_v2_custom_amount_wallet_not_found(client, auth_headers):
     """v2: Перевод при несуществующем кошельке — 404."""
     response = client.put(
         "/api/v2/operations/transfer",
@@ -195,8 +202,9 @@ def test_transfer_v2_custom_amount_wallet_not_found(client, test_user, auth_head
     assert response.status_code in (404, 422)
 
 
-def test_transfer_v2_custom_amount_same_wallet(client, test_user, test_wallet, auth_headers):
+def test_transfer_v2_custom_amount_same_wallet(client, debit_wallet, auth_headers):
     """v2: Перевод в тот же кошелёк недопустим — 422."""
+    test_wallet = debit_wallet
     response = client.put(
         "/api/v2/operations/transfer",
         json={
@@ -222,12 +230,14 @@ async def test_transfer_v2_implied_rate_calculation(
         user_id=test_user.id,
         name="RUB Wallet",
         currency=CurrencyEnum.RUB,
+        type=WalletType.DEBIT,
         balance=Decimal("10000.0"),
     )
     wallet2 = Wallet(
         user_id=test_user.id,
         name="EUR Wallet",
         currency=CurrencyEnum.EUR,
+        type=WalletType.CREDIT,
         balance=Decimal("0.0"),
     )
     db.add(wallet1)
@@ -262,12 +272,14 @@ async def test_transfer_v2_idempotency(client, test_user, db: AsyncSession, auth
         user_id=test_user.id,
         name="Wallet 1",
         currency=CurrencyEnum.USD,
+        type=WalletType.DEBIT,
         balance=Decimal("1000.0"),
     )
     wallet2 = Wallet(
         user_id=test_user.id,
         name="Wallet 2",
         currency=CurrencyEnum.EUR,
+        type=WalletType.CREDIT,
         balance=Decimal("0.0"),
     )
     db.add(wallet1)
@@ -318,12 +330,14 @@ async def test_transfer_v2_empty_custom_amount_works_as_v1(
         user_id=test_user.id,
         name="Wallet 1",
         currency=CurrencyEnum.USD,
+        type=WalletType.DEBIT,
         balance=Decimal("500.0"),
     )
     wallet2 = Wallet(
         user_id=test_user.id,
         name="Wallet 2",
         currency=CurrencyEnum.USD,
+        type=WalletType.CREDIT,
         balance=Decimal("200.0"),
     )
     db.add(wallet1)
