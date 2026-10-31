@@ -55,7 +55,7 @@ target-version = "py312"
 # Папки, которые Ruff не будет проверять
 exclude = [
     "alembic/**",
-    "tests/**",
+    # "tests/**",
     "test-reports/**",
 ]
 
@@ -98,12 +98,13 @@ skip-magic-trailing-comma = false
 split-on-trailing-comma = false
 
 [tool.ty.src]
-# Файлы и папки, которые ty БУДЕТ проверять
-include = ["app/", "main.py"]
-# Файлы и папки, которые ty НЕ будет проверять
+# Файлы и папки, которые ty не будет проверять
 exclude = [
     "alembic/",       # Миграции Alembic (автогенерируемый код)
     "migrations/",    # Миграции базы данных
     "test-reports/",  # Отчеты о тестах
-    "tests/",         # Тесты (можно проверять отдельно при необходимости)
+    # "tests/",         # Тесты (можно проверять отдельно при необходимости)
 ]
+
+[tool.ty.environment]
+root = ["./app"]

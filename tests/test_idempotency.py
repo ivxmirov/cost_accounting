@@ -1,3 +1,4 @@
+# ty: ignore[unresolved-attribute]
 import uuid
 from decimal import Decimal
 
@@ -7,12 +8,18 @@ from app.enum import WalletType
 from app.models import Wallet
 
 
-async def test_income_idempotency(client, test_user, test_wallet, db: AsyncSession, auth_headers):
+async def test_income_idempotency(
+    client,
+    debit_wallet,
+    db: AsyncSession,
+    auth_headers,
+):
     """
     Повторный запрос income с тем же transaction_id возвращает 200 OK с той же операцией.
     Баланс кошелька не должен измениться при повторном запросе.
     """
     transaction_id = str(uuid.uuid4())
+    test_wallet = debit_wallet
 
     response1 = client.put(
         "/api/v1/operations/income",
@@ -30,7 +37,8 @@ async def test_income_idempotency(client, test_user, test_wallet, db: AsyncSessi
     assert data1["amount"] == "500.00"
 
     wallet = await db.get(Wallet, test_wallet.id)
-    initial_balance = wallet.balance
+    if wallet:
+        initial_balance = wallet.balance
 
     response2 = client.put(
         "/api/v1/operations/income",
@@ -53,12 +61,19 @@ async def test_income_idempotency(client, test_user, test_wallet, db: AsyncSessi
     assert wallet.balance == initial_balance
 
 
-async def test_expense_idempotency(client, test_user, test_wallet, db: AsyncSession, auth_headers):
+async def test_expense_idempotency(
+    client,
+    debit_wallet,
+    db: AsyncSession,
+    auth_headers
+):
     """
     Повторный запрос expense с тем же transaction_id возвращает 200 OK с той же операцией.
     Баланс кошелька не должен измениться при повторном запросе.
     """
     transaction_id = str(uuid.uuid4())
+    test_wallet = debit_wallet
+
 
     response1 = client.put(
         "/api/v1/operations/expense",
@@ -104,7 +119,6 @@ async def test_transfer_idempotency(
     client,
     test_user,
     db: AsyncSession,
-    mock_currency_api,
     auth_headers,
 ):
     """
@@ -176,14 +190,15 @@ async def test_transfer_idempotency(
 
 def test_different_transaction_ids_create_separate_operations(
     client,
-    test_user,
-    test_wallet,
     auth_headers,
+    debit_wallet
 ):
     """
     Разные transaction_id должны создавать отдельные операции.
     Каждый запрос с уникальным transaction_id возвращает 201 Created.
     """
+    test_wallet = debit_wallet
+
     response1 = client.put(
         "/api/v1/operations/income",
         json={
@@ -213,8 +228,7 @@ def test_different_transaction_ids_create_separate_operations(
 
 async def test_idempotency_preserves_wallet_balance(
     client,
-    test_user,
-    test_wallet,
+    debit_wallet,
     db: AsyncSession,
     auth_headers,
 ):
@@ -223,6 +237,7 @@ async def test_idempotency_preserves_wallet_balance(
     Баланс должен увеличиться только один раз, несмотря на 3 одинаковых запроса.
     """
     transaction_id = str(uuid.uuid4())
+    test_wallet = debit_wallet
     initial_balance = test_wallet.balance
 
     for _ in range(3):
