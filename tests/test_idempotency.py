@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.enum import WalletType
 from app.models import Wallet
 
 
@@ -117,12 +118,14 @@ async def test_transfer_idempotency(
         name="USD Wallet",
         currency=CurrencyEnum.USD,
         balance=1000.0,
+        type=WalletType.DEBIT,
     )
     wallet2 = Wallet(
         user_id=test_user.id,
         name="EUR Wallet",
         currency=CurrencyEnum.EUR,
         balance=0.0,
+        type=WalletType.CREDIT,
     )
     db.add(wallet1)
     db.add(wallet2)
