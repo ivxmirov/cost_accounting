@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.enum import CurrencyEnum
+from app.enum import CurrencyEnum, WalletType
 from app.models import Wallet
 
 
@@ -11,7 +11,6 @@ async def test_transfer_v1_success(
     client,
     test_user,
     db: AsyncSession,
-    mock_currency_api,
     auth_headers,
 ):
     """v1: Перевод между кошельками должен успешно списать/зачислить средства."""
@@ -20,12 +19,14 @@ async def test_transfer_v1_success(
         name="USD Wallet",
         currency=CurrencyEnum.USD,
         balance=Decimal("1000.0"),
+        type=WalletType.DEBIT,
     )
     wallet2 = Wallet(
         user_id=test_user.id,
         name="EUR Wallet",
         currency=CurrencyEnum.EUR,
         balance=Decimal("0.0"),
+        type=WalletType.CREDIT,
     )
     db.add(wallet1)
     db.add(wallet2)
@@ -55,7 +56,7 @@ async def test_transfer_v1_success(
     assert float(wallet2.balance) > 0
 
 
-def test_transfer_v1_wallet_not_found(client, test_user, auth_headers):
+def test_transfer_v1_wallet_not_found(client, auth_headers):
     """v1: Перевод при несуществующем кошельке — 404."""
     response = client.put(
         "/api/v1/operations/transfer",
@@ -77,12 +78,14 @@ async def test_transfer_v1_insufficient_funds(client, test_user, db: AsyncSessio
         name="Wallet 1",
         currency=CurrencyEnum.USD,
         balance=Decimal("50.0"),
+        type=WalletType.DEBIT,
     )
     wallet2 = Wallet(
         user_id=test_user.id,
         name="Wallet 2",
         currency=CurrencyEnum.USD,
         balance=Decimal("0.0"),
+        type=WalletType.CREDIT,
     )
     db.add(wallet1)
     db.add(wallet2)
@@ -103,8 +106,9 @@ async def test_transfer_v1_insufficient_funds(client, test_user, db: AsyncSessio
     assert response.status_code == 400
 
 
-def test_transfer_v1_same_wallet(client, test_user, test_wallet, auth_headers):
+def test_transfer_v1_same_wallet(client, debit_wallet, auth_headers):
     """v1: Перевод в тот же кошелёк недопустим — FastAPI вернёт 422 (валидация)."""
+    test_wallet = debit_wallet
     response = client.put(
         "/api/v1/operations/transfer",
         json={
@@ -125,12 +129,14 @@ async def test_transfer_v1_same_currency(client, test_user, db: AsyncSession, au
         name="Wallet 1",
         currency=CurrencyEnum.USD,
         balance=Decimal("500.0"),
+        type=WalletType.DEBIT,
     )
     wallet2 = Wallet(
         user_id=test_user.id,
         name="Wallet 2",
         currency=CurrencyEnum.USD,
         balance=Decimal("200.0"),
+        type=WalletType.CREDIT,
     )
     db.add(wallet1)
     db.add(wallet2)
@@ -163,7 +169,6 @@ async def test_transfer_v1_idempotency(
     client,
     test_user,
     db: AsyncSession,
-    mock_currency_api,
     auth_headers,
 ):
     """v1: Повторный запрос с тем же transaction_id возвращает 200."""
@@ -172,12 +177,14 @@ async def test_transfer_v1_idempotency(
         name="Wallet 1",
         currency=CurrencyEnum.USD,
         balance=Decimal("1000.0"),
+        type=WalletType.DEBIT,
     )
     wallet2 = Wallet(
         user_id=test_user.id,
         name="Wallet 2",
         currency=CurrencyEnum.EUR,
         balance=Decimal("0.0"),
+        type=WalletType.CREDIT,
     )
     db.add(wallet1)
     db.add(wallet2)
