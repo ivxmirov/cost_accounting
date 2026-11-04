@@ -1,9 +1,10 @@
 import uuid
 
+from app.enum import WalletType
 from app.models import Wallet
 
 
-async def test_e2e_basic_user_flow_registration_to_expense(client, db, mock_currency_api):
+async def test_e2e_basic_user_flow_registration_to_expense(client, db):
     """E2E тест: Базовый пользовательский флоу от регистрации до траты.
 
     Ожидаемый флоу:
@@ -59,7 +60,12 @@ async def test_e2e_basic_user_flow_registration_to_expense(client, db, mock_curr
     wallet_name = "Main Wallet"
     wallet_response = client.post(
         "/api/v1/wallets",
-        json={"name": wallet_name, "initial_balance": 0.0, "currency": "usd"},
+        json={
+            "name": wallet_name,
+            "initial_balance": 0.0,
+            "currency": "usd",
+            "type": WalletType.DEBIT,
+        },
         headers=headers,
     )
     assert wallet_response.status_code == 201
@@ -114,7 +120,7 @@ async def test_e2e_basic_user_flow_registration_to_expense(client, db, mock_curr
     assert float(wallet_in_db.balance) == 50.0
 
 
-async def test_e2e_multi_wallet_flow_with_transfer(client, db, mock_currency_api):
+async def test_e2e_multi_wallet_flow_with_transfer(client):
     """E2E тест: Флоу с несколькими кошельками и переводом между ними.
 
     Ожидаемый флоу:
@@ -171,7 +177,12 @@ async def test_e2e_multi_wallet_flow_with_transfer(client, db, mock_currency_api
     wallet1_name = "USD Wallet"
     wallet1_response = client.post(
         "/api/v1/wallets",
-        json={"name": wallet1_name, "initial_balance": 500.0, "currency": "usd"},
+        json={
+            "name": wallet1_name,
+            "initial_balance": 500.0,
+            "currency": "usd",
+            "type": WalletType.DEBIT,
+        },
         headers=headers,
     )
     assert wallet1_response.status_code == 201
@@ -181,7 +192,12 @@ async def test_e2e_multi_wallet_flow_with_transfer(client, db, mock_currency_api
     wallet2_name = "EUR Wallet"
     wallet2_response = client.post(
         "/api/v1/wallets",
-        json={"name": wallet2_name, "initial_balance": 0.0, "currency": "eur"},
+        json={
+            "name": wallet2_name,
+            "initial_balance": 0.0,
+            "currency": "eur",
+            "type": WalletType.DEBIT,
+        },
         headers=headers,
     )
     assert wallet2_response.status_code == 201
@@ -233,7 +249,7 @@ async def test_e2e_multi_wallet_flow_with_transfer(client, db, mock_currency_api
     assert float(wallet2_final["balance"]) > 0.0
 
 
-async def test_e2e_operations_history_and_report(client, db, mock_currency_api):
+async def test_e2e_operations_history_and_report(client, db):
     """E2E тест: Флоу с историей операций.
 
     Ожидаемый флоу:
@@ -292,7 +308,12 @@ async def test_e2e_operations_history_and_report(client, db, mock_currency_api):
     wallet_name = "RUB Wallet"
     wallet_response = client.post(
         "/api/v1/wallets",
-        json={"name": wallet_name, "initial_balance": 0.0, "currency": "rub"},
+        json={
+            "name": wallet_name,
+            "initial_balance": 0.0,
+            "currency": "rub",
+            "type": WalletType.DEBIT,
+        },
         headers=headers,
     )
     assert wallet_response.status_code == 201
@@ -373,7 +394,7 @@ async def test_e2e_operations_history_and_report(client, db, mock_currency_api):
     assert float(wallet_in_db.balance) == 1000.0
 
 
-async def test_e2e_insufficient_funds_after_income(client, db, mock_currency_api):
+async def test_e2e_insufficient_funds_after_income(client, db):
     """E2E тест: Ошибка недостатка средств после пополнения.
 
     Ожидаемый флоу:
@@ -424,7 +445,12 @@ async def test_e2e_insufficient_funds_after_income(client, db, mock_currency_api
     wallet_name = "USD Wallet"
     wallet_response = client.post(
         "/api/v1/wallets",
-        json={"name": wallet_name, "initial_balance": 0.0, "currency": "usd"},
+        json={
+            "name": wallet_name,
+            "initial_balance": 0.0,
+            "currency": "usd",
+            "type": WalletType.DEBIT,
+        },
         headers=headers,
     )
     assert wallet_response.status_code == 201
@@ -474,7 +500,7 @@ async def test_e2e_insufficient_funds_after_income(client, db, mock_currency_api
     assert float(wallet_in_db.balance) == 100.0
 
 
-async def test_e2e_expense_without_income(client, db, mock_currency_api):
+async def test_e2e_expense_without_income(client, db):
     """E2E тест: Ошибка траты без предварительного пополнения.
 
     Ожидаемый флоу:
@@ -525,7 +551,12 @@ async def test_e2e_expense_without_income(client, db, mock_currency_api):
     wallet_name = "USD Wallet"
     wallet_response = client.post(
         "/api/v1/wallets",
-        json={"name": wallet_name, "initial_balance": 0.0, "currency": "usd"},
+        json={
+            "name": wallet_name,
+            "initial_balance": 0.0,
+            "currency": "usd",
+            "type": WalletType.DEBIT,
+        },
         headers=headers,
     )
     assert wallet_response.status_code == 201
@@ -568,7 +599,7 @@ async def test_e2e_expense_without_income(client, db, mock_currency_api):
     assert len(operations_data) == 0
 
 
-async def test_e2e_transfer_insufficient_funds(client, db, mock_currency_api):
+async def test_e2e_transfer_insufficient_funds(client):
     """E2E тест: Ошибка перевода при недостатке средств.
 
     Ожидаемый флоу:
@@ -619,7 +650,12 @@ async def test_e2e_transfer_insufficient_funds(client, db, mock_currency_api):
     wallet1_name = "USD Wallet"
     wallet1_response = client.post(
         "/api/v1/wallets",
-        json={"name": wallet1_name, "initial_balance": 100.0, "currency": "usd"},
+        json={
+            "name": wallet1_name,
+            "initial_balance": 100.0,
+            "currency": "usd",
+            "type": WalletType.DEBIT,
+        },
         headers=headers,
     )
     assert wallet1_response.status_code == 201
@@ -629,7 +665,12 @@ async def test_e2e_transfer_insufficient_funds(client, db, mock_currency_api):
     wallet2_name = "EUR Wallet"
     wallet2_response = client.post(
         "/api/v1/wallets",
-        json={"name": wallet2_name, "initial_balance": 0.0, "currency": "eur"},
+        json={
+            "name": wallet2_name,
+            "initial_balance": 0.0,
+            "currency": "eur",
+            "type": WalletType.DEBIT,
+        },
         headers=headers,
     )
     assert wallet2_response.status_code == 201
