@@ -8,15 +8,13 @@ from app.models import Operation
 
 async def test_report_csv_format(
     client,
-    test_user,
-    test_wallet,
+    debit_wallet,
     db,
     auth_headers,
-    mock_currency_api,
 ):
     """CSV отчёт должен иметь правильный формат с заголовками."""
     operation = Operation(
-        wallet_id=test_wallet.id,
+        wallet_id=debit_wallet.id,
         type="income",
         amount=Decimal("500.0"),
         currency=CurrencyEnum.USD,
@@ -43,15 +41,13 @@ async def test_report_csv_format(
 
 async def test_report_csv_content(
     client,
-    test_user,
-    test_wallet,
+    debit_wallet,
     db,
     auth_headers,
-    mock_currency_api,
 ):
     """CSV отчёт должен содержать правильные данные операций."""
     operation1 = Operation(
-        wallet_id=test_wallet.id,
+        wallet_id=debit_wallet.id,
         type="income",
         amount=Decimal("500.0"),
         currency=CurrencyEnum.USD,
@@ -60,7 +56,7 @@ async def test_report_csv_content(
         created_at=datetime(2024, 6, 15, 12, 0, 0),
     )
     operation2 = Operation(
-        wallet_id=test_wallet.id,
+        wallet_id=debit_wallet.id,
         type="expense",
         amount=Decimal("100.0"),
         currency=CurrencyEnum.USD,
@@ -95,15 +91,13 @@ async def test_report_csv_content(
 
 async def test_report_csv_download_headers(
     client,
-    test_user,
-    test_wallet,
+    debit_wallet,
     db,
     auth_headers,
-    mock_currency_api,
 ):
     """CSV отчёт должен иметь заголовки для скачивания файла."""
     operation = Operation(
-        wallet_id=test_wallet.id,
+        wallet_id=debit_wallet.id,
         type="income",
         amount=Decimal("500.0"),
         currency=CurrencyEnum.USD,
@@ -131,16 +125,14 @@ async def test_report_csv_download_headers(
 
 async def test_report_csv_with_multiple_operations(
     client,
-    test_user,
-    test_wallet,
+    debit_wallet,
     db,
     auth_headers,
-    mock_currency_api,
 ):
     """CSV отчёт с несколькими операциями должен содержать все данные."""
     operations = [
         Operation(
-            wallet_id=test_wallet.id,
+            wallet_id=debit_wallet.id,
             type="income",
             amount=Decimal("1000.0"),
             currency=CurrencyEnum.USD,
@@ -149,7 +141,7 @@ async def test_report_csv_with_multiple_operations(
             created_at=datetime(2024, 6, 1, 10, 0, 0),
         ),
         Operation(
-            wallet_id=test_wallet.id,
+            wallet_id=debit_wallet.id,
             type="expense",
             amount=Decimal("50.0"),
             currency=CurrencyEnum.USD,
@@ -158,7 +150,7 @@ async def test_report_csv_with_multiple_operations(
             created_at=datetime(2024, 6, 5, 12, 30, 0),
         ),
         Operation(
-            wallet_id=test_wallet.id,
+            wallet_id=debit_wallet.id,
             type="expense",
             amount=Decimal("200.0"),
             currency=CurrencyEnum.USD,
@@ -167,7 +159,7 @@ async def test_report_csv_with_multiple_operations(
             created_at=datetime(2024, 6, 10, 15, 0, 0),
         ),
         Operation(
-            wallet_id=test_wallet.id,
+            wallet_id=debit_wallet.id,
             type="income",
             amount=Decimal("100.0"),
             currency=CurrencyEnum.USD,
@@ -194,11 +186,7 @@ async def test_report_csv_with_multiple_operations(
 
 async def test_report_csv_empty(
     client,
-    test_user,
-    test_wallet,
-    db,
     auth_headers,
-    mock_currency_api,
 ):
     """Пустой CSV отчёт должен содержать только заголовки."""
     response = client.get(
@@ -215,15 +203,13 @@ async def test_report_csv_empty(
 
 async def test_report_csv_special_characters(
     client,
-    test_user,
-    test_wallet,
+    debit_wallet,
     db,
     auth_headers,
-    mock_currency_api,
 ):
     """CSV должен правильно обрабатывать спецсимволы в категории."""
     operation = Operation(
-        wallet_id=test_wallet.id,
+        wallet_id=debit_wallet.id,
         type="expense",
         amount=Decimal("50.0"),
         currency=CurrencyEnum.USD,
@@ -247,15 +233,28 @@ async def test_report_csv_special_characters(
 
 async def test_report_csv_currency_conversion(
     client,
-    test_user,
-    test_wallet,
+    debit_wallet,
     db,
     auth_headers,
-    mock_currency_api,
+    monkeypatch,
 ):
     """CSV отчёт должен конвертировать валюты правильно."""
+    # 1. Готовим фейковый курс: USD -> RUB = 35.0
+    async def fake_get_exchange_rate(base, target):
+        rates = {
+            (CurrencyEnum.USD, CurrencyEnum.RUB): Decimal("35.0"),
+        }
+        return rates.get((base, target), Decimal("1"))
+
+    # 2. Мокаем имя В модуле-потребителе (operations.py)
+    monkeypatch.setattr(
+        "app.service.operations.get_exchange_rate",
+        fake_get_exchange_rate,
+    )
+
+    # 3. Данные
     operation = Operation(
-        wallet_id=test_wallet.id,
+        wallet_id=debit_wallet.id,
         type="income",
         amount=Decimal("100.0"),
         currency=CurrencyEnum.USD,
@@ -274,21 +273,19 @@ async def test_report_csv_currency_conversion(
 
     assert response.status_code == 200
     lines = response.text.strip().split("\n")
-    assert "9500.00" in lines[1]
+    assert "3500.00" in lines[1]
     assert "RUB" in lines[1]
 
 
 async def test_report_csv_empty_category(
     client,
-    test_user,
-    test_wallet,
+    debit_wallet,
     db,
     auth_headers,
-    mock_currency_api,
 ):
     """CSV отчёт должен правильно обрабатывать пустые категории."""
     operation = Operation(
-        wallet_id=test_wallet.id,
+        wallet_id=debit_wallet.id,
         type="income",
         amount=Decimal("500.0"),
         currency=CurrencyEnum.USD,
