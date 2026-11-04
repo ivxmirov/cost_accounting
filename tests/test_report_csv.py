@@ -239,8 +239,11 @@ async def test_report_csv_currency_conversion(
     monkeypatch,
 ):
     """CSV отчёт должен конвертировать валюты правильно."""
+    calls = []
+
     # 1. Готовим фейковый курс: USD -> RUB = 35.0
     async def fake_get_exchange_rate(base, target):
+        calls.append((base, target))
         rates = {
             (CurrencyEnum.USD, CurrencyEnum.RUB): Decimal("35.0"),
         }
@@ -272,6 +275,8 @@ async def test_report_csv_currency_conversion(
     )
 
     assert response.status_code == 200
+    # Доказательство, что мок реально сработал
+    assert calls == [(CurrencyEnum.USD, CurrencyEnum.RUB)]
     lines = response.text.strip().split("\n")
     assert "3500.00" in lines[1]
     assert "RUB" in lines[1]
