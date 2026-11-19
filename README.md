@@ -227,6 +227,10 @@ Response (201 Created):
 
 ```
 cost_accounting
+├─ .github
+│  └─ workflows
+│     ├─ ci.yml
+│     └─ main.yml
 ├─ .pre-commit-config.yaml
 ├─ .python-version
 ├─ alembic
