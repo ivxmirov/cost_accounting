@@ -227,10 +227,14 @@ Response (201 Created):
 
 ```
 cost_accounting
+├─ .dockerignore
+├─ .env.example
+├─ .env.test.example
 ├─ .github
 │  └─ workflows
 │     ├─ ci.yml
 │     └─ main.yml
+├─ .gitignore
 ├─ .pre-commit-config.yaml
 ├─ .python-version
 ├─ alembic
@@ -238,11 +242,7 @@ cost_accounting
 │  ├─ README
 │  ├─ script.py.mako
 │  └─ versions
-│     ├─ 14f1ce32c670_04_create_table_group_wallets.py
-│     ├─ 6e52b96e29ae_03_group_creator_id.py
-│     ├─ 87658c8418bb_00_initial_migration.py
-│     ├─ c91c710ac91d_01_field_credit_limit_nullable_true.py
-│     └─ d4db97a5952c_02_add_field_group_created_at.py
+│     └─ a2e7f9082f6b_00_initial_migration.py
 ├─ alembic.ini
 ├─ app
 │  ├─ api
@@ -296,6 +296,8 @@ cost_accounting
 │  │  ├─ password.py
 │  │  └─ __init__.py
 │  └─ __init__.py
+├─ compose.yaml
+├─ Dockerfile
 ├─ main.py
 ├─ pyproject.toml
 ├─ README.md
