@@ -25,6 +25,7 @@
 [![ty](https://img.shields.io/badge/ty-0.0.73+-FF6B6B.svg)](https://github.com/astral-sh/ty)
 [![Pytest](https://img.shields.io/badge/Pytest-8.4+-0A9EDC.svg)](https://docs.pytest.org)
 [![Pre-commit](https://img.shields.io/badge/pre--commit-4.6+-FAB040.svg)](https://pre-commit.com)
+[![CI](https://github.com/ivxmirov/cost_accounting/actions/workflows/ci.yml/badge.svg)](https://github.com/ivxmirov/cost_accounting/actions/workflows/ci.yml)
 
 ## Быстрый старт
 
@@ -73,10 +74,32 @@ uv run pytest
 uv run pre-commit install
 ```
 
+**8.** Проверить, что CI проходит локально (то же, что делает GitHub Actions)
+
+```bash
+uv run ruff check .
+uv run ruff format --check .
+uv run ty check
+uv run pytest tests
+```
+
 **Готово! API доступно по адресу:**
 - Web UI: http://localhost:8000/static/index.html
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
+
+## CI/CD
+
+Проект использует GitHub Actions для запуска тестов и линта при каждом push и pull request.
+
+**Workflow:** [.github/workflows/ci.yml](.github/workflows/ci.yml)
+
+**Что проверяется:**
+- **tests** — pytest с покрытием (pytest --cov=app); junit-отчёт и coverage.xml выгружаются артефактами.
+- **lint** — ruff (стиль + форматирование) и ty (типы). Сейчас job носит информационный характер (continue-on-error: true), пока в master не устранён линт-долг.
+
+**Деплой** (`main.yml`) запускается только при push в master. Чтобы падение тестов блокировало выкат, включите branch protection на master с required check **tests** (Settings → Branches → Add rule).
+
 
 ## Примеры запросов к API
 
