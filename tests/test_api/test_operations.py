@@ -4,20 +4,16 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.enum import CurrencyEnum
-from app.models import Wallet
-
 
 @pytest.mark.parametrize("wallet_type", ["debit", "credit"])
 async def test_add_income_success(
     db_session: AsyncSession,
     client,
-    test_user,
     auth_headers,
     wallet_factory,
     wallet_type: str,
 ):
-    wallet = await wallet_factory(wallet_type, balance = Decimal("50"))
+    wallet = await wallet_factory(wallet_type, balance=Decimal("50"))
 
     response = client.put(
         "/api/v1/operations/income",
@@ -76,12 +72,11 @@ def test_add_income_unauthorized(client):
 async def test_add_expense_success(
     db_session: AsyncSession,
     client,
-    test_user,
     auth_headers,
     wallet_factory,
     wallet_type: str,
 ):
-    wallet = await wallet_factory(wallet_type, balance = Decimal("200"))
+    wallet = await wallet_factory(wallet_type, balance=Decimal("200"))
 
     response = client.put(
         "/api/v1/operations/expense",
@@ -107,9 +102,7 @@ async def test_add_expense_success(
 
 @pytest.mark.parametrize("wallet_type", ["debit", "credit"])
 async def test_add_expense_negative_amount(
-    db_session: AsyncSession,
     client,
-    test_user,
     auth_headers,
     wallet_factory,
     wallet_type: str,
@@ -131,9 +124,7 @@ async def test_add_expense_negative_amount(
 
 @pytest.mark.parametrize("wallet_type", ["debit", "credit"])
 async def test_add_expense_empty_name(
-    db_session: AsyncSession,
     client,
-    test_user,
     auth_headers,
     wallet_factory,
     wallet_type: str,
@@ -144,7 +135,7 @@ async def test_add_expense_empty_name(
         "/api/v1/operations/expense",
         json={
             "transaction_id": str(uuid.uuid4()),
-            "wallet_name": "   ",
+            "wallet_name": wallet.name,
             "amount": 100.0,
             "description": "Food",
         },
@@ -186,14 +177,12 @@ def test_add_expense_unauthorized(client):
 
 @pytest.mark.parametrize("wallet_type", ["debit", "credit"])
 async def test_add_expense_not_enough_money(
-    db_session: AsyncSession,
     client,
-    test_user,
     auth_headers,
     wallet_factory,
     wallet_type: str,
 ):
-    wallet = await wallet_factory(wallet_type, balance = Decimal("100"))
+    wallet = await wallet_factory(wallet_type, balance=Decimal("100"))
 
     response = client.put(
         "/api/v1/operations/expense",

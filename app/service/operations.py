@@ -6,6 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.enum import CurrencyEnum, OperationType
+from app.middleware.request_logging import logger
 from app.models import User
 from app.repository import operations as operations_repository
 from app.repository import wallets as wallets_repository
@@ -399,7 +400,8 @@ async def create_bulk_operations(
         raise
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        logger.exception("create_bulk_operations failed")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 async def generate_csv_report(
@@ -461,5 +463,4 @@ async def generate_csv_report(
         csv_line = f"{date_str},{type_str},{wallet_id_str},{amount_str},{category},{currency}"
         csv_lines.append(csv_line)
 
-    csv_content = "\n".join(csv_lines)
-    return csv_content
+    return "\n".join(csv_lines)

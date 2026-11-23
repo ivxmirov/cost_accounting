@@ -27,7 +27,7 @@ async def get_by_transaction_id(db: AsyncSession, transaction_id: UUID) -> Opera
 async def create_operation(
     db: AsyncSession,
     wallet_id: int,
-    type: str,
+    type: str,  # noqa: A002
     amount: Decimal,
     currency: CurrencyEnum,
     transaction_id: UUID,

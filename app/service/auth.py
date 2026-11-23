@@ -54,7 +54,7 @@ async def refresh_token(db: AsyncSession, request: RefreshRequest) -> TokenRespo
         if not login:
             raise HTTPException(status_code=401, detail="Invalid token")
     except ValueError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Invalid token") from None
     user = await users_repository.get_user_by_login(db, login)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid token")

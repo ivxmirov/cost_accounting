@@ -61,11 +61,6 @@ jobs:
     permissions:
       contents: read
     timeout-minutes: 5
-    # Линт-долг в master (ruff + ty) ещё не устранён, поэтому job носит
-    # информационный характер и не блокирует слияние PR. После того как
-    # ruff check --fix, ruff format и правки типов в app/schemas.py будут
-    # сделаны, эту строку нужно удалить, чтобы job стал блокирующим.
-    continue-on-error: true
 
     steps:
       - name: Checkout code

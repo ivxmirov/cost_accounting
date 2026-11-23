@@ -107,4 +107,4 @@ exclude = [
 ]
 
 [tool.ty.environment]
-root = ["./app"]
+root = ["."]
