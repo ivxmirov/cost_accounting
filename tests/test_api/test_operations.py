@@ -122,20 +122,16 @@ async def test_add_expense_negative_amount(
     assert response.status_code == 422
 
 
-@pytest.mark.parametrize("wallet_type", ["debit", "credit"])
 async def test_add_expense_empty_name(
     client,
     auth_headers,
-    wallet_factory,
-    wallet_type: str,
 ):
-    wallet = await wallet_factory(wallet_type)
 
     response = client.put(
         "/api/v1/operations/expense",
         json={
             "transaction_id": str(uuid.uuid4()),
-            "wallet_name": wallet.name,
+            "wallet_name": "",
             "amount": 100.0,
             "description": "Food",
         },
@@ -143,6 +139,7 @@ async def test_add_expense_empty_name(
     )
 
     assert response.status_code == 422
+    assert "empty" in response.json()["message"]
 
 
 def test_add_expense_wallet_not_exists(client, auth_headers):
