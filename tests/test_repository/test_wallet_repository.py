@@ -139,7 +139,7 @@ async def test_add_expense(
     wallet = await wallet_factory(wallet_type, balance=Decimal("100"))
     initial_balance = wallet.balance
     expense_amount = Decimal("50")
-    
+
     updated_wallet = await wallets_repository.add_expense(
         db_session,
         user_id=current_user.id,
@@ -167,7 +167,7 @@ async def test_get_user_wallets(db_session: AsyncSession, current_user):
         user_id=current_user.id,
         currency=CurrencyEnum.USD,
         type=WalletType.CREDIT,
-        credit_limit=Decimal("250")
+        credit_limit=Decimal("250"),
     )
     db_session.add(wallet2)
     await db_session.flush()
@@ -221,7 +221,9 @@ async def test_get_wallet_by_id_without_user_check_not_exists(db_session: AsyncS
     assert found_wallet is None
 
 
-async def test_get_wallet_by_id_without_user_check_other_user(db_session: AsyncSession, credit_wallet):
+async def test_get_wallet_by_id_without_user_check_other_user(
+    db_session: AsyncSession, credit_wallet
+):
     other_user = User(login="other_user_test")
     db_session.add(other_user)
     await db_session.flush()

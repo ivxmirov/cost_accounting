@@ -1,5 +1,4 @@
 import ast
-import os
 from pathlib import Path
 
 
@@ -67,16 +66,16 @@ def extract_api_calls_from_function(func_node) -> list[tuple[str, str]]:
 
 def extract_api_calls_from_test(file_path: str, test_name: str) -> list[tuple[str, str]]:
     """Извлекает вызовы API из тестовой функции в Python файле."""
-    if not os.path.exists(file_path):
+    if not Path(file_path).exists():
         raise FileNotFoundError(f"Test file not found: {file_path}")
 
-    with open(file_path, encoding="utf-8") as f:
+    with Path(file_path).open(encoding="utf-8") as f:
         source = f.read()
 
     try:
         tree = ast.parse(source, filename=file_path)
     except SyntaxError as e:
-        raise SyntaxError(f"Failed to parse {file_path}: {e}")
+        raise SyntaxError(f"Failed to parse {file_path}: {e}") from e
 
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == test_name:
@@ -149,7 +148,9 @@ def validate_test_structure(
             f"Expected: {expected_pattern}. Actual: {actual_calls}",
         )
 
-    for i, (actual, expected) in enumerate(zip(actual_normalized, expected_normalized)):
+    for i, (actual, expected) in enumerate(
+        zip(actual_normalized, expected_normalized, strict=True)
+    ):
         if actual != expected:
             return (
                 False,
@@ -300,23 +301,23 @@ def test_e2e_transfer_insufficient_funds_structure():
 def test_e2e_file_exists():
     """Проверяет что файл test_e2e.py существует."""
     test_file = get_test_file_path()
-    assert os.path.exists(test_file), f"test_e2e.py file not found at {test_file}"
+    assert Path(test_file).exists(), f"test_e2e.py file not found at {test_file}"
 
 
 def test_all_required_tests_present():
     """Проверяет что все необходимые E2E тестовые функции присутствуют в test_e2e.py."""
     test_file = get_test_file_path()
 
-    if not os.path.exists(test_file):
-        assert False, f"test_e2e.py file not found at {test_file}"
+    if not Path(test_file).exists():
+        raise FileNotFoundError(f"test_e2e.py file not found at {test_file}")
 
-    with open(test_file, encoding="utf-8") as f:
+    with Path(test_file).open(encoding="utf-8") as f:
         source = f.read()
 
     try:
         tree = ast.parse(source, filename=test_file)
     except SyntaxError as e:
-        assert False, f"Failed to parse test_e2e.py: {e}"
+        raise SyntaxError(f"Failed to parse test_e2e.py: {e}") from e
 
     function_names = {
         node.name

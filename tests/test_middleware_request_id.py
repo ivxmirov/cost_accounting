@@ -10,7 +10,7 @@ def test_request_id_generated(client):
     try:
         uuid.UUID(request_id)
     except ValueError:
-        assert False, f"Request ID '{request_id}' is not a valid UUID"
+        raise ValueError(f"Request ID '{request_id}' is not a valid UUID") from None
 
 
 def test_request_id_from_header(client):

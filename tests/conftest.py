@@ -116,7 +116,7 @@ def db(db_session):
 async def wallet_factory(db_session, test_user):
     """Фабрика для создания кошельков."""
 
-    async def _create_wallet(wallet_type: str, balance: Decimal=Decimal("0")):
+    async def _create_wallet(wallet_type: str, balance: Decimal = Decimal("0")):
         wallet = Wallet(
             name=f"Test {wallet_type}",
             user_id=test_user.id,
