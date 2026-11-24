@@ -133,6 +133,36 @@ async def wallet_factory(db_session, test_user):
     return _create_wallet
 
 
+@pytest_asyncio.fixture
+async def second_user(db_session: AsyncSession) -> User:
+    """Второй пользователь (потенциальный участник группы)."""
+    user = User(login="seconduser", password_hash=hash_password("password2"))
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture
+async def third_user(db_session: AsyncSession) -> User:
+    """Третий пользователь (не участник группы по умолчанию)."""
+    user = User(login="thirduser", password_hash=hash_password("password3"))
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture
+async def other_group_creator(db_session: AsyncSession) -> User:
+    """Пользователь, который не состоит в основной группе."""
+    user = User(login="outsider", password_hash=hash_password("password0"))
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
 @pytest.fixture
 def mock_currency_api():
     with aioresponses() as m:
